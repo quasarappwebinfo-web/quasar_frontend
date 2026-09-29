@@ -1,0 +1,26 @@
+.alert {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  border: 1px solid transparent;
+}
+
+.info {
+  background: #f6f7f9;
+  border-color: rgba(26, 28, 31, 0.06);
+  color: #4a5058;
+}
+
+.error {
+  background: rgba(180, 35, 24, 0.05);
+  border-color: rgba(180, 35, 24, 0.12);
+  color: var(--color-danger);
+}
+
+.success {
+  background: rgba(1, 76, 189, 0.06);
+  border-color: rgba(1, 76, 189, 0.12);
+  color: var(--color-brand-blue);
+}

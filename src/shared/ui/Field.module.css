@@ -1,0 +1,111 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  text-align: left;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1rem;
+}
+
+.label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a9098;
+}
+
+.helpRoot {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.helpBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  border: 1px solid rgba(26, 28, 31, 0.16);
+  border-radius: 999px;
+  background: #fff;
+  color: #7a8088;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.helpBtn:hover,
+.helpBtn[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--color-brand-blue) 45%, #ddd);
+  color: var(--color-brand-blue);
+  background: color-mix(in srgb, var(--color-brand-blue) 6%, #fff);
+}
+
+.helpTip {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: min(18rem, 72vw);
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(26, 28, 31, 0.1);
+  border-radius: 0.55rem;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(26, 28, 31, 0.12);
+  color: #2a2e34;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.45;
+}
+
+.control {
+  width: 100%;
+  padding: 0.78rem 0.9rem;
+  border: 1px solid rgba(26, 28, 31, 0.1);
+  border-radius: 0.45rem;
+  background: #fff;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.96rem;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--color-brand-blue-46);
+  box-shadow: 0 0 0 3px rgba(1, 76, 189, 0.12);
+}
+
+.control:disabled {
+  opacity: 0.55;
+  background: #f7f8fa;
+}
+
+.textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #8a9098;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+}

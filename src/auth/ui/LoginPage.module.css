@@ -1,0 +1,203 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 50% -10%,
+      var(--color-brand-blue-soft),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 100% 100%,
+      rgba(1, 76, 189, 0.06),
+      transparent 55%
+    ),
+    linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  animation: atmosphereShift 20s var(--ease-out) infinite alternate;
+}
+
+.stage {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 22rem);
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+  animation: riseIn 0.9s var(--ease-out) both;
+}
+
+.logo {
+  width: min(100%, 11.5rem);
+  height: auto;
+  display: block;
+  animation: brandSettle 1.1s var(--ease-out) both;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-brand-blue);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: riseIn 0.9s var(--ease-out) 0.12s both;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  text-align: left;
+}
+
+.field span {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.field input {
+  width: 100%;
+  padding: 0.7rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  transition:
+    border-color 0.35s var(--ease-out),
+    box-shadow 0.35s var(--ease-out);
+}
+
+.field input:focus {
+  outline: none;
+  border-bottom-color: var(--color-brand-blue-46);
+  box-shadow: inset 0 -1px 0 var(--color-brand-blue-46);
+}
+
+.field input:disabled {
+  opacity: 0.45;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-danger);
+  animation: riseIn 0.35s var(--ease-out) both;
+}
+
+.submit {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .stage {
+    width: min(100%, 24rem);
+    gap: 2.75rem;
+  }
+
+  .logo {
+    width: min(100%, 13rem);
+  }
+
+  .title {
+    font-size: 0.8rem;
+    letter-spacing: 0.3em;
+  }
+
+  .form {
+    gap: 1.75rem;
+  }
+
+  .field span {
+    font-size: 0.78rem;
+  }
+
+  .field input {
+    padding: 0.9rem 0;
+    font-size: 1.15rem;
+  }
+
+  .submit {
+    margin-top: 0.75rem;
+    min-height: 3.25rem;
+    font-size: 0.88rem;
+    padding: 1rem 1.35rem;
+  }
+
+  .error {
+    font-size: 0.95rem;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes brandSettle {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes atmosphereShift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere,
+  .intro,
+  .form,
+  .logo,
+  .error {
+    animation: none;
+  }
+}

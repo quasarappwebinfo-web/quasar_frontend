@@ -1,0 +1,46 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 50% 30%,
+      var(--color-brand-blue-soft),
+      transparent 55%
+    ),
+    linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+}
+
+.logo {
+  position: relative;
+  z-index: 1;
+  width: 9rem;
+  height: auto;
+  animation: pulseSoft 1.6s var(--ease-out) infinite alternate;
+}
+
+@keyframes pulseSoft {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo {
+    animation: none;
+    opacity: 0.85;
+  }
+}

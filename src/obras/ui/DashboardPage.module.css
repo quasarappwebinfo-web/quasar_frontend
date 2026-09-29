@@ -1,0 +1,598 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 96rem;
+  animation: riseIn 0.55s var(--ease-out) both;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.title {
+  font-family: 'Questrial', var(--font-sans);
+  font-size: clamp(1.65rem, 3vw, 1.9rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.subtitle {
+  font-size: 0.98rem;
+  color: #717171;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.actionRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.searchBox {
+  position: relative;
+  min-width: min(100%, 16rem);
+  flex: 1 1 14rem;
+}
+
+.searchBox input {
+  width: 100%;
+  height: 3.2rem;
+  padding: 0 2.75rem 0 1rem;
+  border: 1px solid #e2e2e2;
+  border-radius: 5px;
+  background: #fff;
+  font: inherit;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.searchBox input::placeholder {
+  color: #9a9a9a;
+}
+
+.searchBox input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-brand-blue) 35%, transparent);
+  outline-offset: 1px;
+}
+
+.searchIcon {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  width: 1.15rem;
+  height: 1.15rem;
+  transform: translateY(-50%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+@media (min-width: 720px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .kpiGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.kpiCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 8.5rem;
+  padding: 1.15rem 1.25rem 1.2rem;
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.kpiLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.kpiValue {
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 2.35rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+}
+
+.kpiHint {
+  margin-top: auto;
+  font-size: 0.8rem;
+  color: #717171;
+}
+
+.kpiIcon {
+  position: absolute;
+  right: 1.15rem;
+  top: 2.45rem; /* alineado con el número, como en Figma */
+  bottom: auto;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.kpiIconHouse {
+  width: 3.125rem;
+  height: auto;
+  aspect-ratio: 25 / 19.44;
+}
+
+.kpiIconPeople {
+  width: 3.125rem;
+  height: auto;
+  aspect-ratio: 25 / 17.5;
+}
+
+.kpiIconStatus {
+  width: 3rem;
+  height: 3rem;
+}
+
+.toolbarRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.projectGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.15rem;
+}
+
+@media (min-width: 760px) {
+  .projectGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .projectGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.obraCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e2e2e2;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+.obraCard:hover {
+  border-color: color-mix(in srgb, var(--color-brand-blue) 35%, #e2e2e2);
+  box-shadow: 0 10px 28px rgba(26, 28, 31, 0.06);
+  transform: translateY(-2px);
+}
+
+.cover {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  /* Figma: 349.025 × 176 en card de 350 */
+  aspect-ratio: 349 / 176;
+  background:
+    linear-gradient(160deg, #d8e4f5 0%, #eef2f6 55%, #f7f7f5 100%);
+  overflow: hidden;
+  /* el radio lo recorta .obraCard (overflow:hidden); sin radio propio evita hueco */
+  border-radius: 0;
+  line-height: 0;
+}
+
+.coverImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  border: 0;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+}
+
+.finishedOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(18, 20, 24, 0.55);
+  color: #fff;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 1rem;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.05rem 1.1rem;
+}
+
+.cardName {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.05rem;
+  color: var(--color-text);
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.88rem;
+  color: #717171;
+}
+
+.pin {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.progressBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.progressTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #717171;
+}
+
+.progressPct {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.progressTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: #ececec;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-brand-blue-46);
+  transition: width 0.4s var(--ease-out);
+}
+
+.progressFillDelay {
+  background: #e25555;
+}
+
+.progressFillDone {
+  background: #3aa76d;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.people {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #717171;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #f3f3f3;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #444;
+}
+
+.dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #9a9a9a;
+}
+
+.dotOk {
+  background: #3aa76d;
+}
+
+.dotDelay {
+  background: #e25555;
+}
+
+.dotDone {
+  background: #3aa76d;
+}
+
+.empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #8a9098;
+}
+
+.formGrid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.formRow {
+  display: grid;
+  gap: 0.9rem;
+}
+
+@media (min-width: 640px) {
+  .formRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.coverPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.coverPreview {
+  width: 100%;
+  max-height: 11rem;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e2e2e2;
+  background: #f3f3f3;
+}
+
+.coverPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 7rem;
+  border: 1px dashed #d0d0d0;
+  border-radius: 6px;
+  background: #f8f8f8;
+  color: #8a9098;
+  font-size: 0.9rem;
+}
+
+.coverActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.fileLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.1rem;
+  padding: 0 0.85rem;
+  border: 1px solid #e2e2e2;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.fileLabel input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.coverHint {
+  font-size: 0.82rem;
+  color: #8a9098;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .obraCard {
+    animation: none;
+    transition: none;
+  }
+
+  .obraCard:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    gap: 1.1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.9rem;
+  }
+
+  .title {
+    font-size: 1.45rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .headerActions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .searchBox {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .searchBox input {
+    height: 2.85rem;
+    font-size: 0.95rem;
+  }
+
+  .actionRow {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .kpiGrid {
+    gap: 0.65rem;
+  }
+
+  .kpiCard {
+    min-height: 6.75rem;
+    padding: 0.95rem 1rem 1rem;
+  }
+
+  .kpiValue {
+    font-size: 1.85rem;
+  }
+
+  .kpiHint {
+    font-size: 0.75rem;
+    padding-right: 2.25rem;
+  }
+
+  .kpiIcon {
+    width: 1.85rem;
+    height: auto;
+    right: 0.85rem;
+    top: 2.05rem;
+    bottom: auto;
+  }
+
+  .kpiIconStatus {
+    width: 1.85rem;
+    height: 1.85rem;
+  }
+
+  .toolbarRow {
+    align-items: flex-start;
+  }
+
+  .projectGrid {
+    gap: 0.9rem;
+  }
+
+  .cardBody {
+    padding: 0.85rem 0.9rem 0.95rem;
+  }
+
+  .finishedOverlay {
+    font-size: 0.88rem;
+    letter-spacing: 0.05em;
+    padding: 0.75rem;
+  }
+
+  .cardFooter {
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .statusPill {
+    font-size: 0.65rem;
+    padding: 0.3rem 0.55rem;
+  }
+}

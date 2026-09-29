@@ -1,0 +1,81 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.note {
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.65rem;
+  background: rgba(1, 76, 189, 0.06);
+  border: 1px solid rgba(1, 76, 189, 0.12);
+  color: #2a2e34;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.todayLabel {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #4a5058;
+  text-transform: capitalize;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(26, 28, 31, 0.08);
+  border-radius: 0.55rem;
+  background: #fafbfc;
+}
+
+.itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.meta {
+  font-size: 0.78rem;
+  color: #7a8088;
+}
+
+.muted {
+  margin: 0;
+  color: #8a9098;
+  font-size: 0.9rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.85rem;
+}

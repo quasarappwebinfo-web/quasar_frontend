@@ -1,0 +1,73 @@
+:root {
+  --color-brand-blue: #014cbd;
+  --color-brand-blue-46: rgba(1, 76, 189, 0.46);
+  --color-brand-blue-soft: rgba(1, 76, 189, 0.1);
+  --color-brand-blue-strong: rgba(1, 76, 189, 0.72);
+
+  --color-ink: #1a1c1f;
+  --color-text: #1a1c1f;
+  --color-text-muted: #6b7078;
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-border: rgba(26, 28, 31, 0.12);
+  --color-border-strong: rgba(26, 28, 31, 0.22);
+  --color-accent: var(--color-brand-blue-46);
+  --color-accent-solid: var(--color-brand-blue);
+  --color-accent-hover: var(--color-brand-blue-strong);
+  --color-danger: #b42318;
+
+  --font-sans: 'Manrope', sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  font: 16px/1.55 var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--color-bg);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--color-text);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+a {
+  color: var(--color-brand-blue);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

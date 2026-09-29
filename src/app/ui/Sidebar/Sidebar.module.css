@@ -1,0 +1,263 @@
+.sidebar {
+  --sidebar-width: 248px;
+
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  background: #fcfcfc;
+  border-right: 2px solid #eeeeee;
+  font-family: 'Questrial', var(--font-sans);
+}
+
+.backdrop {
+  display: none;
+}
+
+.brand {
+  display: flex;
+  justify-content: center;
+  padding: 2.75rem 1.15rem 1.5rem;
+}
+
+.logo {
+  width: 150px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding-top: 0.5rem;
+  overflow-y: auto;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  width: 100%;
+  min-height: 51px;
+  padding: 0 1.25rem 0 2.1rem;
+  border: 0;
+  background: transparent;
+  color: #000000;
+  font: inherit;
+  font-size: 1.05rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.2s var(--ease-out),
+    color 0.2s var(--ease-out);
+}
+
+.navItem:hover {
+  background: rgba(1, 76, 189, 0.08);
+}
+
+.navItemActive {
+  background: var(--color-brand-blue-46);
+  color: #e2e2e2;
+}
+
+.navItemActive:hover {
+  background: var(--color-brand-blue-46);
+}
+
+.navIcon {
+  width: 25px;
+  height: 20px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+.navLabel {
+  line-height: 1.2;
+}
+
+.footer {
+  position: relative;
+  margin-top: auto;
+  padding: 0 1.25rem 1.5rem;
+}
+
+.divider {
+  height: 2px;
+  margin: 0 0.5rem 1rem;
+  background: #eeeeee;
+}
+
+.userButton {
+  display: grid;
+  grid-template-columns: 49px 1fr 16px;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.35rem 0.35rem 0.35rem 0.15rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0.35rem;
+}
+
+.userButton:hover {
+  background: rgba(26, 28, 31, 0.04);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 49px;
+  height: 49px;
+  border-radius: 50%;
+  background: #4a4a4a;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.userMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.userName {
+  color: #000000;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userRole {
+  color: #818181;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+}
+
+.chevron {
+  width: 14px;
+  height: 9px;
+  justify-self: end;
+  background-color: #413d3d;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  transition: transform 0.2s var(--ease-out);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.userMenu {
+  position: absolute;
+  right: 1.25rem;
+  bottom: calc(100% - 0.35rem);
+  left: 1.25rem;
+  padding: 0.35rem;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 0.35rem;
+  box-shadow: 0 8px 24px rgba(26, 28, 31, 0.08);
+}
+
+.userMenuItem {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: #000000;
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.userMenuItem:hover {
+  background: rgba(1, 76, 189, 0.08);
+}
+
+@media (max-width: 900px) {
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    border: 0;
+    background: rgba(11, 13, 16, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s var(--ease-out);
+  }
+
+  .backdropVisible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar {
+    --sidebar-width: 299px;
+    transform: translateX(-100%);
+    transition: transform 0.28s var(--ease-out);
+    box-shadow: 8px 0 32px rgba(26, 28, 31, 0.12);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .brand {
+    padding: 3.3rem 1.5rem 1.75rem;
+  }
+
+  .logo {
+    width: 186px;
+  }
+
+  .navItem {
+    min-height: 56px;
+    font-size: 1.2rem;
+    padding-left: 2.5rem;
+    gap: 1.15rem;
+  }
+
+  .navIcon {
+    width: 28px;
+    height: 22px;
+  }
+
+  .userName,
+  .userRole {
+    font-size: 1rem;
+  }
+
+  .avatar {
+    width: 52px;
+    height: 52px;
+  }
+}

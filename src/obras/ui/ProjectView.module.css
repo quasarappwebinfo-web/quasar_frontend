@@ -1,0 +1,880 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 96rem;
+  animation: riseIn 0.5s var(--ease-out) both;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.back {
+  border: 0;
+  background: transparent;
+  color: var(--color-brand-blue);
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  width: fit-content;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.subtitle {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.05rem;
+  color: #a1a1a1;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.actionRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.dateBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.2rem;
+  padding: 0 1rem;
+  border: 1px solid #e2e2e2;
+  border-radius: 5px;
+  background: #fff;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.dateText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 1px solid #e2e2e2;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  border-color: color-mix(in srgb, var(--color-brand-blue) 40%, #e2e2e2);
+}
+
+.progressCard {
+  border: 2px solid #eee;
+  border-radius: 7px;
+  padding: 1.35rem 1.5rem 1.5rem;
+  background: #fff;
+}
+
+.sectionTitle {
+  margin: 0 0 1.25rem;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 6.5rem;
+  flex: 1;
+  text-align: center;
+}
+
+.stepLine {
+  position: absolute;
+  top: 1.15rem;
+  left: calc(50% + 1.2rem);
+  right: calc(-50% + 1.2rem);
+  height: 2px;
+  background: #e5e5e5;
+}
+
+.stepLineDone {
+  background: #3aa76d;
+}
+
+.stepLineCurrent {
+  background: linear-gradient(90deg, #3aa76d 0%, #e5e5e5 100%);
+}
+
+.stepDot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  border: 2px solid #d0d0d0;
+  background: #fff;
+}
+
+.stepDotDone {
+  border-color: #3aa76d;
+  background: #3aa76d;
+}
+
+.stepDotCurrent {
+  border-color: #d95a0c;
+  background: #fff;
+}
+
+.stepDotNext {
+  border-color: #d8d8d8;
+  background: #fff;
+}
+
+.checkIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.stepName {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.stepStatus {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.82rem;
+  color: #a3a3a3;
+}
+
+.stepStatusCurrent {
+  color: #d95a0c;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+}
+
+@media (min-width: 1100px) {
+  .mainGrid {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.15fr);
+    align-items: start;
+  }
+}
+
+.siteCard {
+  border: 2px solid #eee;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.siteHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.9rem;
+  padding: 0 1.25rem;
+  border-bottom: 2px solid #eee;
+}
+
+.siteTitle {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.menuDots {
+  border: 0;
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #888;
+  cursor: pointer;
+}
+
+.siteMain {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: #f0f0f0;
+}
+
+.siteMainImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+.thumb {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  background: #f6f6f6;
+}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.metricsCard {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 2px solid #eee;
+  border-radius: 7px;
+  background: #fff;
+  overflow: hidden;
+}
+
+@media (min-width: 760px) {
+  .metricsCard {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.metricCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem 1.25rem;
+  border-bottom: 2px solid #eee;
+}
+
+@media (min-width: 760px) {
+  .metricCell {
+    border-bottom: 0;
+    border-right: 2px solid #eee;
+  }
+
+  .metricCell:last-child {
+    border-right: 0;
+  }
+}
+
+.metricLabel {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.metricRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.ring {
+  --pct: 0;
+  --ring: #3aa76d;
+  position: relative;
+  width: 5.9rem;
+  height: 5.9rem;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring) calc(var(--pct) * 1%), #ececec 0);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ring::before {
+  content: '';
+  position: absolute;
+  inset: 0.7rem;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.ringValue {
+  position: relative;
+  z-index: 1;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.7rem;
+  color: var(--color-text);
+}
+
+.ringOrange {
+  --ring: #d95a0c;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.75rem;
+}
+
+.legendLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.legendDot {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+}
+
+.tasksCard {
+  border: 2px solid #eee;
+  border-radius: 7px;
+  background: #fff;
+  padding: 1.15rem 1.25rem 1.35rem;
+  min-height: 18rem;
+}
+
+.tasksHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.newTaskBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.1rem;
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: 3px;
+  background: #054c09;
+  color: #fff;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.tasksEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 12rem;
+  text-align: center;
+  color: #717171;
+  font-family: 'Questrial', var(--font-sans);
+}
+
+.tasksTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tasksTable th {
+  text-align: left;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #555;
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.tasksTable td {
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.85rem;
+  padding: 0.9rem 0.4rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.asistenciaMeta {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: #8a9098;
+}
+
+.asistenciaFirma {
+  display: block;
+  max-width: 7.5rem;
+  max-height: 2.75rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+}
+
+.planRow {
+  cursor: pointer;
+}
+
+.planRow:hover td {
+  background: rgba(5, 76, 9, 0.04);
+}
+
+.seeAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1.1rem auto 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.adminBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding-top: 0.25rem;
+}
+
+.adminPanel {
+  border: 1px solid #eee;
+  border-radius: 7px;
+  padding: 1rem 1.1rem 1.25rem;
+  background: #fff;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1.25rem;
+  border-bottom: 1px solid rgba(26, 28, 31, 0.08);
+  margin-bottom: 1rem;
+}
+
+.tab {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: #8a9098;
+  padding: 0.65rem 0.1rem 0.8rem;
+  font: inherit;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.tabActive {
+  color: var(--color-brand-blue);
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-brand-blue-46);
+}
+
+.formGrid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+@media (min-width: 720px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.card {
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 1.05rem;
+}
+
+.cardSubtitle {
+  margin: 0.2rem 0 0;
+  color: #7a8088;
+  font-size: 0.88rem;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.muted {
+  color: #8a9098;
+  font-size: 0.9rem;
+}
+
+.empty {
+  padding: 1.5rem 0;
+  color: #8a9098;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timelineItem {
+  border-left: 2px solid var(--color-brand-blue-46);
+  padding: 0.2rem 0 0.2rem 0.9rem;
+}
+
+.personResults {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.personOption {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.personOption strong {
+  display: block;
+}
+
+.personOption span {
+  color: #7a8088;
+  font-size: 0.85rem;
+}
+
+.personOptionSelected {
+  border-color: color-mix(in srgb, var(--color-brand-blue) 45%, #e8e8e8);
+  background: color-mix(in srgb, var(--color-brand-blue) 6%, #fff);
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    animation: none;
+  }
+}
+
+/* —— Teléfonos / tablets pequeñas —— */
+@media (max-width: 720px) {
+  .page {
+    gap: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .title {
+    font-size: 1.45rem;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  .subtitle {
+    font-size: 0.92rem;
+  }
+
+  .headerActions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .dateBox {
+    min-width: 0;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .actionRow {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+  }
+
+  .iconButton {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .progressCard {
+    padding: 1rem 0.85rem 1.1rem;
+    border-width: 1px;
+  }
+
+  .sectionTitle {
+    margin-bottom: 0.9rem;
+    font-size: 0.82rem;
+  }
+
+  .stepper {
+    gap: 0;
+    margin: 0 -0.25rem;
+    padding: 0 0.25rem 0.5rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step {
+    min-width: 5.25rem;
+    flex: 0 0 5.25rem;
+    scroll-snap-align: start;
+  }
+
+  .stepDot {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .stepLine {
+    top: 1rem;
+    left: calc(50% + 1rem);
+    right: calc(-50% + 1rem);
+  }
+
+  .stepName {
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .stepStatus {
+    font-size: 0.7rem;
+  }
+
+  .siteHeader {
+    min-height: 3.25rem;
+    padding: 0 0.9rem;
+  }
+
+  .siteTitle {
+    font-size: 0.9rem;
+  }
+
+  .siteMain {
+    aspect-ratio: 16 / 11;
+  }
+
+  .thumbGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .metricsCard {
+    border-width: 1px;
+  }
+
+  .metricCell {
+    padding: 0.9rem 1rem;
+  }
+
+  .metricRow {
+    flex-wrap: wrap;
+  }
+
+  .ring {
+    width: 4.75rem;
+    height: 4.75rem;
+  }
+
+  .ring::before {
+    inset: 0.55rem;
+  }
+
+  .ringValue {
+    font-size: 1.35rem;
+  }
+
+  .tasksCard {
+    padding: 1rem 0.9rem 1.1rem;
+    min-height: 0;
+    border-width: 1px;
+  }
+
+  .tasksEmpty {
+    min-height: 8rem;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+
+  .adminBar {
+    gap: 0.5rem;
+  }
+
+  .adminPanel {
+    padding: 0.85rem 0.75rem 1rem;
+  }
+
+  .tabs {
+    gap: 0.1rem 0.85rem;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.05rem 0.7rem;
+  }
+
+  .filters > * {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .thumbGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .muted {
+    font-size: 0.82rem;
+  }
+
+  .tasksEmpty {
+    min-height: 6.5rem;
+  }
+}

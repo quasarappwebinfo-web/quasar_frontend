@@ -1,0 +1,26 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border-radius: 0.3rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.neutral {
+  background: rgba(26, 28, 31, 0.05);
+  color: #666b73;
+}
+
+.success {
+  background: rgba(1, 76, 189, 0.1);
+  color: var(--color-brand-blue);
+}
+
+.danger {
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--color-danger);
+}
