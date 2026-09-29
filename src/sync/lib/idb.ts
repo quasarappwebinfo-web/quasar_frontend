@@ -7,8 +7,8 @@ export function openDatabase(
 ): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, version)
-    request.onupgradeneeded = () => {
-      upgrade(request.result, request.oldVersion)
+    request.onupgradeneeded = (event) => {
+      upgrade(request.result, event.oldVersion)
     }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () =>
