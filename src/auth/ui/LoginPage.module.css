@@ -3,9 +3,14 @@
   isolation: isolate;
   display: grid;
   place-items: center;
-  min-height: 100svh;
-  padding: clamp(1.5rem, 4vw, 3rem);
-  overflow: hidden;
+  min-height: 100dvh;
+  padding:
+    max(1.5rem, env(safe-area-inset-top))
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom))
+    max(1.5rem, env(safe-area-inset-left));
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--color-bg);
 }
 
@@ -119,6 +124,25 @@
 .submit {
   margin-top: 0.5rem;
   width: 100%;
+}
+
+@media (max-height: 740px) {
+  .page {
+    place-items: start center;
+  }
+
+  .stage {
+    gap: 1.35rem;
+    padding-bottom: 1rem;
+  }
+
+  .intro {
+    gap: 0.45rem;
+  }
+
+  .logo {
+    width: min(100%, 8.5rem);
+  }
 }
 
 @media (max-width: 640px) {
