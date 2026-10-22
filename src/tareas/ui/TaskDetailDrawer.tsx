@@ -556,18 +556,18 @@ export function TaskDetailDrawer({
                   </p>
                 </div>
                 <div>
-                  <p className={styles.metaLabel}>Categoría</p>
-                  {task.categoryName ? (
+                  <p className={styles.metaLabel}>Capítulo</p>
+                  {task.chapterName ? (
                     <span
                       className={styles.categoryChip}
                       style={{
                         background: categoryColor(
-                          task.categoryName,
-                          task.categoryId,
+                          task.chapterName,
+                          task.chapterId,
                         ),
                       }}
                     >
-                      {task.categoryName}
+                      {task.chapterName}
                     </span>
                   ) : (
                     <p className={styles.metaValue}>—</p>

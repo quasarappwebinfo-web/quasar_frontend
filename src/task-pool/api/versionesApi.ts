@@ -143,7 +143,7 @@ export async function addVersionSubtask(
     description?: string | null
     displayOrder?: number
     isRequired?: 0 | 1
-    weightPercent: number
+    weightPercent?: number
   },
 ): Promise<VersionSubtask> {
   return apiJson(`/api/v1/catalogo/plantillas-versiones/${versionId}/subtareas`, {

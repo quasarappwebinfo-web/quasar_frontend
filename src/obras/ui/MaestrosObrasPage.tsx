@@ -27,7 +27,6 @@ import styles from './ObraDetailPage.module.css'
 
 const TABS = [
   { to: '/dashboard/maestros/tipos-venta', label: 'Tipos de venta' },
-  { to: '/dashboard/maestros/etapas', label: 'Etapas' },
   { to: '/dashboard/maestros/tipos-documento', label: 'Tipos de documento' },
 ] as const
 
@@ -48,8 +47,8 @@ export function MaestrosObrasPage() {
           </button>
           <h1 className={styles.title}>Configuración Global</h1>
           <p className={styles.subtitle}>
-            Tipos de venta, etapas constructivas y tipos de documento.{' '}
-            <Link to="/maestros/task-pool">Ir a Base Datos Actividades →</Link>
+            Tipos de venta y tipos de documento. Las etapas están en la{' '}
+            <Link to="/maestros/task-pool/etapas">Base Datos Actividades</Link>.
           </p>
         </div>
       </header>
@@ -77,6 +76,7 @@ type CatalogItem = {
   isActive: 1 | 2
   description?: string | null
   displayOrder?: number
+  weightPercent?: number | string | null
 }
 
 function CatalogCards({
@@ -119,6 +119,7 @@ function CatalogCards({
                       (item.displayOrder != null
                         ? `Orden ${item.displayOrder}`
                         : 'Catálogo')}
+                    {item.weightPercent != null ? ` · ${item.weightPercent}% de la obra` : ''}
                   </p>
                 </div>
                 <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
@@ -272,6 +273,7 @@ export function EtapasObraPanel() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [displayOrder, setDisplayOrder] = useState('10')
+  const [weightPercent, setWeightPercent] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -296,6 +298,11 @@ export function EtapasObraPanel() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    const weight = weightPercent.trim() ? Number(weightPercent) : null
+    if (weight != null && (Number.isNaN(weight) || weight < 0 || weight > 100)) {
+      setFormError('El % debe estar entre 0 y 100.')
+      return
+    }
     setSaving(true)
     setFormError(null)
     try {
@@ -304,6 +311,7 @@ export function EtapasObraPanel() {
           name: name.trim(),
           description: description.trim() || null,
           displayOrder: Number(displayOrder),
+          weightPercent: weight,
           isActive: editing.isActive,
         })
         toast.success('Etapa actualizada')
@@ -312,6 +320,7 @@ export function EtapasObraPanel() {
           name: name.trim(),
           description: description.trim() || null,
           displayOrder: Number(displayOrder),
+          weightPercent: weight,
         })
         toast.success('Etapa creada')
       }
@@ -336,6 +345,7 @@ export function EtapasObraPanel() {
           setName('')
           setDescription('')
           setDisplayOrder(String((items.at(-1)?.displayOrder ?? 0) + 10))
+          setWeightPercent('')
           setFormError(null)
           setOpen(true)
         }}
@@ -344,6 +354,9 @@ export function EtapasObraPanel() {
           setName(item.name)
           setDescription(item.description || '')
           setDisplayOrder(String(item.displayOrder ?? 10))
+          setWeightPercent(
+            item.weightPercent != null ? String(item.weightPercent) : '',
+          )
           setFormError(null)
           setOpen(true)
         }}
@@ -401,6 +414,21 @@ export function EtapasObraPanel() {
               disabled={saving}
               value={displayOrder}
               onChange={(e) => setDisplayOrder(e.target.value)}
+            />
+          </Field>
+          <Field
+            label="% de la obra"
+            help="Opcional. Cuánto aporta esta etapa al 100% de la obra. Los capítulos reparten el porcentaje dentro de la etapa."
+          >
+            <TextInput
+              type="number"
+              min={0}
+              max={100}
+              step={0.01}
+              disabled={saving}
+              value={weightPercent}
+              onChange={(e) => setWeightPercent(e.target.value)}
+              placeholder="ej. 30"
             />
           </Field>
           {formError ? <Alert tone="error">{formError}</Alert> : null}

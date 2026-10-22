@@ -11,7 +11,11 @@ export async function listObraDocuments(
   params?: { page?: number; search?: string; visibleToClient?: boolean },
 ): Promise<DocumentsResponse> {
   return apiJson(
-    `/api/v1/obras/${obraId}/documentos${buildQuery(params ?? {})}`,
+    `/api/v1/obras/${obraId}/documentos${buildQuery({
+      page: params?.page,
+      search: params?.search,
+      visible_to_client: params?.visibleToClient,
+    })}`,
   )
 }
 

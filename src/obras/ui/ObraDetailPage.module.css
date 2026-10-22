@@ -60,7 +60,7 @@
   position: relative;
   border: 0;
   background: transparent;
-  color: #8a9098;
+  color: #3a3f46;
   padding: 0.7rem 0.1rem 0.85rem;
   font: inherit;
   font-family: 'Questrial', var(--font-sans);
@@ -70,6 +70,7 @@
 
 .tabActive {
   color: var(--color-brand-blue);
+  font-weight: 600;
 }
 
 .tabActive::after {
@@ -79,7 +80,7 @@
   right: 0;
   bottom: -1px;
   height: 2px;
-  background: var(--color-brand-blue-46);
+  background: var(--color-brand-blue);
 }
 
 .metaGrid {
@@ -244,4 +245,11 @@
 .personOptionSelected {
   border-color: color-mix(in srgb, var(--color-brand-blue) 45%, #e8e8e8);
   background: color-mix(in srgb, var(--color-brand-blue) 6%, #fff);
+}
+
+@media (max-width: 720px) {
+  .personResults {
+    max-height: none;
+    overflow: visible;
+  }
 }

@@ -1,5 +1,7 @@
 .shell {
   min-height: 100svh;
+  max-width: 100%;
+  overflow-x: clip;
   background:
     radial-gradient(ellipse 70% 40% at 100% 0%, rgba(1, 76, 189, 0.05), transparent 55%),
     #f7f8fa;
@@ -7,6 +9,8 @@
 
 .mainColumn {
   min-height: 100svh;
+  min-width: 0;
+  max-width: 100%;
   margin-left: 248px;
 }
 
@@ -16,6 +20,8 @@
 
 .content {
   min-height: 100svh;
+  min-width: 0;
+  max-width: 100%;
   padding: clamp(1.5rem, 3vw, 2.75rem);
 }
 

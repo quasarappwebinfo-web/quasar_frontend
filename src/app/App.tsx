@@ -5,7 +5,6 @@ import {
   PublicOnlyRoute,
   RequirePermission,
 } from '@/app/routing/RouteGuards'
-import { PlaceholderPage } from '@/app/ui/PlaceholderPage'
 import { LoginPage } from '@/auth'
 import { IdentidadPage } from '@/identidad'
 import { PersonasPanel } from '@/identidad/ui/PersonasPanel'
@@ -19,6 +18,7 @@ import {
   TiposDocumentoPanel,
   TiposVentaPanel,
 } from '@/obras'
+import { ReportsPage } from '@/reportes/ui/ReportsPage'
 import { RrhhPage } from '@/rrhh'
 import { CargosPanel } from '@/rrhh/ui/CargosPanel'
 import { EspecialidadesPanel } from '@/rrhh/ui/EspecialidadesPanel'
@@ -33,7 +33,7 @@ import {
   VersionEditorPage,
   ZonasPanel,
 } from '@/task-pool'
-import { TasksHubPage, TasksKanbanPage } from '@/tareas'
+import { PhotoGalleryPage, TasksHubPage, TasksKanbanPage } from '@/tareas'
 import {
   WorkPlanComparePage,
   WorkPlanDetailPage,
@@ -56,15 +56,7 @@ export function App() {
 
             <Route element={<RequirePermission permission="obras" />}>
               <Route path="/dashboard/obras/:obraId" element={<ObraDetailPage />} />
-              <Route
-                path="/reports"
-                element={
-                  <PlaceholderPage
-                    title="Reportes"
-                    description="Aquí irán reportes y avances."
-                  />
-                }
-              />
+              <Route path="/reports" element={<ReportsPage />} />
             </Route>
 
             <Route
@@ -75,7 +67,10 @@ export function App() {
               <Route path="/dashboard/maestros" element={<MaestrosObrasPage />}>
                 <Route index element={<Navigate to="tipos-venta" replace />} />
                 <Route path="tipos-venta" element={<TiposVentaPanel />} />
-                <Route path="etapas" element={<EtapasObraPanel />} />
+                <Route
+                  path="etapas"
+                  element={<Navigate to="/maestros/task-pool/etapas" replace />}
+                />
                 <Route path="tipos-documento" element={<TiposDocumentoPanel />} />
               </Route>
             </Route>
@@ -84,6 +79,10 @@ export function App() {
               <Route
                 path="/dashboard/obras/:obraId/tareas"
                 element={<TasksKanbanPage />}
+              />
+              <Route
+                path="/dashboard/obras/:obraId/galeria"
+                element={<PhotoGalleryPage />}
               />
               <Route path="/tasks" element={<TasksHubPage />} />
             </Route>
@@ -109,8 +108,13 @@ export function App() {
               }
             >
               <Route path="/maestros/task-pool" element={<TaskPoolPage />}>
-                <Route index element={<Navigate to="categorias" replace />} />
-                <Route path="categorias" element={<CategoriasPanel />} />
+                <Route index element={<Navigate to="etapas" replace />} />
+                <Route path="etapas" element={<EtapasObraPanel />} />
+                <Route path="capitulos" element={<CategoriasPanel />} />
+                <Route
+                  path="categorias"
+                  element={<Navigate to="/maestros/task-pool/capitulos" replace />}
+                />
                 <Route path="zonas" element={<ZonasPanel />} />
                 <Route
                   path="actividades-presupuestales"

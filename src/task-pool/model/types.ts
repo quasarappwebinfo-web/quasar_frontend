@@ -10,7 +10,7 @@ export type DependencyType =
   | 'finish_to_finish'
   | 'start_to_finish'
 
-export type TaskCategory = {
+type NamedCatalog = {
   id: number
   name: string
   description: string | null
@@ -19,63 +19,82 @@ export type TaskCategory = {
   createdAt?: string | null
 }
 
-export type TaskCategoryWrite = {
-  name: string
-  description?: string | null
-  displayOrder: number
+export type TaskChapter = NamedCatalog & {
+  stageId: number | null
+  stageName: string | null
+  weightPercent: number | string | null
 }
 
-export type TaskCategoryUpdate = {
+export type TaskChapterWrite = {
+  name: string
+  stageId: number
+  description?: string | null
+  displayOrder?: number
+  weightPercent?: number | null
+}
+
+export type TaskChapterUpdate = {
+  name?: string
+  stageId?: number | null
+  description?: string | null
+  displayOrder?: number
+  weightPercent?: number | null
+  isActive?: ActiveStatus
+}
+
+export type TaskZone = NamedCatalog
+export type TaskZoneWrite = {
+  name: string
+  description?: string | null
+  displayOrder?: number
+}
+export type TaskZoneUpdate = {
   name?: string
   description?: string | null
   displayOrder?: number
   isActive?: ActiveStatus
 }
 
-export type TaskZone = TaskCategory
-export type TaskZoneWrite = TaskCategoryWrite
-export type TaskZoneUpdate = TaskCategoryUpdate
-
 export type TaskBudgetActivity = {
   id: number
-  categoryId: number | null
-  categoryName: string | null
+  chapterId: number | null
+  chapterName: string | null
   zoneId: number | null
   zoneName: string | null
   name: string
   description: string | null
   displayOrder: number
-  categoryWeightPercent: number | string | null
+  chapterWeightPercent: number | string | null
   zoneWeightPercent: number | string | null
   isActive: ActiveStatus
   createdAt?: string | null
 }
 
 export type TaskBudgetActivityWrite = {
-  categoryId: number
+  chapterId: number
   zoneId?: number | null
   name: string
   description?: string | null
-  displayOrder: number
-  categoryWeightPercent?: number | null
+  displayOrder?: number
+  chapterWeightPercent?: number | null
   zoneWeightPercent?: number | null
 }
 
 export type TaskBudgetActivityUpdate = {
-  categoryId?: number
+  chapterId?: number
   zoneId?: number | null
   name?: string
   description?: string | null
   displayOrder?: number
-  categoryWeightPercent?: number | null
+  chapterWeightPercent?: number | null
   zoneWeightPercent?: number | null
   isActive?: ActiveStatus
 }
 
 export type TaskTemplate = {
   id: number
-  categoryId: number
-  categoryName: string | null
+  chapterId: number
+  chapterName: string | null
   zoneId: number | null
   zoneName: string | null
   budgetActivityId: number | null
@@ -89,22 +108,20 @@ export type TaskTemplate = {
 }
 
 export type TaskTemplateWrite = {
-  categoryId: number
-  zoneId: number
+  chapterId: number
+  zoneId?: number | null
   budgetActivityId: number
   name: string
   code: string
   description?: string | null
-  budgetWeightPercent?: number | null
 }
 
 export type TaskTemplateUpdate = {
-  categoryId?: number
+  chapterId?: number
   zoneId?: number | null
   budgetActivityId?: number | null
   name?: string
   description?: string | null
-  budgetWeightPercent?: number | null
   isActive?: ActiveStatus
 }
 
@@ -193,13 +210,20 @@ export type VersionDependency = {
   createdAt?: string | null
 }
 
+export type PreferredCrew = {
+  id: number
+  crewId?: number | null
+  crewName?: string | null
+  isPreferred?: number | null
+}
+
 export type VersionDetail = {
   version: TaskTemplateVersion
   measurements: VersionMeasurement[]
   positions: VersionPosition[]
   subtasks: VersionSubtask[]
   dependencies: VersionDependency[]
-  preferredCrews?: unknown[]
+  preferredCrews?: PreferredCrew[]
 }
 
 export type RecommendedPosition = {

@@ -17,7 +17,14 @@ export async function listCrews(params: {
   activeOnly?: boolean
   obraId?: number
 }): Promise<CrewsResponse> {
-  return apiJson(`/api/v1/rrhh/cuadrillas${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/rrhh/cuadrillas${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+      obra_id: params.obraId,
+    })}`,
+  )
 }
 
 export async function createCrew(payload: {
@@ -51,7 +58,10 @@ export async function listCrewMembers(
   params?: { page?: number; currentOnly?: boolean },
 ): Promise<MembersResponse> {
   return apiJson(
-    `/api/v1/rrhh/cuadrillas/${crewId}/miembros${buildQuery(params ?? {})}`,
+    `/api/v1/rrhh/cuadrillas/${crewId}/miembros${buildQuery({
+      page: params?.page,
+      current_only: params?.currentOnly,
+    })}`,
   )
 }
 

@@ -11,7 +11,10 @@ export async function listObraClients(
   params?: { page?: number; currentOnly?: boolean },
 ): Promise<ClientsResponse> {
   return apiJson(
-    `/api/v1/obras/${obraId}/clientes${buildQuery(params ?? {})}`,
+    `/api/v1/obras/${obraId}/clientes${buildQuery({
+      page: params?.page,
+      current_only: params?.currentOnly,
+    })}`,
   )
 }
 
@@ -50,7 +53,7 @@ export async function closeObraClient(
   endDate?: string,
 ): Promise<ObraClient> {
   return apiJson(
-    `/api/v1/obras/clientes/${clientId}/cerrar${buildQuery({ endDate })}`,
+    `/api/v1/obras/clientes/${clientId}/cerrar${buildQuery({ end_date: endDate })}`,
     { method: 'PUT' },
   )
 }

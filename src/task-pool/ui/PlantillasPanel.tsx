@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listActiveTaskCategories } from '@/task-pool/api/categoriasApi'
+import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
 import { listActiveTaskZones } from '@/task-pool/api/zonasApi'
 import { listActiveTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuestalesApi'
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/task-pool/api/plantillasApi'
 import type {
   TaskBudgetActivity,
-  TaskCategory,
+  TaskChapter,
   TaskTemplate,
   TaskZone,
 } from '@/task-pool/model/types'
@@ -35,13 +35,13 @@ export function PlantillasPanel() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
-  const [categoryId, setCategoryId] = useState('')
+  const [chapterId, setChapterId] = useState('')
   const [zoneId, setZoneId] = useState('')
   const [budgetActivityId, setBudgetActivityId] = useState('')
   const [activeOnly, setActiveOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<TaskTemplate[]>([])
-  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [categories, setCategories] = useState<TaskChapter[]>([])
   const [zones, setZones] = useState<TaskZone[]>([])
   const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>(
     [],
@@ -55,16 +55,15 @@ export function PlantillasPanel() {
   const [editing, setEditing] = useState<TaskTemplate | null>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
-  const [formCategoryId, setFormCategoryId] = useState('')
+  const [formChapterId, setFormChapterId] = useState('')
   const [formZoneId, setFormZoneId] = useState('')
   const [formBudgetActivityId, setFormBudgetActivityId] = useState('')
   const [description, setDescription] = useState('')
-  const [budgetWeightPercent, setBudgetWeightPercent] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
-    void listActiveTaskCategories()
+    void listActiveTaskChapters()
       .then(setCategories)
       .catch(() => setCategories([]))
     void listActiveTaskZones()
@@ -76,16 +75,16 @@ export function PlantillasPanel() {
   }, [])
 
   const filterBudgetActivities = useMemo(() => {
-    if (!categoryId) return budgetActivities
-    const cat = Number(categoryId)
-    return budgetActivities.filter((a) => a.categoryId === cat)
-  }, [budgetActivities, categoryId])
+    if (!chapterId) return budgetActivities
+    const cat = Number(chapterId)
+    return budgetActivities.filter((a) => a.chapterId === cat)
+  }, [budgetActivities, chapterId])
 
   const formBudgetActivities = useMemo(() => {
-    if (!formCategoryId) return []
-    const cat = Number(formCategoryId)
-    return budgetActivities.filter((a) => a.categoryId === cat)
-  }, [budgetActivities, formCategoryId])
+    if (!formChapterId) return []
+    const cat = Number(formChapterId)
+    return budgetActivities.filter((a) => a.chapterId === cat)
+  }, [budgetActivities, formChapterId])
 
   useEffect(() => {
     if (!formBudgetActivityId) return
@@ -106,7 +105,7 @@ export function PlantillasPanel() {
       const data = await listTaskTemplates({
         page,
         search: debouncedSearch,
-        categoryId: categoryId ? Number(categoryId) : undefined,
+        chapterId: chapterId ? Number(chapterId) : undefined,
         zoneId: zoneId ? Number(zoneId) : undefined,
         budgetActivityId: budgetActivityId
           ? Number(budgetActivityId)
@@ -121,7 +120,7 @@ export function PlantillasPanel() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, categoryId, zoneId, budgetActivityId, activeOnly])
+  }, [page, debouncedSearch, chapterId, zoneId, budgetActivityId, activeOnly])
 
   useEffect(() => {
     void load()
@@ -131,13 +130,13 @@ export function PlantillasPanel() {
     setEditing(null)
     setName('')
     setCode('')
-    setFormCategoryId(categoryId || (categories[0] ? String(categories[0].id) : ''))
-    setFormZoneId(zoneId || (zones[0] ? String(zones[0].id) : ''))
+    setFormChapterId(chapterId || (categories[0] ? String(categories[0].id) : ''))
+    setFormZoneId(zoneId || '')
     const initialCat = Number(
-      categoryId || (categories[0] ? String(categories[0].id) : ''),
+      chapterId || (categories[0] ? String(categories[0].id) : ''),
     )
     const activitiesForCat = budgetActivities.filter(
-      (a) => a.categoryId === initialCat,
+      (a) => a.chapterId === initialCat,
     )
     setFormBudgetActivityId(
       budgetActivityId &&
@@ -148,7 +147,6 @@ export function PlantillasPanel() {
           : '',
     )
     setDescription('')
-    setBudgetWeightPercent('')
     setFormError(null)
     setModalOpen(true)
   }
@@ -157,44 +155,30 @@ export function PlantillasPanel() {
     setEditing(item)
     setName(item.name)
     setCode(item.code)
-    setFormCategoryId(String(item.categoryId))
+    setFormChapterId(String(item.chapterId))
     setFormZoneId(item.zoneId ? String(item.zoneId) : '')
     setFormBudgetActivityId(
       item.budgetActivityId ? String(item.budgetActivityId) : '',
     )
     setDescription(item.description || '')
-    setBudgetWeightPercent(
-      item.budgetWeightPercent != null ? String(item.budgetWeightPercent) : '',
-    )
     setFormError(null)
     setModalOpen(true)
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const catId = Number(formCategoryId)
-    const zId = Number(formZoneId)
+    const catId = Number(formChapterId)
+    const zId = formZoneId ? Number(formZoneId) : null
     const baId = Number(formBudgetActivityId)
-    const budgetWeight = budgetWeightPercent
-      ? Number(budgetWeightPercent)
-      : null
     if (
       !name.trim() ||
       (!editing && !code.trim()) ||
       Number.isNaN(catId) ||
-      Number.isNaN(zId) ||
       Number.isNaN(baId)
     ) {
       setFormError(
-        'Categoría, zona, actividad presupuestal, nombre y código son obligatorios.',
+        'Capítulo, actividad presupuestal, nombre y código son obligatorios.',
       )
-      return
-    }
-    if (
-      budgetWeight != null &&
-      (Number.isNaN(budgetWeight) || budgetWeight < 0 || budgetWeight > 100)
-    ) {
-      setFormError('El % hacia la actividad presupuestal debe estar entre 0 y 100.')
       return
     }
     setSaving(true)
@@ -202,24 +186,22 @@ export function PlantillasPanel() {
     try {
       if (editing) {
         await updateTaskTemplate(editing.id, {
-          categoryId: catId,
+          chapterId: catId,
           zoneId: zId,
           budgetActivityId: baId,
           name: name.trim(),
           description: description.trim() || null,
-          budgetWeightPercent: budgetWeight,
           isActive: editing.isActive,
         })
         toast.success('Actividad Registrada actualizada')
       } else {
         await createTaskTemplate({
-          categoryId: catId,
+          chapterId: catId,
           zoneId: zId,
           budgetActivityId: baId,
           name: name.trim(),
           code: code.trim().toUpperCase(),
           description: description.trim() || null,
-          budgetWeightPercent: budgetWeight,
         })
         toast.success('Actividad Registrada creada')
       }
@@ -268,21 +250,44 @@ export function PlantillasPanel() {
             </Field>
           </div>
           <Field
-            label="Categoría"
-            help="Filtra Actividades Registradas que pertenecen a una categoría de la Base Datos Actividades."
+            label="Capítulo"
+            help="Filtra Actividades Registradas que pertenecen a un capítulo de la Base Datos Actividades."
           >
             <TextSelect
-              value={categoryId}
+              value={chapterId}
               onChange={(e) => {
-                setCategoryId(e.target.value)
+                setChapterId(e.target.value)
                 setBudgetActivityId('')
                 setPage(1)
               }}
             >
-              <option value="">Todas</option>
+              <option value="">Todos</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          <Field
+            label="Actividad presupuestal"
+            help={
+              chapterId
+                ? 'Solo actividades del capítulo filtrado.'
+                : 'Elige un capítulo para filtrar actividades, o deja «Todas».'
+            }
+          >
+            <TextSelect
+              value={budgetActivityId}
+              onChange={(e) => {
+                setBudgetActivityId(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="">Todas</option>
+              {filterBudgetActivities.map((activity) => (
+                <option key={activity.id} value={activity.id}>
+                  {activity.name}
                 </option>
               ))}
             </TextSelect>
@@ -299,29 +304,6 @@ export function PlantillasPanel() {
               {zones.map((zone) => (
                 <option key={zone.id} value={zone.id}>
                   {zone.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Actividad presupuestal"
-            help={
-              categoryId
-                ? 'Solo actividades de la categoría filtrada.'
-                : 'Elige una categoría para filtrar actividades, o deja «Todas».'
-            }
-          >
-            <TextSelect
-              value={budgetActivityId}
-              onChange={(e) => {
-                setBudgetActivityId(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todas</option>
-              {filterBudgetActivities.map((activity) => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.name}
                 </option>
               ))}
             </TextSelect>
@@ -366,15 +348,9 @@ export function PlantillasPanel() {
               </div>
               <div className={styles.cardMeta}>
                 <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Categoría</span>
+                  <span className={styles.metaLabel}>Capítulo</span>
                   <span className={styles.metaValue}>
-                    {item.categoryName || `ID ${item.categoryId}`}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Zona</span>
-                  <span className={styles.metaValue}>
-                    {item.zoneName || (item.zoneId ? `ID ${item.zoneId}` : '—')}
+                    {item.chapterName || `ID ${item.chapterId}`}
                   </span>
                 </div>
                 <div className={styles.metaRow}>
@@ -387,6 +363,12 @@ export function PlantillasPanel() {
                     {item.budgetWeightPercent != null
                       ? ` · ${item.budgetWeightPercent}%`
                       : ''}
+                  </span>
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaLabel}>Zona</span>
+                  <span className={styles.metaValue}>
+                    {item.zoneName || (item.zoneId ? `ID ${item.zoneId}` : '—')}
                   </span>
                 </div>
                 {item.description ? (
@@ -444,13 +426,13 @@ export function PlantillasPanel() {
         <form id="task-template-form" className={styles.formGrid} onSubmit={handleSubmit}>
           {formError ? <Alert tone="error">{formError}</Alert> : null}
           <Field
-            label="Categoría"
+            label="Capítulo"
             help="Grupo constructivo amplio (ej. Estructura). Define qué actividades presupuestales puedes elegir."
           >
             <TextSelect
-              value={formCategoryId}
+              value={formChapterId}
               onChange={(e) => {
-                setFormCategoryId(e.target.value)
+                setFormChapterId(e.target.value)
                 setFormBudgetActivityId('')
               }}
               required
@@ -464,38 +446,21 @@ export function PlantillasPanel() {
             </TextSelect>
           </Field>
           <Field
-            label="Zona"
-            help="Ámbito de la obra (ej. Casa, Zona social)."
-          >
-            <TextSelect
-              value={formZoneId}
-              onChange={(e) => setFormZoneId(e.target.value)}
-              required
-            >
-              <option value="">Seleccionar…</option>
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field
             label="Actividad presupuestal"
-            help="Solo se listan actividades de la categoría elegida."
+            help="Solo se listan actividades del capítulo elegido."
           >
             <TextSelect
               value={formBudgetActivityId}
               onChange={(e) => setFormBudgetActivityId(e.target.value)}
               required
-              disabled={!formCategoryId}
+              disabled={!formChapterId}
             >
               <option value="">
-                {formCategoryId
+                {formChapterId
                   ? formBudgetActivities.length === 0
-                    ? 'Sin actividades en esta categoría'
+                    ? 'Sin actividades en este capítulo'
                     : 'Seleccionar…'
-                  : 'Elige categoría primero'}
+                  : 'Elige capítulo primero'}
               </option>
               {formBudgetActivities.map((activity) => (
                 <option key={activity.id} value={activity.id}>
@@ -505,18 +470,20 @@ export function PlantillasPanel() {
             </TextSelect>
           </Field>
           <Field
-            label="% hacia la actividad presupuestal"
-            help="Cuánto aporta esta Actividad Registrada al 100% de su actividad presupuestal."
+            label="Zona"
+            help="Opcional. Ámbito de la obra (ej. Casa, Zona social). La actividad se puede guardar sin zona."
           >
-            <TextInput
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={budgetWeightPercent}
-              onChange={(e) => setBudgetWeightPercent(e.target.value)}
-              placeholder="ej. 20"
-            />
+            <TextSelect
+              value={formZoneId}
+              onChange={(e) => setFormZoneId(e.target.value)}
+            >
+              <option value="">Sin zona</option>
+              {zones.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.name}
+                </option>
+              ))}
+            </TextSelect>
           </Field>
           <Field
             label="Nombre"

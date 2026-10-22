@@ -22,7 +22,6 @@ import {
   updateVersionSubtask,
 } from '@/task-pool/api/versionesApi'
 import type {
-  DependencyType,
   MeasurementUnit,
   TaskTemplate,
   VersionDetail,
@@ -49,6 +48,13 @@ import { RecomendarModal } from './RecomendarModal'
 import styles from './taskPool.module.css'
 
 type DetailTab = 'unidades' | 'cargos' | 'subactividades' | 'dependencias'
+
+function optionalPositive(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const number = Number(trimmed)
+  return Number.isFinite(number) ? number : null
+}
 
 const TABS: { id: DetailTab; label: string }[] = [
   { id: 'unidades', label: 'Unidades' },
@@ -230,16 +236,24 @@ export function VersionEditorPage() {
   async function saveHeader(event: FormEvent) {
     event.preventDefault()
     if (!isDraft) return
-    const qty = Number(baseQuantity)
-    const days = Number(baseDurationDays)
+    const qty = optionalPositive(baseQuantity)
+    const days = optionalPositive(baseDurationDays)
+    if (baseQuantity.trim() && qty == null) {
+      setHeaderError('La cantidad base, si la indicas, debe ser un número.')
+      return
+    }
+    if (baseDurationDays.trim() && days == null) {
+      setHeaderError('La duración base, si la indicas, debe ser un número.')
+      return
+    }
     setSavingHeader(true)
     setHeaderError(null)
     try {
       await updateTaskTemplateVersion(id, {
         name: name.trim(),
         description: description.trim() || null,
-        baseQuantity: Number.isFinite(qty) ? qty : null,
-        baseDurationDays: Number.isFinite(days) ? days : null,
+        baseQuantity: qty,
+        baseDurationDays: days,
       })
       toast.success('Cabecera guardada')
       await load()
@@ -400,13 +414,12 @@ export function VersionEditorPage() {
             </Field>
             <Field
               label="Unidad de medida"
-              help="Elige primero la unidad (m³, m², und…). La cantidad base se interpreta en esa unidad. Queda como unidad primaria de la versión."
+              help="Opcional. Si la eliges, queda como unidad primaria de la versión."
             >
               <TextSelect
                 value={selectedUnitId}
                 onChange={(e) => void handlePrimaryUnitChange(e.target.value)}
                 disabled={!isDraft || savingUnit}
-                required
               >
                 <option value="">
                   {savingUnit ? 'Guardando…' : 'Seleccionar unidad…'}
@@ -425,25 +438,20 @@ export function VersionEditorPage() {
                     ? `Cantidad base (${primaryUnit.unitSymbol})`
                     : 'Cantidad base'
                 }
-                help="Volumen de referencia en la unidad elegida arriba (ej. 100 m³). Debe ser > 0 para publicar."
+                help="Opcional. Volumen de referencia (ej. 100). No hace falta para guardar ni para publicar. Sí hace falta, junto con la duración, para recomendar."
               >
                 <TextInput
                   type="number"
                   step="any"
                   value={baseQuantity}
                   onChange={(e) => setBaseQuantity(e.target.value)}
-                  disabled={!isDraft || !selectedUnitId}
-                  placeholder={
-                    selectedUnitId
-                      ? 'Ej. 100'
-                      : 'Selecciona unidad primero'
-                  }
-                  required
+                  disabled={!isDraft}
+                  placeholder="Ej. 100"
                 />
               </Field>
               <Field
                 label="Duración base (días)"
-                help="Días estimados para ejecutar la cantidad base. Debe ser > 0 para publicar."
+                help="Opcional. Días para la cantidad base. No hace falta para publicar."
               >
                 <TextInput
                   type="number"
@@ -451,7 +459,6 @@ export function VersionEditorPage() {
                   value={baseDurationDays}
                   onChange={(e) => setBaseDurationDays(e.target.value)}
                   disabled={!isDraft}
-                  required
                 />
               </Field>
             </div>
@@ -514,6 +521,16 @@ export function VersionEditorPage() {
                 {detail.dependencies.length}
               </span>
             </div>
+            {detail.preferredCrews && detail.preferredCrews.length > 0 ? (
+              <div className={styles.metaRow}>
+                <span className={styles.metaLabel}>Cuadrillas</span>
+                <span className={styles.metaValue}>
+                  {detail.preferredCrews
+                    .map((crew) => crew.crewName || `ID ${crew.crewId ?? crew.id}`)
+                    .join(', ')}
+                </span>
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
@@ -592,7 +609,6 @@ function UnidadesTab({
 }) {
   const toast = useToast()
   const [unitId, setUnitId] = useState('')
-  const [isPrimary, setIsPrimary] = useState(true)
   const [saving, setSaving] = useState(false)
 
   async function handleAdd(event: FormEvent) {
@@ -601,10 +617,7 @@ function UnidadesTab({
     if (!id) return
     setSaving(true)
     try {
-      await addVersionMeasurement(detail.version.id, {
-        unitId: id,
-        isPrimary: isPrimary ? 1 : 0,
-      })
+      await addVersionMeasurement(detail.version.id, { unitId: id })
       toast.success('Unidad agregada')
       setUnitId('')
       await onChanged()
@@ -644,18 +657,6 @@ function UnidadesTab({
                   {u.symbol} — {u.name}
                 </option>
               ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Primaria"
-            help="La unidad primaria es la principal de la versión. Si marcas Sí, las demás dejan de ser primarias."
-          >
-            <TextSelect
-              value={isPrimary ? '1' : '0'}
-              onChange={(e) => setIsPrimary(e.target.value === '1')}
-            >
-              <option value="1">Sí</option>
-              <option value="0">No</option>
             </TextSelect>
           </Field>
           <div className={styles.inlineFormFull}>
@@ -721,7 +722,6 @@ function CargosTab({
   const [workerPositionId, setWorkerPositionId] = useState('')
   const [specialtyId, setSpecialtyId] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [isRequired, setIsRequired] = useState(true)
   const [saving, setSaving] = useState(false)
   const [qtyDrafts, setQtyDrafts] = useState<Record<number, string>>({})
   const [savingQtyId, setSavingQtyId] = useState<number | null>(null)
@@ -783,7 +783,6 @@ function CargosTab({
         workerPositionId: posId,
         specialtyId: specId,
         quantity: qty,
-        isRequired: isRequired ? 1 : 0,
       })
       toast.success('Cargo agregado')
       setWorkerPositionId('')
@@ -984,18 +983,6 @@ function CargosTab({
               required
             />
           </Field>
-          <Field
-            label="Requerido"
-            help="Si es requerido, el cargo se considera indispensable en la recomendación y en obra (Fase 6)."
-          >
-            <TextSelect
-              value={isRequired ? '1' : '0'}
-              onChange={(e) => setIsRequired(e.target.value === '1')}
-            >
-              <option value="1">Sí</option>
-              <option value="0">No</option>
-            </TextSelect>
-          </Field>
           <div className={styles.inlineFormFull}>
             <Button type="submit" disabled={saving}>
               {saving ? 'Agregando…' : 'Agregar cargo'}
@@ -1173,9 +1160,7 @@ function SubactividadesTab({
   const toast = useToast()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [displayOrder, setDisplayOrder] = useState('1')
-  const [weightPercent, setWeightPercent] = useState('0')
-  const [isRequired, setIsRequired] = useState(true)
+  const [weightPercent, setWeightPercent] = useState('')
   const [saving, setSaving] = useState(false)
 
   const weightSum = detail.subtasks.reduce(
@@ -1186,8 +1171,8 @@ function SubactividadesTab({
   async function handleAdd(event: FormEvent) {
     event.preventDefault()
     if (!name.trim()) return
-    const weight = Number(weightPercent)
-    if (Number.isNaN(weight) || weight < 0 || weight > 100) {
+    const weight = weightPercent.trim() ? Number(weightPercent) : undefined
+    if (weight != null && (Number.isNaN(weight) || weight < 0 || weight > 100)) {
       toast.error('El % de la subactividad debe estar entre 0 y 100')
       return
     }
@@ -1196,15 +1181,12 @@ function SubactividadesTab({
       await addVersionSubtask(detail.version.id, {
         name: name.trim(),
         description: description.trim() || null,
-        displayOrder: Number(displayOrder) || 1,
-        isRequired: isRequired ? 1 : 0,
         weightPercent: weight,
       })
       toast.success('Subactividad agregada')
       setName('')
       setDescription('')
-      setDisplayOrder(String(detail.subtasks.length + 2))
-      setWeightPercent('0')
+      setWeightPercent('')
       await onChanged()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo agregar')
@@ -1220,17 +1202,6 @@ function SubactividadesTab({
       await onChanged()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo eliminar')
-    }
-  }
-
-  async function toggleRequired(itemId: number, current: unknown) {
-    try {
-      await updateVersionSubtask(itemId, {
-        isRequired: asFlag(current) ? 0 : 1,
-      })
-      await onChanged()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar')
     }
   }
 
@@ -1251,11 +1222,9 @@ function SubactividadesTab({
   return (
     <section className={styles.panel}>
       <p className={styles.muted}>
-        Cada subactividad aporta un % al 100% de la actividad. Suma actual:{' '}
+        Opcional. Cada subactividad puede aportar un % al 100% de la actividad.
+        No hace falta que sumen 100 para publicar. Suma actual:{' '}
         <strong>{weightSum.toFixed(1)}%</strong>
-        {Math.abs(weightSum - 100) > 0.05
-          ? ' (debe ser 100 antes de publicar)'
-          : ' ✓'}
       </p>
       {editable ? (
         <form className={styles.inlineForm} onSubmit={handleAdd}>
@@ -1270,18 +1239,8 @@ function SubactividadesTab({
             />
           </Field>
           <Field
-            label="Orden"
-            help="Orden de aparición de la subactividad (1, 2, 3…). Menor número = primero."
-          >
-            <TextInput
-              type="number"
-              value={displayOrder}
-              onChange={(e) => setDisplayOrder(e.target.value)}
-            />
-          </Field>
-          <Field
             label="% de la actividad"
-            help="Cuánto aporta esta subactividad al 100% de la actividad."
+            help="Opcional. Si lo dejas vacío, queda en 0."
           >
             <TextInput
               type="number"
@@ -1290,20 +1249,8 @@ function SubactividadesTab({
               step={0.01}
               value={weightPercent}
               onChange={(e) => setWeightPercent(e.target.value)}
-              required
+              placeholder="0"
             />
-          </Field>
-          <Field
-            label="Requerida"
-            help="Si es requerida, el paso no debería omitirse al ejecutar la actividad en obra."
-          >
-            <TextSelect
-              value={isRequired ? '1' : '0'}
-              onChange={(e) => setIsRequired(e.target.value === '1')}
-            >
-              <option value="1">Sí</option>
-              <option value="0">No</option>
-            </TextSelect>
           </Field>
           <Field
             label="Descripción"
@@ -1367,13 +1314,6 @@ function SubactividadesTab({
                 {editable ? (
                   <div className={styles.rowActions}>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void toggleRequired(item.id, item.isRequired)}
-                    >
-                      {asFlag(item.isRequired) ? 'Opcional' : 'Requerida'}
-                    </Button>
-                    <Button
                       variant="danger"
                       size="sm"
                       onClick={() => void handleDelete(item.id)}
@@ -1403,10 +1343,6 @@ function DependenciasTab({
 }) {
   const toast = useToast()
   const [dependsOnTemplateId, setDependsOnTemplateId] = useState('')
-  const [dependencyType, setDependencyType] =
-    useState<DependencyType>('finish_to_start')
-  const [isRequired, setIsRequired] = useState(true)
-  const [blocksStart, setBlocksStart] = useState(true)
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -1418,9 +1354,6 @@ function DependenciasTab({
     try {
       await addVersionDependency(detail.version.id, {
         dependsOnTemplateId: tplId,
-        dependencyType,
-        isRequired: isRequired ? 1 : 0,
-        blocksStart: blocksStart ? 1 : 0,
         description: description.trim() || null,
       })
       toast.success('Dependencia agregada')
@@ -1463,49 +1396,6 @@ function DependenciasTab({
                   {t.code} — {t.name}
                 </option>
               ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Tipo"
-            help="Relación temporal: Fin→Inicio (default), Inicio→Inicio, Fin→Fin o Inicio→Fin."
-          >
-            <TextSelect
-              value={dependencyType}
-              onChange={(e) =>
-                setDependencyType(e.target.value as DependencyType)
-              }
-            >
-              {(Object.keys(DEPENDENCY_TYPE_LABELS) as DependencyType[]).map(
-                (key) => (
-                  <option key={key} value={key}>
-                    {DEPENDENCY_TYPE_LABELS[key]}
-                  </option>
-                ),
-              )}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Requerida"
-            help="Si es requerida, la dependencia no debería ignorarse al planificar la obra."
-          >
-            <TextSelect
-              value={isRequired ? '1' : '0'}
-              onChange={(e) => setIsRequired(e.target.value === '1')}
-            >
-              <option value="1">Sí</option>
-              <option value="0">No</option>
-            </TextSelect>
-          </Field>
-          <Field
-            label="Bloquea inicio"
-            help="Si es Sí, esta actividad no debería empezar hasta cumplir la dependencia."
-          >
-            <TextSelect
-              value={blocksStart ? '1' : '0'}
-              onChange={(e) => setBlocksStart(e.target.value === '1')}
-            >
-              <option value="1">Sí</option>
-              <option value="0">No</option>
             </TextSelect>
           </Field>
           <Field

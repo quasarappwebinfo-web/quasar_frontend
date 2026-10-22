@@ -108,8 +108,8 @@ export function WorkPlansPage() {
           </button>
           <h1 className={styles.title}>Planificación</h1>
           <p className={styles.subtitle}>
-            {obraName || `Obra #${obraId}`} · define un periodo y selecciona las
-            actividades a ejecutar; luego fírmalo.
+            {obraName || `Obra #${obraId}`} · define un periodo, registra
+            actividades y trae las que quedaron pendientes.
           </p>
         </div>
         <div className={styles.actions}>

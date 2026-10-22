@@ -54,7 +54,7 @@
   position: relative;
   border: 0;
   background: transparent;
-  color: #8a9098;
+  color: #3a3f46;
   padding: 0.7rem 0.1rem 0.85rem;
   font: inherit;
   font-family: 'Questrial', var(--font-sans);
@@ -82,10 +82,11 @@
 
 .tabActive {
   color: var(--color-brand-blue);
+  font-weight: 600;
 }
 
 .tabActive::after {
-  background: var(--color-brand-blue-46);
+  background: var(--color-brand-blue);
 }
 
 .toolbar {
@@ -387,5 +388,32 @@
   .rowActions :global(button) {
     flex: 1 1 calc(50% - 0.55rem);
     min-height: 2.85rem;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .searchGrow,
+  .filters > * {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .toolbar > :global(button) {
+    width: 100%;
+  }
+
+  .personResults {
+    max-height: none;
+    overflow: visible;
   }
 }

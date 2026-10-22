@@ -27,7 +27,7 @@ export type CatalogItem = {
 type CatalogWrite = {
   name: string
   description?: string | null
-  displayOrder: number
+  displayOrder?: number
 }
 
 type CatalogUpdate = {
@@ -79,7 +79,6 @@ export function CatalogSimplePanel({
   const [editing, setEditing] = useState<CatalogItem | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [displayOrder, setDisplayOrder] = useState('10')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -114,7 +113,6 @@ export function CatalogSimplePanel({
     setEditing(null)
     setName('')
     setDescription('')
-    setDisplayOrder('10')
     setFormError(null)
     setModalOpen(true)
   }
@@ -123,16 +121,14 @@ export function CatalogSimplePanel({
     setEditing(item)
     setName(item.name)
     setDescription(item.description || '')
-    setDisplayOrder(String(item.displayOrder))
     setFormError(null)
     setModalOpen(true)
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const order = Number(displayOrder)
-    if (!name.trim() || Number.isNaN(order)) {
-      setFormError('Nombre y orden son obligatorios.')
+    if (!name.trim()) {
+      setFormError('El nombre es obligatorio.')
       return
     }
     setSaving(true)
@@ -142,7 +138,6 @@ export function CatalogSimplePanel({
         await updateItem(editing.id, {
           name: name.trim(),
           description: description.trim() || null,
-          displayOrder: order,
           isActive: editing.isActive,
         })
         toast.success(`${singular} actualizada`)
@@ -150,7 +145,6 @@ export function CatalogSimplePanel({
         await createItem({
           name: name.trim(),
           description: description.trim() || null,
-          displayOrder: order,
         })
         toast.success(`${singular} creada`)
       }
@@ -291,17 +285,6 @@ export function CatalogSimplePanel({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={nameExample}
-              required
-            />
-          </Field>
-          <Field
-            label="Orden de visualización"
-            help="Menor número aparece primero (ej. 10, 20, 30)."
-          >
-            <TextInput
-              type="number"
-              value={displayOrder}
-              onChange={(e) => setDisplayOrder(e.target.value)}
               required
             />
           </Field>

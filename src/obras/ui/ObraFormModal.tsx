@@ -359,7 +359,10 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
               </TextSelect>
             </Field>
           ) : (
-            <Field label="Etapa actual" hint="Cámbiala en el detalle de la obra">
+            <Field
+              label="Etapa actual"
+              hint="Se elige al crear la obra. El avance de la obra sale de los capítulos."
+            >
               <TextInput
                 disabled
                 value={obra?.currentStageName || 'Sin etapa'}

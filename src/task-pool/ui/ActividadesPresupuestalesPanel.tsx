@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { listActiveTaskCategories } from '@/task-pool/api/categoriasApi'
+import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
 import { listActiveTaskZones } from '@/task-pool/api/zonasApi'
 import {
   createTaskBudgetActivity,
@@ -8,7 +8,7 @@ import {
 } from '@/task-pool/api/actividadesPresupuestalesApi'
 import type {
   TaskBudgetActivity,
-  TaskCategory,
+  TaskChapter,
   TaskZone,
 } from '@/task-pool/model/types'
 import { ApiError } from '@/shared/api/apiJson'
@@ -31,11 +31,11 @@ export function ActividadesPresupuestalesPanel() {
   const toast = useToast()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
-  const [categoryId, setCategoryId] = useState('')
+  const [chapterId, setChapterId] = useState('')
   const [activeOnly, setActiveOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<TaskBudgetActivity[]>([])
-  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [categories, setCategories] = useState<TaskChapter[]>([])
   const [zones, setZones] = useState<TaskZone[]>([])
   const [totalItems, setTotalItems] = useState(0)
   const [itemsPerPage, setItemsPerPage] = useState(15)
@@ -44,18 +44,16 @@ export function ActividadesPresupuestalesPanel() {
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TaskBudgetActivity | null>(null)
-  const [formCategoryId, setFormCategoryId] = useState('')
+  const [formChapterId, setFormChapterId] = useState('')
   const [formZoneId, setFormZoneId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [displayOrder, setDisplayOrder] = useState('10')
-  const [categoryWeightPercent, setCategoryWeightPercent] = useState('')
-  const [zoneWeightPercent, setZoneWeightPercent] = useState('')
+  const [chapterWeightPercent, setChapterWeightPercent] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
-    void listActiveTaskCategories()
+    void listActiveTaskChapters()
       .then(setCategories)
       .catch(() => setCategories([]))
     void listActiveTaskZones()
@@ -70,7 +68,7 @@ export function ActividadesPresupuestalesPanel() {
       const data = await listTaskBudgetActivities({
         page,
         search: debouncedSearch,
-        categoryId: categoryId ? Number(categoryId) : undefined,
+        chapterId: chapterId ? Number(chapterId) : undefined,
         activeOnly: activeOnly || undefined,
       })
       setItems(data.budgetActivities)
@@ -85,7 +83,7 @@ export function ActividadesPresupuestalesPanel() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, categoryId, activeOnly])
+  }, [page, debouncedSearch, chapterId, activeOnly])
 
   useEffect(() => {
     void load()
@@ -93,33 +91,27 @@ export function ActividadesPresupuestalesPanel() {
 
   function openCreate() {
     setEditing(null)
-    setFormCategoryId(
-      categoryId || (categories[0] ? String(categories[0].id) : ''),
+    setFormChapterId(
+      chapterId || (categories[0] ? String(categories[0].id) : ''),
     )
     setFormZoneId('')
     setName('')
     setDescription('')
-    setDisplayOrder('10')
-    setCategoryWeightPercent('')
-    setZoneWeightPercent('')
+    setChapterWeightPercent('')
     setFormError(null)
     setModalOpen(true)
   }
 
   function openEdit(item: TaskBudgetActivity) {
     setEditing(item)
-    setFormCategoryId(item.categoryId ? String(item.categoryId) : '')
+    setFormChapterId(item.chapterId ? String(item.chapterId) : '')
     setFormZoneId(item.zoneId ? String(item.zoneId) : '')
     setName(item.name)
     setDescription(item.description || '')
-    setDisplayOrder(String(item.displayOrder))
-    setCategoryWeightPercent(
-      item.categoryWeightPercent != null
-        ? String(item.categoryWeightPercent)
+    setChapterWeightPercent(
+      item.chapterWeightPercent != null
+        ? String(item.chapterWeightPercent)
         : '',
-    )
-    setZoneWeightPercent(
-      item.zoneWeightPercent != null ? String(item.zoneWeightPercent) : '',
     )
     setFormError(null)
     setModalOpen(true)
@@ -127,23 +119,17 @@ export function ActividadesPresupuestalesPanel() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const catId = Number(formCategoryId)
-    const order = Number(displayOrder)
+    const catId = Number(formChapterId)
     const zoneIdNum = formZoneId ? Number(formZoneId) : null
-    const catWeight = categoryWeightPercent
-      ? Number(categoryWeightPercent)
+    const catWeight = chapterWeightPercent
+      ? Number(chapterWeightPercent)
       : null
-    const zoneWeight = zoneWeightPercent ? Number(zoneWeightPercent) : null
-    if (!name.trim() || Number.isNaN(catId) || Number.isNaN(order)) {
-      setFormError('Categoría, nombre y orden son obligatorios.')
+    if (!name.trim() || Number.isNaN(catId)) {
+      setFormError('Capítulo y nombre son obligatorios.')
       return
     }
-    if (
-      (catWeight != null && (Number.isNaN(catWeight) || catWeight < 0 || catWeight > 100)) ||
-      (zoneWeight != null &&
-        (Number.isNaN(zoneWeight) || zoneWeight < 0 || zoneWeight > 100))
-    ) {
-      setFormError('Los porcentajes deben estar entre 0 y 100.')
+    if (catWeight != null && (Number.isNaN(catWeight) || catWeight < 0 || catWeight > 100)) {
+      setFormError('El % hacia el capítulo debe estar entre 0 y 100.')
       return
     }
     setSaving(true)
@@ -151,25 +137,21 @@ export function ActividadesPresupuestalesPanel() {
     try {
       if (editing) {
         await updateTaskBudgetActivity(editing.id, {
-          categoryId: catId,
+          chapterId: catId,
           zoneId: zoneIdNum,
           name: name.trim(),
           description: description.trim() || null,
-          displayOrder: order,
-          categoryWeightPercent: catWeight,
-          zoneWeightPercent: zoneWeight,
+          chapterWeightPercent: catWeight,
           isActive: editing.isActive,
         })
         toast.success('Actividad presupuestal actualizada')
       } else {
         await createTaskBudgetActivity({
-          categoryId: catId,
+          chapterId: catId,
           zoneId: zoneIdNum,
           name: name.trim(),
           description: description.trim() || null,
-          displayOrder: order,
-          categoryWeightPercent: catWeight,
-          zoneWeightPercent: zoneWeight,
+          chapterWeightPercent: catWeight,
         })
         toast.success('Actividad presupuestal creada')
       }
@@ -177,7 +159,7 @@ export function ActividadesPresupuestalesPanel() {
       await load()
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setFormError('Ese nombre ya existe en la categoría.')
+        setFormError('Ese nombre ya existe en el capítulo.')
       } else {
         setFormError(err instanceof Error ? err.message : 'No se pudo guardar')
       }
@@ -219,17 +201,17 @@ export function ActividadesPresupuestalesPanel() {
             </Field>
           </div>
           <Field
-            label="Categoría"
-            help="Cada actividad presupuestal pertenece a una categoría."
+            label="Capítulo"
+            help="Cada actividad presupuestal pertenece a un capítulo."
           >
             <TextSelect
-              value={categoryId}
+              value={chapterId}
               onChange={(e) => {
-                setCategoryId(e.target.value)
+                setChapterId(e.target.value)
                 setPage(1)
               }}
             >
-              <option value="">Todas</option>
+              <option value="">Todos</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -276,12 +258,12 @@ export function ActividadesPresupuestalesPanel() {
               </div>
               <div className={styles.cardMeta}>
                 <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Categoría</span>
+                  <span className={styles.metaLabel}>Capítulo</span>
                   <span className={styles.metaValue}>
-                    {item.categoryName ||
-                      (item.categoryId ? `ID ${item.categoryId}` : 'Sin categoría')}
-                    {item.categoryWeightPercent != null
-                      ? ` · ${item.categoryWeightPercent}%`
+                    {item.chapterName ||
+                      (item.chapterId ? `ID ${item.chapterId}` : 'Sin capítulo')}
+                    {item.chapterWeightPercent != null
+                      ? ` · ${item.chapterWeightPercent}%`
                       : ''}
                   </span>
                 </div>
@@ -290,9 +272,6 @@ export function ActividadesPresupuestalesPanel() {
                   <span className={styles.metaValue}>
                     {item.zoneName ||
                       (item.zoneId ? `ID ${item.zoneId}` : 'Sin zona')}
-                    {item.zoneWeightPercent != null
-                      ? ` · ${item.zoneWeightPercent}%`
-                      : ''}
                   </span>
                 </div>
                 <div className={styles.metaRow}>
@@ -354,12 +333,12 @@ export function ActividadesPresupuestalesPanel() {
         >
           {formError ? <Alert tone="error">{formError}</Alert> : null}
           <Field
-            label="Categoría"
-            help="La actividad queda ligada a esta categoría (ej. Estructura → Estructura metálica)."
+            label="Capítulo"
+            help="La actividad queda ligada a este capítulo (ej. Estructura → Estructura metálica)."
           >
             <TextSelect
-              value={formCategoryId}
-              onChange={(e) => setFormCategoryId(e.target.value)}
+              value={formChapterId}
+              onChange={(e) => setFormChapterId(e.target.value)}
               required
             >
               <option value="">Seleccionar…</option>
@@ -371,16 +350,16 @@ export function ActividadesPresupuestalesPanel() {
             </TextSelect>
           </Field>
           <Field
-            label="% hacia la categoría"
-            help="Cuánto aporta esta actividad presupuestal al 100% de su categoría."
+            label="% hacia el capítulo"
+            help="Cuánto aporta esta actividad presupuestal al 100% de su capítulo."
           >
             <TextInput
               type="number"
               min={0}
               max={100}
               step={0.01}
-              value={categoryWeightPercent}
-              onChange={(e) => setCategoryWeightPercent(e.target.value)}
+              value={chapterWeightPercent}
+              onChange={(e) => setChapterWeightPercent(e.target.value)}
               placeholder="ej. 25"
             />
           </Field>
@@ -401,21 +380,6 @@ export function ActividadesPresupuestalesPanel() {
             </TextSelect>
           </Field>
           <Field
-            label="% hacia la zona"
-            help="Cuánto aporta esta actividad presupuestal al 100% de su zona."
-          >
-            <TextInput
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={zoneWeightPercent}
-              onChange={(e) => setZoneWeightPercent(e.target.value)}
-              placeholder="ej. 10"
-              disabled={!formZoneId}
-            />
-          </Field>
-          <Field
             label="Nombre"
             help="Rubro presupuestal concreto (ej. Estructura metálica)."
           >
@@ -423,14 +387,6 @@ export function ActividadesPresupuestalesPanel() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Estructura metálica"
-              required
-            />
-          </Field>
-          <Field label="Orden de visualización">
-            <TextInput
-              type="number"
-              value={displayOrder}
-              onChange={(e) => setDisplayOrder(e.target.value)}
               required
             />
           </Field>

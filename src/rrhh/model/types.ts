@@ -11,6 +11,8 @@ export type Worker = {
   specialtyName: string | null
   linkedUserId: number | null
   linkedUsername: string | null
+  dailyRate?: number | null
+  bankAccount?: string | null
   isActive: ActiveStatus
   deactivationReason: string | null
   createdAt?: string | null
@@ -21,12 +23,16 @@ export type WorkerCreate = {
   workerPositionId?: number | null
   specialtyId?: number | null
   linkedUserId?: number | null
+  dailyRate?: number | null
+  bankAccount?: string | null
 }
 
 export type WorkerUpdate = {
   workerPositionId?: number | null
   specialtyId?: number | null
   linkedUserId?: number | null
+  dailyRate?: number | null
+  bankAccount?: string | null
 }
 
 export type WorkerAssignment = {

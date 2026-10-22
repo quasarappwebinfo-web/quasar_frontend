@@ -7,6 +7,13 @@ import type { Obra, StageOption } from '@/obras/model/types'
 import { ObraCard } from '@/obras/ui/ObraCard'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
 import { listAssignments } from '@/rrhh/api/asignacionesApi'
+import {
+  listMyNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  notifyNotificationsChanged,
+  type UserNotification,
+} from '@/app/ui/Sidebar/notificationsApi'
 import { useAuth } from '@/auth'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
@@ -30,6 +37,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+  const [notices, setNotices] = useState<UserNotification[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -62,9 +70,22 @@ export function DashboardPage() {
     }
   }, [page, debouncedSearch])
 
+  const loadNotices = useCallback(async () => {
+    try {
+      const data = await listMyNotifications()
+      setNotices(data.notifications)
+    } catch {
+      setNotices([])
+    }
+  }, [])
+
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    void loadNotices()
+  }, [loadNotices])
 
   const kpis = useMemo(() => {
     const active = obras.filter(isObraActiveWork)
@@ -81,6 +102,23 @@ export function DashboardPage() {
       delayedHint: pct(delayed.length),
     }
   }, [obras, totalItems, peopleTotal])
+
+  const unreadNotices = notices.filter((notice) => !notice.readAt)
+
+  async function markSeen(notice: UserNotification) {
+    if (notice.readAt) return
+    setNotices((items) => items.filter((item) => item.id !== notice.id))
+    await markNotificationRead(notice.id)
+    notifyNotificationsChanged()
+    await loadNotices()
+  }
+
+  async function markAllSeen() {
+    setNotices([])
+    await markAllNotificationsRead()
+    notifyNotificationsChanged()
+    await loadNotices()
+  }
 
   return (
     <div className={styles.page}>
@@ -125,6 +163,55 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {unreadNotices.length > 0 ? (
+        <section className={styles.noticePanelHot} aria-label="Notificaciones">
+          <div className={styles.noticeHead}>
+            <div className={styles.noticeTitleBlock}>
+              <h2 className={styles.noticeHeading}>Notificaciones</h2>
+              <p className={styles.noticeLead}>
+                {`Tienes ${unreadNotices.length} ${unreadNotices.length === 1 ? 'nota sin ver' : 'notas sin ver'}.`}
+              </p>
+            </div>
+            <span className={styles.noticeBadge}>{unreadNotices.length} sin ver</span>
+            {unreadNotices.length > 1 ? (
+              <Button variant="ghost" size="sm" onClick={() => void markAllSeen()}>
+                Marcar todas como vistas
+              </Button>
+            ) : null}
+          </div>
+          <ul className={styles.noticeList}>
+            {unreadNotices.map((notice) => (
+              <li key={notice.id} className={styles.noticeCard}>
+                <div className={styles.noticeCopy}>
+                  <p className={styles.noticeTitle}>{notice.title}</p>
+                  <p className={styles.noticeBody}>{notice.body}</p>
+                </div>
+                <div className={styles.noticeActions}>
+                  {notice.link ? (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        void markSeen(notice)
+                        navigate(notice.link as string)
+                      }}
+                    >
+                      Abrir actividad
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void markSeen(notice)}
+                  >
+                    Marcar como vista
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className={styles.kpiGrid}>
         <article className={styles.kpiCard}>
@@ -180,7 +267,7 @@ export function DashboardPage() {
       <div className={styles.toolbarRow}>
         <p className={styles.subtitle}>
           Proyectos ·{' '}
-          <Link to="/dashboard/maestros">tipos de venta, etapas y documentos</Link>
+          <Link to="/dashboard/maestros">tipos de venta y documentos</Link>
           {' · '}
           <Link to="/maestros/task-pool">Base Datos Actividades</Link>
         </p>

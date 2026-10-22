@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { createWorkPlan } from '@/planificacion/api/planesApi'
+import {
+  createWorkPlan,
+  listUnfinishedPlanActivities,
+} from '@/planificacion/api/planesApi'
+import type { UnfinishedPlanActivity } from '@/planificacion/model/types'
+import { listTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuestalesApi'
+import { listTaskChapters } from '@/task-pool/api/capitulosApi'
+import { listTaskTemplates } from '@/task-pool/api/plantillasApi'
+import type {
+  TaskBudgetActivity,
+  TaskChapter,
+  TaskTemplate,
+} from '@/task-pool/model/types'
+import { TASK_STATUS_LABELS } from '@/tareas/model/types'
+import type { TaskStatus } from '@/tareas/model/types'
 import { listTasks } from '@/tareas/api/tareasApi'
-import type { Task } from '@/tareas/model/types'
 import { formatTaskDate } from '@/tareas/lib/taskUi'
 import { ApiError } from '@/shared/api/apiJson'
 import {
@@ -10,6 +23,7 @@ import {
   Field,
   Modal,
   TextInput,
+  TextSelect,
   useToast,
 } from '@/shared/ui'
 import styles from './planificacion.module.css'
@@ -20,6 +34,28 @@ type CreatePlanModalProps = {
   obraName?: string
   onClose: () => void
   onCreated: (planId: number) => void
+}
+
+function statusLabel(status: string): string {
+  if (status in TASK_STATUS_LABELS) {
+    return TASK_STATUS_LABELS[status as TaskStatus]
+  }
+  return status
+}
+
+async function listEvery<T>(
+  load: (page: number) => Promise<{ rows: T[]; total: number }>,
+): Promise<T[]> {
+  const all: T[] = []
+  let page = 1
+  let total = 0
+  do {
+    const data = await load(page)
+    all.push(...data.rows)
+    total = data.total
+    page += 1
+  } while (all.length < total && page <= 40)
+  return all
 }
 
 function defaultWeekRange(): { start: string; end: string } {
@@ -46,9 +82,19 @@ export function CreatePlanModal({
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState(range.start)
   const [endDate, setEndDate] = useState(range.end)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [selected, setSelected] = useState<number[]>([])
+  const [pending, setPending] = useState<UnfinishedPlanActivity[]>([])
+  const [chapters, setChapters] = useState<TaskChapter[]>([])
+  const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>([])
+  const [templates, setTemplates] = useState<TaskTemplate[]>([])
+  const [chapterId, setChapterId] = useState('')
+  const [budgetActivityId, setBudgetActivityId] = useState('')
+  const [selectedTasks, setSelectedTasks] = useState<number[]>([])
+  const [selectedTemplates, setSelectedTemplates] = useState<number[]>([])
+  const [pickedLabels, setPickedLabels] = useState<Record<number, string>>({})
+  const [usedTemplateIds, setUsedTemplateIds] = useState<number[]>([])
   const [loadingTasks, setLoadingTasks] = useState(false)
+  const [loadingPool, setLoadingPool] = useState(false)
+  const [poolAlreadyPending, setPoolAlreadyPending] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,7 +102,13 @@ export function CreatePlanModal({
     if (!open) return
     setError(null)
     setStep(1)
-    setSelected([])
+    setSelectedTasks([])
+    setSelectedTemplates([])
+    setPickedLabels({})
+    setChapterId('')
+    setBudgetActivityId('')
+    setBudgetActivities([])
+    setTemplates([])
     setStartDate(range.start)
     setEndDate(range.end)
     setName(
@@ -65,24 +117,138 @@ export function CreatePlanModal({
         : `Plan ${range.start}`,
     )
     setLoadingTasks(true)
-    void listTasks({ obraId, page: 1, parentOnly: true })
-      .then((data) => setTasks(data.tasks))
-      .catch(() => setTasks([]))
+    void Promise.all([
+      listUnfinishedPlanActivities(obraId).catch(() => ({ tasks: [] })),
+      listEvery((page) =>
+        listTasks({ obraId, page, parentOnly: true }).then((data) => ({
+          rows: data.tasks,
+          total: data.pagination.totalItems,
+        })),
+      ).catch(() => []),
+      listEvery((page) =>
+        listTaskChapters({ page, activeOnly: true }).then((data) => ({
+          rows: data.chapters,
+          total: data.pagination.totalItems,
+        })),
+      ).catch(() => [] as TaskChapter[]),
+    ])
+      .then(([pendingData, obraTasks, chapterRows]) => {
+        setPending(pendingData.tasks)
+        setChapters(chapterRows)
+        const used = new Set<number>()
+        for (const task of obraTasks) {
+          if (task.sourceTemplateId != null) used.add(task.sourceTemplateId)
+        }
+        for (const task of pendingData.tasks) {
+          if (task.templateId != null) used.add(task.templateId)
+        }
+        setUsedTemplateIds([...used])
+      })
       .finally(() => setLoadingTasks(false))
   }, [open, obraId, obraName, range.end, range.start])
 
-  const eligible = useMemo(
-    () =>
-      tasks.filter((task) => Boolean(task.plannedStartDate && task.plannedEndDate)),
-    [tasks],
-  )
-  const ineligible = tasks.length - eligible.length
+  useEffect(() => {
+    if (!chapterId) {
+      setBudgetActivities([])
+      setBudgetActivityId('')
+      setTemplates([])
+      return
+    }
+    let cancelled = false
+    setBudgetActivities([])
+    setBudgetActivityId('')
+    setTemplates([])
+    setLoadingPool(true)
+    void listEvery((page) =>
+      listTaskBudgetActivities({
+        page,
+        activeOnly: true,
+        chapterId: Number(chapterId),
+      }).then((data) => ({
+        rows: data.budgetActivities,
+        total: data.pagination.totalItems,
+      })),
+    )
+      .then((rows) => {
+        if (!cancelled) setBudgetActivities(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setBudgetActivities([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPool(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [chapterId])
 
-  function toggleTask(taskId: number) {
-    setSelected((current) =>
-      current.includes(taskId)
-        ? current.filter((id) => id !== taskId)
-        : [...current, taskId],
+  useEffect(() => {
+    if (!budgetActivityId) {
+      setTemplates([])
+      setPoolAlreadyPending(false)
+      return
+    }
+    let cancelled = false
+    setLoadingPool(true)
+    setPoolAlreadyPending(false)
+    void listEvery((page) =>
+      listTaskTemplates({
+        page,
+        activeOnly: true,
+        chapterId: chapterId ? Number(chapterId) : undefined,
+        budgetActivityId: Number(budgetActivityId),
+      }).then((data) => ({
+        rows: data.templates,
+        total: data.pagination.totalItems,
+      })),
+    )
+      .then((rows) => {
+        if (!cancelled) {
+          const visible = rows.filter((item) => !usedTemplateIds.includes(item.id))
+          setTemplates(visible)
+          setPoolAlreadyPending(rows.length > 0 && visible.length === 0)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setTemplates([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPool(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [budgetActivityId, chapterId, usedTemplateIds])
+
+  const selectedCount = selectedTasks.length + selectedTemplates.length
+
+  function toggleTemplate(item: TaskTemplate) {
+    const label = `${item.code} — ${item.name}`
+    setSelectedTemplates((current) =>
+      current.includes(item.id)
+        ? current.filter((id) => id !== item.id)
+        : [...current, item.id],
+    )
+    setPickedLabels((current) => {
+      if (current[item.id]) {
+        const next = { ...current }
+        delete next[item.id]
+        return next
+      }
+      return { ...current, [item.id]: label }
+    })
+  }
+
+  function toggleId(
+    current: number[],
+    id: number,
+    setter: (next: number[]) => void,
+  ) {
+    setter(
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
     )
   }
 
@@ -102,8 +268,8 @@ export function CreatePlanModal({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (selected.length === 0) {
-      setError('Selecciona al menos una actividad con fechas planificadas.')
+    if (selectedCount === 0) {
+      setError('Selecciona al menos una actividad para este periodo.')
       return
     }
     setSaving(true)
@@ -114,7 +280,8 @@ export function CreatePlanModal({
         name: name.trim(),
         startDate,
         endDate,
-        taskIds: selected,
+        taskIds: selectedTasks,
+        templateIds: selectedTemplates,
       })
       toast.success('Plan creado (borrador v1)')
       onCreated(plan.id)
@@ -168,8 +335,8 @@ export function CreatePlanModal({
         >
           <div className={styles.noteBox}>
             <strong>Paso 1 · Periodo de trabajo.</strong> Define el intervalo
-            (semana, quincena, etc.). Después elegirás qué actividades ejecutar
-            en ese periodo.
+            (semana, quincena, etc.). Después registras las actividades de ese
+            periodo, sin versión ni rendimiento.
           </div>
           <Field label="Nombre del plan">
             <TextInput
@@ -204,50 +371,128 @@ export function CreatePlanModal({
           onSubmit={handleSubmit}
         >
           <div className={styles.noteBox}>
-            <strong>Paso 2 · Actividades.</strong> Periodo{' '}
-            {startDate} → {endDate}. Selecciona las actividades programadas que
-            entran en este plan (deben tener fechas planificadas).
+            <strong>Paso 2 · Actividades.</strong> Periodo {startDate} → {endDate}.
+            Registrar una actividad no pide versión, cantidad ni rendimiento.
+            Las que quedaron sin completar se pueden traer a estas fechas.
           </div>
-          <Field
-            label={`Actividades a ejecutar (${selected.length} seleccionadas)`}
-            help="Solo aparecen actividades con fechas planificadas."
-          >
-            {loadingTasks ? (
-              <p className={styles.muted}>Cargando actividades…</p>
-            ) : eligible.length === 0 ? (
-              <p className={styles.muted}>
-                No hay actividades elegibles en esta obra.
-                {ineligible > 0
-                  ? ` (${ineligible} sin fechas planificadas)`
-                  : ''}
+          {loadingTasks ? (
+            <p className={styles.muted}>Cargando actividades…</p>
+          ) : (
+            <>
+              <p className={styles.groupLabel}>
+                Quedaron sin completar ({selectedTasks.length} seleccionadas)
               </p>
-            ) : (
-              <div className={styles.taskPick}>
-                {eligible.map((task) => (
-                  <label key={task.id} className={styles.taskOption}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(task.id)}
-                      onChange={() => toggleTask(task.id)}
-                    />
-                    <span className={styles.taskOptionBody}>
-                      <span className={styles.taskOptionName}>{task.name}</span>
-                      <span className={styles.taskOptionMeta}>
-                        {formatTaskDate(task.plannedStartDate)} →{' '}
-                        {formatTaskDate(task.plannedEndDate)}
-                        {task.status ? ` · ${task.status}` : ''}
+              {pending.length === 0 ? (
+                <p className={styles.muted}>
+                  En periodos anteriores no hay actividades pendientes.
+                </p>
+              ) : (
+                <div className={styles.taskPick}>
+                  {pending.map((task) => (
+                    <label key={task.id} className={styles.taskOption}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.includes(task.id)}
+                        onChange={() =>
+                          toggleId(selectedTasks, task.id, setSelectedTasks)
+                        }
+                      />
+                      <span className={styles.taskOptionBody}>
+                        <span className={styles.taskOptionName}>{task.name}</span>
+                        <span className={styles.taskOptionMeta}>
+                          {statusLabel(task.status)}
+                          {task.sourcePlanName
+                            ? ` · venía de ${task.sourcePlanName}`
+                            : ''}
+                          {task.plannedEndDate
+                            ? ` · hasta ${formatTaskDate(task.plannedEndDate)}`
+                            : ''}
+                        </span>
                       </span>
-                    </span>
-                  </label>
-                ))}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className={styles.groupLabel}>
+                Registrar en este periodo ({selectedTemplates.length}{' '}
+                seleccionadas)
+              </p>
+              <div className={styles.twoCol}>
+                <Field label="Capítulo">
+                  <TextSelect
+                    value={chapterId}
+                    onChange={(e) => setChapterId(e.target.value)}
+                  >
+                    <option value="">Seleccionar…</option>
+                    {chapters.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.stageName ? `${item.stageName} · ` : ''}
+                        {item.name}
+                      </option>
+                    ))}
+                  </TextSelect>
+                </Field>
+                <Field label="Actividad presupuestal">
+                  <TextSelect
+                    value={budgetActivityId}
+                    onChange={(e) => setBudgetActivityId(e.target.value)}
+                    disabled={!chapterId || loadingPool}
+                  >
+                    <option value="">Seleccionar…</option>
+                    {budgetActivities.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </TextSelect>
+                </Field>
               </div>
-            )}
-          </Field>
-          {ineligible > 0 ? (
-            <p className={styles.muted}>
-              {ineligible} actividad(es) ocultas por no tener fechas planificadas.
-            </p>
-          ) : null}
+              {selectedTemplates.length > 0 ? (
+                <p className={styles.muted}>
+                  Elegidas:{' '}
+                  {selectedTemplates
+                    .map((id) => pickedLabels[id] || `#${id}`)
+                    .join(' · ')}
+                </p>
+              ) : null}
+              {loadingPool ? (
+                <p className={styles.muted}>Cargando actividades del pool…</p>
+              ) : !chapterId ? (
+                <p className={styles.muted}>
+                  Elige un capítulo. Después verás sus actividades presupuestales
+                  y, al elegir una, las actividades del pool.
+                </p>
+              ) : !budgetActivityId ? (
+                <p className={styles.muted}>
+                  {budgetActivities.length === 0
+                    ? 'Este capítulo no tiene actividades presupuestales.'
+                    : 'Elige la actividad presupuestal para ver las del pool.'}
+                </p>
+              ) : templates.length === 0 ? (
+                <p className={styles.muted}>
+                  {poolAlreadyPending
+                    ? 'Esas actividades ya se usaron en esta obra: están planeadas, en progreso o terminadas. No se vuelven a ofrecer.'
+                    : 'Esta actividad presupuestal no tiene actividades en el pool.'}
+                </p>
+              ) : (
+                <div className={styles.taskPick}>
+                  {templates.map((item) => (
+                    <label key={item.id} className={styles.taskOption}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTemplates.includes(item.id)}
+                        onChange={() => toggleTemplate(item)}
+                      />
+                      <span className={styles.taskOptionBody}>
+                        <span className={styles.taskOptionName}>{item.name}</span>
+                        <span className={styles.taskOptionMeta}>{item.code}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </form>
       )}
     </Modal>

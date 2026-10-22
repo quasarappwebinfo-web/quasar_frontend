@@ -23,11 +23,12 @@ export type Task = {
   uuid: string
   obraId: number
   obraName?: string | null
+  sourceTemplateId?: number | null
   sourceTemplateVersionId?: number | null
   templateCode?: string | null
   templateName?: string | null
-  categoryId?: number | null
-  categoryName?: string | null
+  chapterId?: number | null
+  chapterName?: string | null
   zoneId?: number | null
   zoneName?: string | null
   budgetActivityId?: number | null
@@ -257,6 +258,28 @@ export const BOARD_COLUMNS: {
     countKey: 'rescheduled',
   },
 ]
+
+export type ActivityStatusSummary = {
+  completed: number
+  inProgress: number
+  pending: number
+  total: number
+}
+
+export type PeriodFulfillment = {
+  planId?: number | null
+  planName?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  progressPercent: number | string
+}
+
+export type ObraFulfillment = {
+  obraId: number
+  progressPercent: number | string
+  period?: PeriodFulfillment | null
+  activityStatus?: ActivityStatusSummary | null
+}
 
 export const ALLOWED_STATUS_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   scheduled: ['in_progress'],

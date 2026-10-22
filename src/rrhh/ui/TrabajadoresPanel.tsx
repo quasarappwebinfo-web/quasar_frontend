@@ -58,6 +58,8 @@ export function TrabajadoresPanel() {
   const [positionId, setPositionId] = useState('')
   const [specialtyId, setSpecialtyId] = useState('')
   const [linkedUserId, setLinkedUserId] = useState('')
+  const [dailyRate, setDailyRate] = useState('')
+  const [bankAccount, setBankAccount] = useState('')
   const [personUsers, setPersonUsers] = useState<AppUser[]>([])
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -152,6 +154,8 @@ export function TrabajadoresPanel() {
     setPositionId('')
     setSpecialtyId('')
     setLinkedUserId('')
+    setDailyRate('')
+    setBankAccount('')
     setFormError(null)
     setFormOpen(true)
   }
@@ -169,6 +173,8 @@ export function TrabajadoresPanel() {
     setPositionId(worker.workerPositionId ? String(worker.workerPositionId) : '')
     setSpecialtyId(worker.specialtyId ? String(worker.specialtyId) : '')
     setLinkedUserId(worker.linkedUserId ? String(worker.linkedUserId) : '')
+    setDailyRate(worker.dailyRate != null ? formatMoneyInput(worker.dailyRate) : '')
+    setBankAccount(worker.bankAccount || '')
     setFormError(null)
     setFormOpen(true)
   }
@@ -178,10 +184,20 @@ export function TrabajadoresPanel() {
     setSaving(true)
     setFormError(null)
     try {
+      let parsedRate: number | null = null
+      try {
+        parsedRate = parseMoney(dailyRate)
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Valor día inválido')
+        setSaving(false)
+        return
+      }
       const payload = {
         workerPositionId: positionId ? Number(positionId) : null,
         specialtyId: specialtyId ? Number(specialtyId) : null,
         linkedUserId: linkedUserId ? Number(linkedUserId) : null,
+        dailyRate: parsedRate,
+        bankAccount: bankAccount.trim() || null,
       }
 
       if (editing) {
@@ -331,6 +347,18 @@ export function TrabajadoresPanel() {
                   </span>
                 </div>
                 <div className={styles.metaRow}>
+                  <span className={styles.metaLabel}>Valor día</span>
+                  <span className={styles.metaValue}>
+                    {worker.dailyRate != null ? formatCop(worker.dailyRate) : '—'}
+                  </span>
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaLabel}>Nequi</span>
+                  <span className={styles.metaValue}>
+                    {worker.bankAccount || '—'}
+                  </span>
+                </div>
+                <div className={styles.metaRow}>
                   <span className={styles.metaLabel}>Usuario vinculado</span>
                   <span className={styles.metaValue}>
                     {worker.linkedUsername || 'Sin usuario'}
@@ -472,6 +500,32 @@ export function TrabajadoresPanel() {
           </Field>
 
           <Field
+            label="Valor día"
+            hint="Lo que se le paga por cada día con asistencia. En Reportes se multiplica por los días trabajados."
+          >
+            <TextInput
+              inputMode="numeric"
+              placeholder="100.000"
+              value={dailyRate}
+              onChange={(e) => setDailyRate(e.target.value)}
+              disabled={saving}
+            />
+          </Field>
+
+          <Field
+            label="Cuenta bancaria (Nequi)"
+            hint="Sale en el Excel de liquidación para saber a qué cuenta girar."
+          >
+            <TextInput
+              placeholder="Número Nequi"
+              value={bankAccount}
+              onChange={(e) => setBankAccount(e.target.value)}
+              disabled={saving}
+              maxLength={40}
+            />
+          </Field>
+
+          <Field
             label="Usuario vinculado"
             hint="Opcional. Debe ser usuario de la misma persona."
           >
@@ -541,4 +595,27 @@ export function TrabajadoresPanel() {
       </Modal>
     </section>
   )
+}
+
+function formatCop(value: number): string {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function formatMoneyInput(value: number): string {
+  return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(value)
+}
+
+function parseMoney(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const normalized = trimmed.replace(/\./g, '').replace(',', '.')
+  const amount = Number(normalized)
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error('El valor día debe ser un número, por ejemplo 100.000.')
+  }
+  return Math.round(amount)
 }

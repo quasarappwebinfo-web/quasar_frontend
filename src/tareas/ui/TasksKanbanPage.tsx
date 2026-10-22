@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { listObras } from '@/obras/api/obrasApi'
 import type { Obra } from '@/obras/model/types'
-import { listActiveTaskCategories } from '@/task-pool/api/categoriasApi'
-import type { TaskCategory } from '@/task-pool/model/types'
+import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
+import type { TaskChapter } from '@/task-pool/model/types'
 import { changeTaskStatus, getTaskBoard } from '@/tareas/api/tareasApi'
 import { canTransition } from '@/tareas/lib/taskUi'
 import type {
@@ -41,17 +41,20 @@ export function TasksKanbanPage() {
   const obraId = Number(obraIdParam)
   const [obraName, setObraName] = useState('')
   const [obras, setObras] = useState<Obra[]>([])
-  const [categories, setCategories] = useState<TaskCategory[]>([])
+  const [chapters, setChapters] = useState<TaskChapter[]>([])
   const [board, setBoard] = useState<TaskBoard | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '')
+  const [chapterId, setChapterId] = useState(
+    searchParams.get('chapterId') || searchParams.get('categoryId') || '',
+  )
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '')
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '')
 
   const [createOpen, setCreateOpen] = useState(false)
   const openedCreateFromQuery = useRef(false)
+  const openedTaskFromQuery = useRef(false)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null)
 
@@ -76,6 +79,17 @@ export function TasksKanbanPage() {
     setCreateOpen(true)
   }, [searchParams])
 
+  useEffect(() => {
+    if (openedTaskFromQuery.current) return
+    const raw = searchParams.get('tarea')
+    if (!raw) return
+    const id = Number(raw)
+    if (!Number.isFinite(id) || id <= 0) return
+    openedTaskFromQuery.current = true
+    setDetailTaskId(id)
+    setDetailOpen(true)
+  }, [searchParams])
+
   const load = useCallback(async () => {
     if (!Number.isFinite(obraId)) {
       setError('Obra inválida')
@@ -87,7 +101,7 @@ export function TasksKanbanPage() {
 
     const filters = {
       obraId,
-      categoryId: categoryId ? Number(categoryId) : undefined,
+      chapterId: chapterId ? Number(chapterId) : undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
     }
@@ -143,16 +157,16 @@ export function TasksKanbanPage() {
     } finally {
       setLoading(false)
     }
-  }, [obraId, categoryId, dateFrom, dateTo])
+  }, [obraId, chapterId, dateFrom, dateTo])
 
   useEffect(() => {
     void load()
   }, [load])
 
   useEffect(() => {
-    void listActiveTaskCategories()
-      .then(setCategories)
-      .catch(() => setCategories([]))
+    void listActiveTaskChapters()
+      .then(setChapters)
+      .catch(() => setChapters([]))
     void listObras({ page: 1, activeOnly: true })
       .then((data) => {
         setObras(data.obras)
@@ -164,11 +178,11 @@ export function TasksKanbanPage() {
 
   useEffect(() => {
     const next = new URLSearchParams()
-    if (categoryId) next.set('categoryId', categoryId)
+    if (chapterId) next.set('chapterId', chapterId)
     if (dateFrom) next.set('dateFrom', dateFrom)
     if (dateTo) next.set('dateTo', dateTo)
     setSearchParams(next, { replace: true })
-  }, [categoryId, dateFrom, dateTo, setSearchParams])
+  }, [chapterId, dateFrom, dateTo, setSearchParams])
 
   const totalTasks = useMemo(() => {
     if (!board) return 0
@@ -317,13 +331,13 @@ export function TasksKanbanPage() {
             </Field>
           </div>
           <div className={styles.filterField}>
-            <Field label="Filtrar por categoría">
+            <Field label="Filtrar por capítulo">
               <TextSelect
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+                value={chapterId}
+                onChange={(e) => setChapterId(e.target.value)}
               >
                 <option value="">Todas</option>
-                {categories.map((item) => (
+                {chapters.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
@@ -440,8 +454,8 @@ export function TasksKanbanPage() {
 
       {!loading && board && totalTasks === 0 ? (
         <p className={styles.hint}>
-          Aún no hay actividades. Usa «+ Nueva Actividad» para crear desde una Actividad Registrada
-          publicada de la Base Datos Actividades.
+          Aún no hay actividades. Usa «+ Nueva Actividad» para agregar una del pool
+          o una que exista solo en esta obra.
         </p>
       ) : null}
 

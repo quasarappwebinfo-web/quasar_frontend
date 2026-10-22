@@ -9,26 +9,26 @@ import type {
 export async function listTaskBudgetActivities(params: {
   page?: number
   search?: string
-  categoryId?: number
+  chapterId?: number
   activeOnly?: boolean
 }): Promise<{ budgetActivities: TaskBudgetActivity[]; pagination: Pagination }> {
   return apiJson(
     `/api/v1/catalogo/actividades-presupuestales${buildQuery({
       page: params.page,
       search: params.search,
-      category_id: params.categoryId,
+      chapterId: params.chapterId,
       active_only: params.activeOnly,
     })}`,
   )
 }
 
 export async function listActiveTaskBudgetActivities(params?: {
-  categoryId?: number
+  chapterId?: number
 }): Promise<TaskBudgetActivity[]> {
   const data = await listTaskBudgetActivities({
     page: 1,
     activeOnly: true,
-    categoryId: params?.categoryId,
+    chapterId: params?.chapterId,
   })
   return data.budgetActivities
 }

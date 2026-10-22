@@ -9,7 +9,7 @@ import type {
 export async function listTaskTemplates(params: {
   page?: number
   search?: string
-  categoryId?: number
+  chapterId?: number
   zoneId?: number
   budgetActivityId?: number
   activeOnly?: boolean
@@ -18,7 +18,7 @@ export async function listTaskTemplates(params: {
     `/api/v1/catalogo/plantillas${buildQuery({
       page: params.page,
       search: params.search,
-      category_id: params.categoryId,
+      chapterId: params.chapterId,
       zone_id: params.zoneId,
       budget_activity_id: params.budgetActivityId,
       active_only: params.activeOnly,
@@ -27,12 +27,12 @@ export async function listTaskTemplates(params: {
 }
 
 export async function listActiveTaskTemplates(params?: {
-  categoryId?: number
+  chapterId?: number
 }): Promise<TaskTemplate[]> {
   const data = await listTaskTemplates({
     page: 1,
     activeOnly: true,
-    categoryId: params?.categoryId,
+    chapterId: params?.chapterId,
   })
   return data.templates
 }
