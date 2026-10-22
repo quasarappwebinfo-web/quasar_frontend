@@ -38,7 +38,13 @@ export async function listPositions(params: {
   search?: string
   activeOnly?: boolean
 }): Promise<PositionsResponse> {
-  return apiJson(`/api/v1/rrhh/cargos${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/rrhh/cargos${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+    })}`,
+  )
 }
 
 export async function createPosition(name: string): Promise<PositionOption> {
@@ -64,7 +70,14 @@ export async function listSpecialties(params: {
   activeOnly?: boolean
   workerPositionId?: number
 }): Promise<SpecialtiesResponse> {
-  return apiJson(`/api/v1/rrhh/especialidades${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/rrhh/especialidades${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+      worker_position_id: params.workerPositionId,
+    })}`,
+  )
 }
 
 export async function createSpecialty(payload: {

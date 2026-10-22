@@ -12,7 +12,14 @@ export async function listAssignments(params: {
   obraId?: number
   currentOnly?: boolean
 }): Promise<AssignmentsResponse> {
-  return apiJson(`/api/v1/rrhh/asignaciones${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/rrhh/asignaciones${buildQuery({
+      page: params.page,
+      worker_id: params.workerId,
+      obra_id: params.obraId,
+      current_only: params.currentOnly,
+    })}`,
+  )
 }
 
 export async function createAssignment(payload: {

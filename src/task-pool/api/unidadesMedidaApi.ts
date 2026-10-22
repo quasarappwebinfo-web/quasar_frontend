@@ -10,7 +10,13 @@ export async function listMeasurementUnits(params: {
   search?: string
   activeOnly?: boolean
 }): Promise<{ measurementUnits: MeasurementUnit[]; pagination: Pagination }> {
-  return apiJson(`/api/v1/catalogo/unidades-medida${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/catalogo/unidades-medida${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+    })}`,
+  )
 }
 
 export async function listActiveMeasurementUnits(): Promise<MeasurementUnit[]> {

@@ -12,7 +12,13 @@ export async function listSaleTypes(params: {
   search?: string
   activeOnly?: boolean
 }): Promise<{ saleTypes: SaleTypeOption[]; pagination: Pagination }> {
-  return apiJson(`/api/v1/obras/tipos-venta${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/obras/tipos-venta${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+    })}`,
+  )
 }
 
 export async function listActiveSaleTypes(): Promise<SaleTypeOption[]> {
@@ -42,7 +48,13 @@ export async function listStages(params: {
   search?: string
   activeOnly?: boolean
 }): Promise<{ stages: StageOption[]; pagination: Pagination }> {
-  return apiJson(`/api/v1/obras/etapas${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/obras/etapas${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+    })}`,
+  )
 }
 
 export async function listActiveStages(): Promise<StageOption[]> {
@@ -54,6 +66,7 @@ export async function createStage(payload: {
   name: string
   description?: string | null
   displayOrder: number
+  weightPercent?: number | null
 }): Promise<StageOption> {
   return apiJson('/api/v1/obras/etapas', {
     method: 'POST',
@@ -67,6 +80,7 @@ export async function updateStage(
     name?: string
     description?: string | null
     displayOrder?: number
+    weightPercent?: number | null
     isActive?: ActiveStatus
   },
 ): Promise<StageOption> {
@@ -81,7 +95,13 @@ export async function listDocumentTypes(params: {
   search?: string
   activeOnly?: boolean
 }): Promise<{ documentTypes: DocumentTypeOption[]; pagination: Pagination }> {
-  return apiJson(`/api/v1/obras/tipos-documento${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/obras/tipos-documento${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+    })}`,
+  )
 }
 
 export async function listActiveDocumentTypes(): Promise<DocumentTypeOption[]> {

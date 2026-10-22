@@ -1,5 +1,6 @@
 import { apiFormData, apiJson, buildQuery } from '@/shared/api/apiJson'
 import type {
+  ObraFulfillment,
   Task,
   TaskBoard,
   TaskComment,
@@ -14,9 +15,17 @@ import type {
   TaskUpdate,
 } from '@/tareas/model/types'
 
+export async function getObraFulfillment(
+  obraId: number,
+): Promise<ObraFulfillment> {
+  return apiJson(
+    `/api/v1/operacion/tareas/cumplimiento${buildQuery({ obraId })}`,
+  )
+}
+
 export async function getTaskBoard(params: {
   obraId: number
-  categoryId?: number
+  chapterId?: number
   dateFrom?: string
   dateTo?: string
 }): Promise<TaskBoard> {
@@ -26,7 +35,7 @@ export async function getTaskBoard(params: {
 export async function listTasks(params: {
   obraId?: number
   status?: string
-  categoryId?: number
+  chapterId?: number
   search?: string
   dateFrom?: string
   dateTo?: string
@@ -38,6 +47,23 @@ export async function listTasks(params: {
   pagination: { totalItems: number; itemsPerPage: number; currentPage: number }
 }> {
   return apiJson(`/api/v1/operacion/tareas${buildQuery(params)}`)
+}
+
+export async function addActivityToPeriod(payload: {
+  obraId: number
+  templateId?: number | null
+  name?: string | null
+  description?: string | null
+  justification: string
+}): Promise<{
+  task: Task
+  workPlan: { id: number; name: string; status: string }
+  justification: string
+}> {
+  return apiJson('/api/v1/operacion/tareas/agregar-al-periodo', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function createTaskFromTemplate(
@@ -116,6 +142,35 @@ export async function addTaskComment(
     method: 'POST',
     body: JSON.stringify({ type: 'comment', content }),
   })
+}
+
+export type GalleryPhoto = {
+  id: number
+  fileUrl: string
+  description?: string | null
+  takenAt?: string | null
+  createdAt?: string | null
+  uploadedByName?: string | null
+  taskId: number
+  taskName: string
+  subtaskName?: string | null
+  chapterId?: number | null
+  chapterName?: string | null
+  budgetActivityId?: number | null
+  budgetActivityName?: string | null
+}
+
+export async function listObraPhotoGallery(params: {
+  obraId: number
+  chapterId?: number
+  budgetActivityId?: number
+  taskId?: number
+  page?: number
+}): Promise<{
+  photos: GalleryPhoto[]
+  pagination: { totalItems: number; itemsPerPage: number; currentPage: number }
+}> {
+  return apiJson(`/api/v1/operacion/tareas/galeria${buildQuery(params)}`)
 }
 
 export async function uploadTaskPhoto(

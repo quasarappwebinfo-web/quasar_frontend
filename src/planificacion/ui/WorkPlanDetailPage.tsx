@@ -136,6 +136,11 @@ export function WorkPlanDetailPage() {
 
   const canSign =
     plan?.status === 'pending_signature' && mySigner?.status === 'pending'
+  const latestSignatureRequest = [...(current?.events || [])]
+    .filter((event) => event.eventType === 'requested' && event.details)
+    .sort((a, b) =>
+      String(b.eventAt || '').localeCompare(String(a.eventAt || '')),
+    )[0]
 
   async function runAction(label: string, action: () => Promise<unknown>) {
     setBusy(true)
@@ -354,6 +359,12 @@ export function WorkPlanDetailPage() {
           </Button>
         </div>
       </header>
+
+      {plan.status === 'pending_signature' && latestSignatureRequest?.details ? (
+        <div className={styles.noteBox}>
+          <strong>Pendiente de firma.</strong> {latestSignatureRequest.details}
+        </div>
+      ) : null}
 
       {version?.isImmutable || plan.status === 'signed' ? (
         <div className={styles.noteBox}>

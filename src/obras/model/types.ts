@@ -114,6 +114,7 @@ export type StageOption = {
   name: string
   description: string | null
   displayOrder: number
+  weightPercent?: number | string | null
   isActive: ActiveStatus
 }
 

@@ -111,7 +111,23 @@ export type WorkPlanCreate = {
   name: string
   startDate: string
   endDate: string
-  taskIds: number[]
+  taskIds?: number[]
+  templateIds?: number[]
+}
+
+export type UnfinishedPlanActivity = {
+  id: number
+  name: string
+  status: string
+  plannedStartDate?: string | null
+  plannedEndDate?: string | null
+  templateId?: number | null
+  templateCode?: string | null
+  chapterName?: string | null
+  sourcePlanId?: number | null
+  sourcePlanName?: string | null
+  sourcePlanStartDate?: string | null
+  sourcePlanEndDate?: string | null
 }
 
 export type WorkPlanUpdate = {

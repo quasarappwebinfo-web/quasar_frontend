@@ -15,25 +15,18 @@ import {
   listObraDocuments,
   updateObraDocument,
 } from '@/obras/api/documentosApi'
-import {
-  changeObraStage,
-  getObra,
-  listObraStageHistory,
-  updateObra,
-} from '@/obras/api/obrasApi'
+import { getObra, updateObra } from '@/obras/api/obrasApi'
 import {
   coverForObra,
   resolveObraCover,
   stageStepLabel,
   stageStepState,
-  estimateObraProgress,
 } from '@/obras/lib/obraUi'
 import type {
   DocumentTypeOption,
   Obra,
   ObraClient,
   ObraDocument,
-  ObraStageHistory,
   StageOption,
 } from '@/obras/model/types'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
@@ -44,6 +37,8 @@ import {
   todayColombiaIso,
 } from '@/obras/lib/asistenciaUi'
 import type { ObraDailyAttendance } from '@/obras/model/asistenciaTypes'
+import { getObraFulfillment } from '@/tareas/api/tareasApi'
+import type { ObraFulfillment } from '@/tareas/model/types'
 import { listWorkPlans } from '@/planificacion/api/planesApi'
 import {
   formatPlanDate,
@@ -70,7 +65,7 @@ import {
 } from '@/shared/ui'
 import styles from './ProjectView.module.css'
 
-type AdminTab = 'etapas' | 'clientes' | 'documentos'
+type AdminTab = 'clientes' | 'documentos'
 
 const CLIENT_ROLES = [
   { value: 'comprador', label: 'Comprador' },
@@ -90,12 +85,13 @@ export function ObraDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
-  const [adminTab, setAdminTab] = useState<AdminTab>('etapas')
+  const [adminTab, setAdminTab] = useState<AdminTab>('clientes')
   const [asistenciaOpen, setAsistenciaOpen] = useState(false)
   const [asistenciaHoy, setAsistenciaHoy] = useState<ObraDailyAttendance[]>([])
   const [asistenciaLoading, setAsistenciaLoading] = useState(false)
   const [planesRecientes, setPlanesRecientes] = useState<WorkPlan[]>([])
   const [planesLoading, setPlanesLoading] = useState(false)
+  const [fulfillment, setFulfillment] = useState<ObraFulfillment | null>(null)
 
   useDocumentTitle(obra ? `Quasar · ${obra.name}` : 'Quasar · Obra')
 
@@ -138,12 +134,14 @@ export function ObraDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [obraData, stageList] = await Promise.all([
+      const [obraData, stageList, fulfillmentData] = await Promise.all([
         getObra(id),
         listActiveStages(),
+        getObraFulfillment(id).catch(() => null),
       ])
       setObra(obraData)
       setStages(stageList)
+      setFulfillment(fulfillmentData)
       void loadAsistenciaHoy()
       void loadPlanesRecientes()
     } catch (err) {
@@ -157,10 +155,16 @@ export function ObraDetailPage() {
     void load()
   }, [load])
 
-  const progress = useMemo(
-    () => (obra ? estimateObraProgress(obra, stages) : 0),
-    [obra, stages],
-  )
+  const globalProgress = asPercent(fulfillment?.progressPercent)
+  const periodProgress = asPercent(fulfillment?.period?.progressPercent)
+  const activityStatus = fulfillment?.activityStatus
+  const completedCount = activityStatus?.completed ?? 0
+  const inProgressCount = activityStatus?.inProgress ?? 0
+  const pendingCount = activityStatus?.pending ?? 0
+  const statusTotal = completedCount + inProgressCount + pendingCount
+  const periodLabel = fulfillment?.period
+    ? `${formatShortDate(fulfillment.period.startDate || null) || '—'} → ${formatShortDate(fulfillment.period.endDate || null) || '—'}`
+    : 'Sin periodo'
 
   const dateRangeLabel = useMemo(() => {
     if (!obra) return '—'
@@ -234,7 +238,7 @@ export function ObraDetailPage() {
         <h2 className={styles.sectionTitle}>Progreso de la construcción</h2>
         {stages.length === 0 ? (
           <p className={styles.muted}>
-            No hay etapas activas. Configúralas en Configuración Global.
+            No hay etapas activas. Configúralas en Base Datos Actividades.
           </p>
         ) : (
           <div className={styles.stepper}>
@@ -331,36 +335,39 @@ export function ObraDetailPage() {
             <div className={styles.metricCell}>
               <p className={styles.metricLabel}>Global</p>
               <div className={styles.metricRow}>
-                <div className={styles.ring} style={{ ['--pct' as string]: progress }}>
-                  <span className={styles.ringValue}>{progress}</span>
+                <div
+                  className={styles.ring}
+                  style={{ ['--pct' as string]: globalProgress }}
+                >
+                  <span className={styles.ringValue}>{globalProgress}</span>
                 </div>
               </div>
+              <p className={styles.metricHint}>% de la obra</p>
             </div>
             <div className={styles.metricCell}>
               <p className={styles.metricLabel}>Periodo</p>
               <div className={styles.metricRow}>
                 <div
                   className={cn(styles.ring, styles.ringOrange)}
-                  style={{ ['--pct' as string]: Math.min(100, Math.round(progress * 0.66)) }}
+                  style={{ ['--pct' as string]: periodProgress }}
                 >
-                  <span className={styles.ringValue}>
-                    {Math.min(100, Math.round(progress * 0.66))}
-                  </span>
+                  <span className={styles.ringValue}>{periodProgress}</span>
                 </div>
               </div>
+              <p className={styles.metricHint}>{periodLabel}</p>
             </div>
             <div className={styles.metricCell}>
               <p className={styles.metricLabel}>Estado actividades</p>
               <div className={styles.metricRow}>
                 <div
                   className={styles.ring}
-                  style={{
-                    ['--pct' as string]: 52,
-                    background:
-                      'conic-gradient(#054c09 0 52%, #d95a0c 52% 73%, #c8c8c8 73% 100%)',
-                  }}
+                  style={activityDonutStyle(
+                    completedCount,
+                    inProgressCount,
+                    pendingCount,
+                  )}
                 >
-                  <span className={styles.ringValue} aria-hidden="true" />
+                  <span className={styles.ringValue}>{statusTotal}</span>
                 </div>
                 <ul className={styles.legend}>
                   <li className={styles.legendItem}>
@@ -368,21 +375,21 @@ export function ObraDetailPage() {
                       <span className={styles.legendDot} style={{ background: '#054c09' }} />
                       Completadas
                     </span>
-                    <span>—</span>
+                    <span>{completedCount}</span>
                   </li>
                   <li className={styles.legendItem}>
                     <span className={styles.legendLeft}>
                       <span className={styles.legendDot} style={{ background: '#d95a0c' }} />
                       En progreso
                     </span>
-                    <span>—</span>
+                    <span>{inProgressCount}</span>
                   </li>
                   <li className={styles.legendItem}>
                     <span className={styles.legendLeft}>
                       <span className={styles.legendDot} style={{ background: '#c8c8c8' }} />
                       Pendientes
                     </span>
-                    <span>—</span>
+                    <span>{pendingCount}</span>
                   </li>
                 </ul>
               </div>
@@ -486,15 +493,24 @@ export function ObraDetailPage() {
               <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
                 Actividades recientes
               </h2>
-              <button
-                type="button"
-                className={styles.newTaskBtn}
-                onClick={() =>
-                  navigate(`/dashboard/obras/${obra.id}/tareas?nueva=1`)
-                }
-              >
-                + Nueva Actividad
-              </button>
+              <div className={styles.headerActions}>
+                <button
+                  type="button"
+                  className={styles.galleryBtn}
+                  onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
+                >
+                  Galería de fotos
+                </button>
+                <button
+                  type="button"
+                  className={styles.newTaskBtn}
+                  onClick={() =>
+                    navigate(`/dashboard/obras/${obra.id}/tareas?nueva=1`)
+                  }
+                >
+                  + Nueva Actividad
+                </button>
+              </div>
             </div>
             <div className={styles.tasksEmpty}>
               <p>Abre el tablero Kanban para programar y seguir el avance.</p>
@@ -596,7 +612,7 @@ export function ObraDetailPage() {
           variant="ghost"
           onClick={() => {
             setAdminOpen((open) => !open)
-            setAdminTab('etapas')
+            setAdminTab('clientes')
           }}
         >
           {adminOpen ? 'Ocultar administración' : 'Administrar obra'}
@@ -617,7 +633,6 @@ export function ObraDetailPage() {
           <div className={styles.tabs} role="tablist">
             {(
               [
-                ['etapas', 'Etapas'],
                 ['clientes', 'Clientes'],
                 ['documentos', 'Documentos'],
               ] as const
@@ -633,9 +648,6 @@ export function ObraDetailPage() {
               </button>
             ))}
           </div>
-          {adminTab === 'etapas' ? (
-            <EtapasTab obra={obra} onChanged={setObra} />
-          ) : null}
           {adminTab === 'clientes' ? <ClientesTab obraId={obra.id} /> : null}
           {adminTab === 'documentos' ? <DocumentosTab obraId={obra.id} /> : null}
         </div>
@@ -658,6 +670,28 @@ export function ObraDetailPage() {
       />
     </div>
   )
+}
+
+function asPercent(value: number | string | null | undefined): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 0
+  return Math.max(0, Math.min(100, Math.round(parsed)))
+}
+
+function activityDonutStyle(
+  completed: number,
+  inProgress: number,
+  pending: number,
+): { background: string } {
+  const total = completed + inProgress + pending
+  if (total === 0) {
+    return { background: 'conic-gradient(#ececec 0 100%)' }
+  }
+  const completedEnd = (completed / total) * 100
+  const progressEnd = completedEnd + (inProgress / total) * 100
+  return {
+    background: `conic-gradient(#054c09 0 ${completedEnd}%, #d95a0c ${completedEnd}% ${progressEnd}%, #c8c8c8 ${progressEnd}% 100%)`,
+  }
 }
 
 function formatShortDate(value: string | null): string | null {
@@ -691,131 +725,6 @@ function PowerIcon() {
         d="M13 3h-2v10h2V3Zm4.6 2.4-1.4 1.4A7 7 0 1 1 7.8 6.8L6.4 5.4a9 9 0 1 0 11.2 0Z"
       />
     </svg>
-  )
-}
-
-function EtapasTab({
-  obra,
-  onChanged,
-}: {
-  obra: Obra
-  onChanged: (obra: Obra) => void
-}) {
-  const toast = useToast()
-  const [stages, setStages] = useState<StageOption[]>([])
-  const [history, setHistory] = useState<ObraStageHistory[]>([])
-  const [stageId, setStageId] = useState('')
-  const [plannedStart, setPlannedStart] = useState('')
-  const [plannedEnd, setPlannedEnd] = useState('')
-  const [actualStart, setActualStart] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const reload = useCallback(async () => {
-    const [stageList, hist] = await Promise.all([
-      listActiveStages(),
-      listObraStageHistory(obra.id),
-    ])
-    setStages(stageList)
-    setHistory(hist.history)
-  }, [obra.id])
-
-  useEffect(() => {
-    void reload().catch((err) =>
-      setError(err instanceof Error ? err.message : 'Error al cargar etapas'),
-    )
-  }, [reload])
-
-  async function handleChange(event: FormEvent) {
-    event.preventDefault()
-    if (!stageId) return
-    setSaving(true)
-    setError(null)
-    try {
-      const updated = await changeObraStage(obra.id, {
-        stageId: Number(stageId),
-        plannedStartDate: plannedStart || null,
-        plannedEndDate: plannedEnd || null,
-        actualStartDate: actualStart || null,
-      })
-      onChanged(updated)
-      toast.success('Etapa actualizada')
-      setStageId('')
-      await reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cambiar etapa')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <section>
-      <form className={styles.formGrid} onSubmit={handleChange}>
-        <Field label="Nueva etapa">
-          <TextSelect
-            required
-            disabled={saving}
-            value={stageId}
-            onChange={(e) => setStageId(e.target.value)}
-          >
-            <option value="">Selecciona…</option>
-            {stages.map((stage) => (
-              <option key={stage.id} value={stage.id}>
-                {stage.name}
-              </option>
-            ))}
-          </TextSelect>
-        </Field>
-        <div className={styles.filters}>
-          <Field label="Inicio planificado">
-            <TextInput
-              type="date"
-              disabled={saving}
-              value={plannedStart}
-              onChange={(e) => setPlannedStart(e.target.value)}
-            />
-          </Field>
-          <Field label="Fin planificado">
-            <TextInput
-              type="date"
-              disabled={saving}
-              value={plannedEnd}
-              onChange={(e) => setPlannedEnd(e.target.value)}
-            />
-          </Field>
-          <Field label="Inicio real">
-            <TextInput
-              type="date"
-              disabled={saving}
-              value={actualStart}
-              onChange={(e) => setActualStart(e.target.value)}
-            />
-          </Field>
-          <Button type="submit" disabled={saving || !stageId}>
-            {saving ? 'Guardando…' : 'Cambiar etapa'}
-          </Button>
-        </div>
-        {error ? <Alert tone="error">{error}</Alert> : null}
-      </form>
-      <h3 className={styles.cardTitle} style={{ marginTop: '1.25rem' }}>
-        Historial
-      </h3>
-      {history.length === 0 ? (
-        <p className={styles.empty}>Sin movimientos de etapa.</p>
-      ) : (
-        <div className={styles.timeline}>
-          {history.map((item) => (
-            <div key={item.id} className={styles.timelineItem}>
-              <strong>{item.stageName || `Etapa #${item.stageId}`}</strong>
-              <p className={styles.muted}>
-                Plan: {item.plannedStartDate || '—'} → {item.plannedEndDate || '—'}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
   )
 }
 

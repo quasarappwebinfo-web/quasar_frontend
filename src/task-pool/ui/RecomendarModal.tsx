@@ -71,6 +71,13 @@ export function RecomendarModal({
     onClose()
   }
 
+  const hasBase =
+    baseQuantity != null &&
+    baseQuantity !== '' &&
+    Number(baseQuantity) > 0 &&
+    baseDurationDays != null &&
+    baseDurationDays !== '' &&
+    Number(baseDurationDays) > 0
   const unitSuffix = unitLabel ? ` (${unitLabel})` : ''
   const resultUnit =
     result?.unitSymbol || result?.unitName
@@ -87,7 +94,7 @@ export function RecomendarModal({
           <Button variant="ghost" onClick={handleClose}>
             Cerrar
           </Button>
-          <Button type="submit" form="recommend-form" disabled={loading}>
+          <Button type="submit" form="recommend-form" disabled={loading || !hasBase}>
             {loading ? 'Calculando…' : 'Calcular'}
           </Button>
         </>
@@ -95,6 +102,13 @@ export function RecomendarModal({
     >
       <form id="recommend-form" className={styles.formGrid} onSubmit={handleSubmit}>
         {error ? <Alert tone="error">{error}</Alert> : null}
+        {!hasBase ? (
+          <Alert tone="error">
+            Esta versión no tiene cantidad base y duración base. Puedes
+            publicarla igual, pero la recomendación solo funciona si ambos
+            valores están cargados.
+          </Alert>
+        ) : null}
         <div className={styles.noteBox}>
           Indica la cantidad de obra
           {unitSuffix ? ` en ${unitLabel}` : ''} y, si quieres, los días que te
@@ -199,7 +213,9 @@ export function RecomendarModal({
                 </div>
               </div>
             ))}
-            <p className={styles.readonlyHint}>{result.note}</p>
+            <p className={styles.readonlyHint}>
+              Recomendado — pendiente de aprobación. {result.note}
+            </p>
           </div>
         ) : null}
       </form>

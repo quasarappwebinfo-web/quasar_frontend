@@ -52,8 +52,15 @@ export function recordToBoardTask(row: Record<string, unknown>): Task | null {
     ),
     templateCode: asString(row.templateCode ?? row.template_code),
     templateName: asString(row.templateName ?? row.template_name),
-    categoryId: asNumber(row.categoryId ?? row.category_id),
-    categoryName: asString(row.categoryName ?? row.category_name),
+    chapterId: asNumber(
+      row.chapterId ?? row.chapter_id ?? row.categoryId ?? row.category_id,
+    ),
+    chapterName: asString(
+      row.chapterName ??
+        row.chapter_name ??
+        row.categoryName ??
+        row.category_name,
+    ),
     zoneId: asNumber(row.zoneId ?? row.zone_id),
     zoneName: asString(row.zoneName ?? row.zone_name),
     budgetActivityId: asNumber(row.budgetActivityId ?? row.budget_activity_id),
@@ -115,7 +122,7 @@ function inDateRange(
 
 export async function buildLocalTaskBoard(params: {
   obraId: number
-  categoryId?: number
+  chapterId?: number
   dateFrom?: string
   dateTo?: string
 }): Promise<TaskBoard | null> {
@@ -127,7 +134,7 @@ export async function buildLocalTaskBoard(params: {
     if (!task) continue
     if (task.obraId !== params.obraId) continue
     if (task.parentTaskId != null) continue
-    if (params.categoryId && task.categoryId !== params.categoryId) continue
+    if (params.chapterId && task.chapterId !== params.chapterId) continue
     if (!inDateRange(task, params.dateFrom, params.dateTo)) continue
     tasks.push(task)
   }

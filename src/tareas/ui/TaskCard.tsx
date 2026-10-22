@@ -63,16 +63,16 @@ export function TaskCard({
       }}
     >
       <h3 className={styles.cardTitle}>{task.name}</h3>
-      {task.categoryName || task.budgetActivityName ? (
+      {task.chapterName || task.budgetActivityName ? (
         <div className={styles.chipRow}>
-          {task.categoryName ? (
+          {task.chapterName ? (
             <span
               className={styles.categoryChip}
               style={{
-                background: categoryColor(task.categoryName, task.categoryId),
+                background: categoryColor(task.chapterName, task.chapterId),
               }}
             >
-              {task.categoryName}
+              {task.chapterName}
             </span>
           ) : null}
           {task.budgetActivityName ? (

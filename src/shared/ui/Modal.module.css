@@ -43,10 +43,12 @@
 }
 
 .title {
+  min-width: 0;
   font-family: 'Questrial', var(--font-sans);
   font-size: 1.15rem;
   font-weight: 400;
   letter-spacing: -0.01em;
+  line-height: 1.25;
 }
 
 .body {
@@ -97,11 +99,35 @@
   }
 
   .footer {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 
   .footer > * {
-    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .footer :global(button) {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 720px) {
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footer > * {
+    width: 100%;
+  }
+
+  .footer :global(button) {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
   }
 }

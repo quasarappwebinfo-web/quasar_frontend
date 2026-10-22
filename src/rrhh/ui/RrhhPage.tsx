@@ -27,8 +27,9 @@ export function RrhhPage() {
           <p className={styles.eyebrow}>Operación</p>
           <h1 className={styles.title}>RRHH</h1>
           <p className={styles.subtitle}>
-            Cargos, especialidades y trabajadores. La asistencia diaria (quién
-            llegó hoy) se registra desde cada obra, con firma.
+            Cargos, especialidades y trabajadores. El valor día y la cuenta
+            Nequi se usan en la liquidación de Reportes. La asistencia diaria
+            se registra desde cada obra.
           </p>
         </div>
       </header>

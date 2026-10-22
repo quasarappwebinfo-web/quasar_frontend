@@ -26,7 +26,16 @@ export async function listObras(params: {
   currentStageId?: number
   activeOnly?: boolean
 }): Promise<ObrasResponse> {
-  return apiJson(`/api/v1/obras${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/obras${buildQuery({
+      page: params.page,
+      search: params.search,
+      status: params.status,
+      city: params.city,
+      current_stage_id: params.currentStageId,
+      active_only: params.activeOnly,
+    })}`,
+  )
 }
 
 export async function getObra(id: number): Promise<Obra> {

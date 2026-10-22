@@ -18,7 +18,14 @@ export async function listWorkers(params: {
   activeOnly?: boolean
   workerPositionId?: number
 }): Promise<WorkersResponse> {
-  return apiJson(`/api/v1/rrhh/trabajadores${buildQuery(params)}`)
+  return apiJson(
+    `/api/v1/rrhh/trabajadores${buildQuery({
+      page: params.page,
+      search: params.search,
+      active_only: params.activeOnly,
+      worker_position_id: params.workerPositionId,
+    })}`,
+  )
 }
 
 export async function getWorker(id: number): Promise<Worker> {

@@ -14,6 +14,7 @@ import type {
   WorkPlanStatus,
   WorkPlanTaskSnapshot,
   WorkPlanUpdate,
+  UnfinishedPlanActivity,
 } from '@/planificacion/model/types'
 
 export async function listWorkPlans(params: {
@@ -29,6 +30,14 @@ export async function listWorkPlans(params: {
       status: params.status,
       search: params.search,
     })}`,
+  )
+}
+
+export async function listUnfinishedPlanActivities(
+  obraId: number,
+): Promise<{ tasks: UnfinishedPlanActivity[] }> {
+  return apiJson(
+    `/api/v1/planificacion/planes/pendientes${buildQuery({ obraId })}`,
   )
 }
 

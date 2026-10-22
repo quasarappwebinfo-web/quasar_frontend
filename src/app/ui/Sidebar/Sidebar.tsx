@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { NAV_ICON_URLS, CHEVRON_ICON_URL } from '@/app/ui/Sidebar/iconUrls'
 import {
@@ -8,10 +8,26 @@ import {
   getVisibleNav,
   type SidebarItemId,
 } from '@/app/ui/Sidebar/nav'
+import {
+  listMyNotifications,
+  markNotificationRead,
+  NOTIFICATIONS_CHANGED,
+  notifyNotificationsChanged,
+  type UserNotification,
+} from '@/app/ui/Sidebar/notificationsApi'
 import { useAuth } from '@/auth'
 import quasarLogo from '@/shared/assets/quasar-logo.png'
 import { cn } from '@/shared/lib/cn'
 import styles from './Sidebar.module.css'
+
+function iconMask(url: string): CSSProperties {
+  const value = `url("${url}")`
+  return {
+    maskImage: value,
+    WebkitMaskImage: value,
+    maskMode: 'alpha',
+  }
+}
 
 type SidebarProps = {
   activeId?: SidebarItemId
@@ -25,7 +41,10 @@ export function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const { user, logout, offlineSession } = useAuth()
+  const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [notices, setNotices] = useState<UserNotification[]>([])
+  const [unread, setUnread] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const initials = getUserInitials(user)
@@ -34,6 +53,32 @@ export function Sidebar({
     ? `${getUserRole(user)} · sin red`
     : getUserRole(user)
   const navItems = getVisibleNav(user)
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+
+    function loadNotices() {
+      void listMyNotifications()
+        .then((data) => {
+          if (cancelled) return
+          setNotices(data.notifications)
+          setUnread(data.unread)
+        })
+        .catch(() => {
+          if (cancelled) return
+          setNotices([])
+          setUnread(0)
+        })
+    }
+
+    loadNotices()
+    window.addEventListener(NOTIFICATIONS_CHANGED, loadNotices)
+    return () => {
+      cancelled = true
+      window.removeEventListener(NOTIFICATIONS_CHANGED, loadNotices)
+    }
+  }, [user, menuOpen])
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -81,12 +126,7 @@ export function Sidebar({
               >
                 <span
                   className={styles.navIcon}
-                  style={
-                    {
-                      maskImage: `url(${NAV_ICON_URLS[item.id]})`,
-                      WebkitMaskImage: `url(${NAV_ICON_URLS[item.id]})`,
-                    } as CSSProperties
-                  }
+                  style={iconMask(NAV_ICON_URLS[item.id])}
                   aria-hidden="true"
                 />
                 <span className={styles.navLabel}>{item.label}</span>
@@ -109,22 +149,51 @@ export function Sidebar({
             </span>
             <span className={styles.userMeta}>
               <span className={styles.userName}>{displayName}</span>
-              <span className={styles.userRole}>{role}</span>
+              <span className={styles.userRole}>
+                {role}
+                {unread > 0 ? ` · ${unread} aviso${unread === 1 ? '' : 's'}` : ''}
+              </span>
             </span>
             <span
               className={cn(styles.chevron, menuOpen && styles.chevronOpen)}
-              style={
-                {
-                  maskImage: `url(${CHEVRON_ICON_URL})`,
-                  WebkitMaskImage: `url(${CHEVRON_ICON_URL})`,
-                } as CSSProperties
-              }
+              style={iconMask(CHEVRON_ICON_URL)}
               aria-hidden="true"
             />
           </button>
 
           {menuOpen ? (
             <div className={styles.userMenu} role="menu">
+              {notices.some((notice) => !notice.readAt) ? (
+                <div className={styles.noticeList}>
+                  {notices
+                    .filter((notice) => !notice.readAt)
+                    .slice(0, 5)
+                    .map((notice) => (
+                    <button
+                      key={notice.id}
+                      type="button"
+                      role="menuitem"
+                      className={styles.noticeItem}
+                      onClick={() => {
+                        setMenuOpen(false)
+                        if (!notice.readAt) {
+                          setUnread((count) => Math.max(0, count - 1))
+                          setNotices((items) =>
+                            items.filter((item) => item.id !== notice.id),
+                          )
+                        }
+                        void markNotificationRead(notice.id)
+                          .then(() => notifyNotificationsChanged())
+                          .catch(() => undefined)
+                        if (notice.link) navigate(notice.link)
+                      }}
+                    >
+                      <span className={styles.noticeTitle}>{notice.title}</span>
+                      <span className={styles.noticeBody}>{notice.body}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
                 role="menuitem"

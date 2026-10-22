@@ -70,8 +70,8 @@ export function PlantillaDetailPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [baseQuantity, setBaseQuantity] = useState('100')
-  const [baseDurationDays, setBaseDurationDays] = useState('5')
+  const [baseQuantity, setBaseQuantity] = useState('')
+  const [baseDurationDays, setBaseDurationDays] = useState('')
   const [copyFromVersionId, setCopyFromVersionId] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -128,8 +128,8 @@ export function PlantillaDetailPage() {
   function openCreate() {
     setName(template ? `${template.name} v${versions.length + 1}` : '')
     setDescription('')
-    setBaseQuantity('100')
-    setBaseDurationDays('5')
+    setBaseQuantity('')
+    setBaseDurationDays('')
     setCopyFromVersionId('')
     setFormError(null)
     setModalOpen(true)
@@ -137,10 +137,17 @@ export function PlantillaDetailPage() {
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
-    const qty = Number(baseQuantity)
-    const days = Number(baseDurationDays)
+    const qty = baseQuantity.trim() ? Number(baseQuantity) : null
+    const days = baseDurationDays.trim() ? Number(baseDurationDays) : null
     if (!name.trim()) {
       setFormError('El nombre es obligatorio.')
+      return
+    }
+    if (
+      (qty != null && !Number.isFinite(qty)) ||
+      (days != null && !Number.isFinite(days))
+    ) {
+      setFormError('Cantidad y duración, si las indicas, deben ser números.')
       return
     }
     setSaving(true)
@@ -150,8 +157,8 @@ export function PlantillaDetailPage() {
         taskTemplateId: id,
         name: name.trim(),
         description: description.trim() || null,
-        baseQuantity: Number.isFinite(qty) ? qty : null,
-        baseDurationDays: Number.isFinite(days) ? days : null,
+        baseQuantity: qty,
+        baseDurationDays: days,
         copyFromVersionId: copyFromVersionId
           ? Number(copyFromVersionId)
           : null,
@@ -190,11 +197,11 @@ export function PlantillaDetailPage() {
           <p className={styles.eyebrow}>{template.code}</p>
           <h1 className={styles.title}>{template.name}</h1>
           <p className={styles.subtitle}>
-            {template.categoryName || 'Sin categoría'}
-            {template.zoneName ? ` · ${template.zoneName}` : ''}
+            {template.chapterName || 'Sin capítulo'}
             {template.budgetActivityName
               ? ` · ${template.budgetActivityName}`
               : ''}
+            {template.zoneName ? ` · ${template.zoneName}` : ''}
             {template.description ? ` · ${template.description}` : ''}
           </p>
         </div>
@@ -323,7 +330,7 @@ export function PlantillaDetailPage() {
           <div className={styles.twoCol}>
             <Field
               label="Cantidad base"
-              help="Volumen de referencia con el que se calibró la Actividad Registrada (ej. 100). Al recomendar, se escala según la cantidad real de la obra."
+              help="Opcional. Volumen de referencia (ej. 100). No hace falta para crear ni para publicar."
             >
               <TextInput
                 type="number"
@@ -334,7 +341,7 @@ export function PlantillaDetailPage() {
             </Field>
             <Field
               label="Duración base (días)"
-              help="Días que toma ejecutar esa cantidad base. Al recomendar se multiplica por el factor cantidad obra ÷ cantidad base."
+              help="Opcional. Días para esa cantidad base. Solo hace falta si después vas a recomendar."
             >
               <TextInput
                 type="number"

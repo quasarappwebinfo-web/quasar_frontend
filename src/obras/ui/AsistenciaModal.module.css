@@ -79,3 +79,10 @@
   display: grid;
   gap: 0.85rem;
 }
+
+@media (max-width: 720px) {
+  .list {
+    max-height: none;
+    overflow: visible;
+  }
+}
