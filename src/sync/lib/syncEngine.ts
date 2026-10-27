@@ -1,9 +1,12 @@
+import { ApiError } from '@/shared/api/apiJson'
+import { preparePhotoFile } from '@/shared/lib/preparePhoto'
 import { metaGet, metaSet, STORE } from '@/sync/db/database'
 import {
   deletePhotoBlob,
   getPhotoBlob,
   listConflicts,
   putConflict,
+  putPhotoBlob,
   upsertEntity,
   upsertMany,
 } from '@/sync/db/entityStore'
@@ -48,24 +51,60 @@ async function saveServerTime(serverTime: string): Promise<void> {
   await metaSet('lastServerTime', serverTime)
 }
 
-async function processNeedsUpload(items: OutboxItem[]): Promise<number> {
+async function processNeedsUpload(items: OutboxItem[]): Promise<{
+  uploaded: number
+  error: string | null
+}> {
   let uploaded = 0
+  let error: string | null = null
   for (const item of items) {
     if (item.entity !== 'task_photo') continue
     const blobRec = await getPhotoBlob(item.uuid)
     if (!blobRec) {
+      const message = 'Falta el archivo local de la foto. Vuelve a tomarla.'
+      error = error ?? message
       await updateOutboxItem(item.opId, {
         status: 'error',
-        lastError: 'Falta el archivo local de la foto',
-        tries: item.tries + 1,
+        lastError: message,
+        tries: MAX_TRIES,
       })
       continue
     }
+
+    let file: File
+    try {
+      const source =
+        blobRec.blob instanceof File
+          ? blobRec.blob
+          : new File([blobRec.blob], `photo-${blobRec.photoUuid}.jpg`, {
+              type: blobRec.mimeType || blobRec.blob.type || 'image/jpeg',
+            })
+      file = await preparePhotoFile(source)
+      await putPhotoBlob({
+        ...blobRec,
+        blob: file,
+        mimeType: 'image/jpeg',
+      })
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'No se pudo leer la foto guardada en el celular.'
+      error = error ?? message
+      await updateOutboxItem(item.opId, {
+        status: 'error',
+        lastError: message,
+        tries: MAX_TRIES,
+      })
+      continue
+    }
+
     try {
       const result = await uploadSyncPhoto({
         taskUuid: blobRec.taskUuid,
         photoUuid: blobRec.photoUuid,
-        file: blobRec.blob,
+        file,
+        fileName: file.name,
         description: blobRec.description,
       })
       await upsertEntity(STORE.photos, result.photo, item.uuid)
@@ -79,14 +118,22 @@ async function processNeedsUpload(items: OutboxItem[]): Promise<number> {
       })
       uploaded += 1
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error subiendo foto'
+      error = error ?? message
+      const permanent =
+        err instanceof ApiError &&
+        err.status >= 400 &&
+        err.status < 500 &&
+        err.status !== 408 &&
+        err.status !== 429
       await updateOutboxItem(item.opId, {
-        status: 'needs_upload',
-        lastError: err instanceof Error ? err.message : 'Error subiendo foto',
-        tries: item.tries + 1,
+        status: permanent ? 'error' : 'needs_upload',
+        lastError: message,
+        tries: permanent ? MAX_TRIES : item.tries + 1,
       })
     }
   }
-  return uploaded
+  return { uploaded, error }
 }
 
 async function applyPushResults(
@@ -210,12 +257,16 @@ export async function runSyncCycle(options?: {
       serverTime: null,
     }
 
+    let uploadError: string | null = null
+
     try {
       // 1) Subir fotos pendientes de needs_upload
       const needsUpload = await listOutboxByStatus(['needs_upload'])
-      summary.uploadedPhotos = await processNeedsUpload(
+      const firstUpload = await processNeedsUpload(
         needsUpload.filter((item) => item.tries < MAX_TRIES),
       )
+      summary.uploadedPhotos = firstUpload.uploaded
+      uploadError = firstUpload.error
 
       // 2) Push outbox pending / error reintentable
       const pending = (
@@ -247,9 +298,11 @@ export async function runSyncCycle(options?: {
 
         // 3) Fotos que acabaron en needs_upload en este push
         const freshNeeds = await listOutboxByStatus(['needs_upload'])
-        summary.uploadedPhotos += await processNeedsUpload(
+        const secondUpload = await processNeedsUpload(
           freshNeeds.filter((item) => item.tries < MAX_TRIES),
         )
+        summary.uploadedPhotos += secondUpload.uploaded
+        uploadError = uploadError ?? secondUpload.error
       }
 
       // 4) Pull deltas
@@ -260,7 +313,7 @@ export async function runSyncCycle(options?: {
       summary.serverTime = pull.serverTime
 
       await metaSet('lastSyncAt', nowIso())
-      await metaSet('lastSyncError', null)
+      await metaSet('lastSyncError', uploadError)
       return summary
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sync falló'

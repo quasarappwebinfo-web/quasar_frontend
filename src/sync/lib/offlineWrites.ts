@@ -7,6 +7,7 @@ import {
 import type { TaskComment, TaskPhoto, TaskStatus } from '@/tareas/model/types'
 import { STORE } from '@/sync/db/database'
 import { putPhotoBlob, upsertEntity } from '@/sync/db/entityStore'
+import { preparePhotoFile } from '@/shared/lib/preparePhoto'
 import { enqueueOutbox, runSyncCycle } from '@/sync/lib/syncEngine'
 import { createClientUuid, createOpId, nowIso } from '@/sync/lib/uuid'
 
@@ -84,12 +85,13 @@ export async function syncAddPhoto(params: {
 }): Promise<{ offline: boolean; photo?: TaskPhoto }> {
   const photoUuid = createClientUuid()
   const clientUpdatedAt = nowIso()
+  const file = await preparePhotoFile(params.file)
 
   if (isOnline()) {
     try {
       const photo = await uploadTaskPhoto(
         params.taskId,
-        params.file,
+        file,
         params.description,
       )
       await upsertEntity(STORE.photos, {
@@ -106,8 +108,8 @@ export async function syncAddPhoto(params: {
     photoUuid,
     taskUuid: params.taskUuid,
     description: params.description ?? null,
-    blob: params.file,
-    mimeType: params.file.type || 'image/jpeg',
+    blob: file,
+    mimeType: file.type || 'image/jpeg',
     createdAt: clientUpdatedAt,
   })
   await enqueueOutbox({
