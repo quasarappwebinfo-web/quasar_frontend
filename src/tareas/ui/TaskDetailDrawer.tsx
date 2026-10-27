@@ -11,6 +11,7 @@ import { categoryColor, formatTaskDate } from '@/tareas/lib/taskUi'
 import type { Task, TaskDetail } from '@/tareas/model/types'
 import { TASK_STATUS_BADGE } from '@/tareas/model/types'
 import { ApiError } from '@/shared/api/apiJson'
+import { preparePhotoFile } from '@/shared/lib/preparePhoto'
 import {
   syncAddComment,
   syncAddPhoto,
@@ -235,18 +236,28 @@ export function TaskDetailDrawer({
     }
   }
 
-  function addEvidenceFiles(files: FileList | null) {
-    if (!files?.length) return
-    const next = Array.from(files).filter((f) => f.type.startsWith('image/'))
-    if (next.length === 0) {
-      setEvidenceError('Solo se admiten imágenes (JPEG, PNG o WebP).')
+  async function addEvidenceFiles(files: File[]) {
+    if (!files.length) return
+    const prepared: File[] = []
+    const errors: string[] = []
+    for (const file of files) {
+      try {
+        prepared.push(await preparePhotoFile(file))
+      } catch (err) {
+        errors.push(
+          err instanceof Error ? err.message : 'No se pudo leer una foto',
+        )
+      }
+    }
+    if (prepared.length === 0) {
+      setEvidenceError(errors[0] || 'Solo se admiten imágenes.')
       return
     }
-    setEvidenceError(null)
-    setEvidenceFiles((prev) => [...prev, ...next])
+    setEvidenceError(errors[0] ?? null)
+    setEvidenceFiles((prev) => [...prev, ...prepared])
     setEvidencePreviews((prev) => [
       ...prev,
-      ...next.map((f) => URL.createObjectURL(f)),
+      ...prepared.map((f) => URL.createObjectURL(f)),
     ])
   }
 
@@ -843,11 +854,26 @@ export function TaskDetailDrawer({
                     <input
                       ref={fileRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif"
                       hidden
                       onChange={(e) => {
-                        void handlePhotoSelected(e.target.files?.[0] || null)
-                        e.target.value = ''
+                        const input = e.currentTarget
+                        const selected = input.files?.[0]
+                        if (!selected) return
+                        void (async () => {
+                          try {
+                            const prepared = await preparePhotoFile(selected)
+                            await handlePhotoSelected(prepared)
+                          } catch (err) {
+                            toast.error(
+                              err instanceof Error
+                                ? err.message
+                                : 'No se pudo leer la foto',
+                            )
+                          } finally {
+                            input.value = ''
+                          }
+                        })()
                       }}
                     />
                   </div>
@@ -980,12 +1006,15 @@ export function TaskDetailDrawer({
             <input
               ref={evidenceFileRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               multiple
               hidden
               onChange={(e) => {
-                addEvidenceFiles(e.target.files)
-                e.target.value = ''
+                const input = e.currentTarget
+                const selected = input.files ? Array.from(input.files) : []
+                void addEvidenceFiles(selected).finally(() => {
+                  input.value = ''
+                })
               }}
             />
           </div>

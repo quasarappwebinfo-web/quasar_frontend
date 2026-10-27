@@ -36,7 +36,8 @@ export async function countPendingOutbox(): Promise<number> {
     'needs_upload',
     'error',
   ])
-  return items.length
+  // Mismo tope que MAX_TRIES en syncEngine: lo agotado ya no se reintenta.
+  return items.filter((item) => item.tries < 8).length
 }
 
 export async function updateOutboxItem(
