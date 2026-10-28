@@ -37,8 +37,13 @@ import {
   todayColombiaIso,
 } from '@/obras/lib/asistenciaUi'
 import type { ObraDailyAttendance } from '@/obras/model/asistenciaTypes'
-import { getObraFulfillment } from '@/tareas/api/tareasApi'
-import type { ObraFulfillment } from '@/tareas/model/types'
+import {
+  getObraFulfillment,
+  listObraPhotoGallery,
+  listTasks,
+  type GalleryPhoto,
+} from '@/tareas/api/tareasApi'
+import type { ObraFulfillment, Task } from '@/tareas/model/types'
 import { listWorkPlans } from '@/planificacion/api/planesApi'
 import {
   formatPlanDate,
@@ -67,6 +72,9 @@ import styles from './ProjectView.module.css'
 
 type AdminTab = 'clientes' | 'documentos'
 
+const RECENT_PHOTO_COUNT = 8
+const RECENT_ACTIVITY_COUNT = 5
+
 const CLIENT_ROLES = [
   { value: 'comprador', label: 'Comprador' },
   { value: 'propietario', label: 'Propietario' },
@@ -91,6 +99,10 @@ export function ObraDetailPage() {
   const [asistenciaLoading, setAsistenciaLoading] = useState(false)
   const [planesRecientes, setPlanesRecientes] = useState<WorkPlan[]>([])
   const [planesLoading, setPlanesLoading] = useState(false)
+  const [recentPhotos, setRecentPhotos] = useState<GalleryPhoto[]>([])
+  const [photosLoading, setPhotosLoading] = useState(false)
+  const [actividadesEnProgreso, setActividadesEnProgreso] = useState<Task[]>([])
+  const [actividadesLoading, setActividadesLoading] = useState(false)
   const [fulfillment, setFulfillment] = useState<ObraFulfillment | null>(null)
 
   useDocumentTitle(obra ? `Quasar · ${obra.name}` : 'Quasar · Obra')
@@ -125,6 +137,40 @@ export function ObraDetailPage() {
     }
   }, [id])
 
+  const loadRecentPhotos = useCallback(async () => {
+    if (!Number.isFinite(id)) return
+    setPhotosLoading(true)
+    try {
+      const data = await listObraPhotoGallery({ obraId: id, page: 1 })
+      setRecentPhotos(data.photos.slice(0, RECENT_PHOTO_COUNT))
+    } catch {
+      setRecentPhotos([])
+    } finally {
+      setPhotosLoading(false)
+    }
+  }, [id])
+
+  const loadActividadesEnProgreso = useCallback(async () => {
+    if (!Number.isFinite(id)) return
+    setActividadesLoading(true)
+    try {
+      const data = await listTasks({
+        obraId: id,
+        status: 'in_progress',
+        parentOnly: true,
+        page: 1,
+      })
+      const latest = [...data.tasks]
+        .sort((a, b) => taskRecency(b) - taskRecency(a))
+        .slice(0, RECENT_ACTIVITY_COUNT)
+      setActividadesEnProgreso(latest)
+    } catch {
+      setActividadesEnProgreso([])
+    } finally {
+      setActividadesLoading(false)
+    }
+  }, [id])
+
   const load = useCallback(async () => {
     if (!Number.isFinite(id)) {
       setError('Obra inválida')
@@ -144,12 +190,20 @@ export function ObraDetailPage() {
       setFulfillment(fulfillmentData)
       void loadAsistenciaHoy()
       void loadPlanesRecientes()
+      void loadRecentPhotos()
+      void loadActividadesEnProgreso()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar la obra')
     } finally {
       setLoading(false)
     }
-  }, [id, loadAsistenciaHoy, loadPlanesRecientes])
+  }, [
+    id,
+    loadAsistenciaHoy,
+    loadPlanesRecientes,
+    loadRecentPhotos,
+    loadActividadesEnProgreso,
+  ])
 
   useEffect(() => {
     void load()
@@ -324,9 +378,31 @@ export function ObraDetailPage() {
             />
           </div>
           <div className={styles.thumbGrid}>
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className={styles.thumb} />
-            ))}
+            {photosLoading ? (
+              Array.from({ length: RECENT_PHOTO_COUNT }).map((_, index) => (
+                <div key={index} className={styles.thumb} />
+              ))
+            ) : recentPhotos.length === 0 ? (
+              <p className={styles.thumbEmpty}>Aún no hay fotos en esta obra.</p>
+            ) : (
+              recentPhotos.map((photo) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  className={styles.thumbBtn}
+                  title={photoCaption(photo)}
+                  onClick={() =>
+                    navigate(`/dashboard/obras/${obra.id}/galeria`)
+                  }
+                >
+                  <img
+                    className={styles.thumbImg}
+                    src={photo.fileUrl}
+                    alt={photoCaption(photo)}
+                  />
+                </button>
+              ))
+            )}
           </div>
         </section>
 
@@ -512,16 +588,66 @@ export function ObraDetailPage() {
                 </button>
               </div>
             </div>
-            <div className={styles.tasksEmpty}>
-              <p>Abre el tablero Kanban para programar y seguir el avance.</p>
-              <button
-                type="button"
-                className={styles.seeAll}
-                onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
-              >
-                Ver todas las actividades →
-              </button>
-            </div>
+            {actividadesLoading ? (
+              <div className={styles.tasksEmpty}>
+                <p>Cargando…</p>
+              </div>
+            ) : actividadesEnProgreso.length === 0 ? (
+              <div className={styles.tasksEmpty}>
+                <p>No hay actividades en progreso.</p>
+                <button
+                  type="button"
+                  className={styles.seeAll}
+                  onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
+                >
+                  Ver todas las actividades →
+                </button>
+              </div>
+            ) : (
+              <>
+                <table className={styles.tasksTable}>
+                  <thead>
+                    <tr>
+                      <th>Actividad</th>
+                      <th>Avance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {actividadesEnProgreso.map((task) => (
+                      <tr
+                        key={task.id}
+                        className={styles.planRow}
+                        onClick={() =>
+                          navigate(
+                            `/dashboard/obras/${obra.id}/tareas?tarea=${task.id}`,
+                          )
+                        }
+                      >
+                        <td>
+                          <strong>{task.name}</strong>
+                          <div className={styles.asistenciaMeta}>
+                            {task.chapterName ||
+                              task.budgetActivityName ||
+                              'Sin capítulo'}
+                            {task.updatedAt
+                              ? ` · ${formatActivityDate(task.updatedAt) || ''}`
+                              : ''}
+                          </div>
+                        </td>
+                        <td>{asPercent(task.progressPercent)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  className={styles.seeAll}
+                  onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
+                >
+                  Ver todas las actividades →
+                </button>
+              </>
+            )}
           </section>
 
           <section className={styles.tasksCard}>
@@ -672,6 +798,18 @@ export function ObraDetailPage() {
   )
 }
 
+function photoCaption(photo: GalleryPhoto): string {
+  if (photo.subtaskName) return `${photo.taskName} · ${photo.subtaskName}`
+  return photo.taskName
+}
+
+function taskRecency(task: Task): number {
+  const raw = task.updatedAt || task.actualStartDate || task.createdAt
+  if (!raw) return 0
+  const time = new Date(raw).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
+
 function asPercent(value: number | string | null | undefined): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
@@ -692,6 +830,17 @@ function activityDonutStyle(
   return {
     background: `conic-gradient(#054c09 0 ${completedEnd}%, #d95a0c ${completedEnd}% ${progressEnd}%, #c8c8c8 ${progressEnd}% 100%)`,
   }
+}
+
+function formatActivityDate(value?: string | null): string | null {
+  if (!value) return null
+  const date = new Date(value.includes('T') ? value : `${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString('es-CO', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  })
 }
 
 function formatShortDate(value: string | null): string | null {

@@ -1,6 +1,7 @@
 export { Button } from './Button'
 export { Field, TextInput, TextArea, TextSelect } from './Field'
 export { Modal } from './Modal'
+export { UploadOverlay } from './UploadOverlay'
 export { Badge } from './Badge'
 export { PaginationBar } from './Pagination'
 export { Alert } from './Alert'

@@ -26,6 +26,7 @@ import {
   Modal,
   TextArea,
   TextInput,
+  UploadOverlay,
   useToast,
 } from '@/shared/ui'
 import styles from './tareas.module.css'
@@ -99,6 +100,7 @@ export function TaskDetailDrawer({
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([])
   const [evidencePreviews, setEvidencePreviews] = useState<string[]>([])
   const [evidenceSaving, setEvidenceSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [evidenceError, setEvidenceError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -240,14 +242,19 @@ export function TaskDetailDrawer({
     if (!files.length) return
     const prepared: File[] = []
     const errors: string[] = []
-    for (const file of files) {
-      try {
-        prepared.push(await preparePhotoFile(file))
-      } catch (err) {
-        errors.push(
-          err instanceof Error ? err.message : 'No se pudo leer una foto',
-        )
+    setUploadingPhoto(true)
+    try {
+      for (const file of files) {
+        try {
+          prepared.push(await preparePhotoFile(file))
+        } catch (err) {
+          errors.push(
+            err instanceof Error ? err.message : 'No se pudo leer una foto',
+          )
+        }
       }
+    } finally {
+      setUploadingPhoto(false)
     }
     if (prepared.length === 0) {
       setEvidenceError(errors[0] || 'Solo se admiten imágenes.')
@@ -465,6 +472,7 @@ export function TaskDetailDrawer({
 
   return (
     <>
+      <UploadOverlay open={uploadingPhoto || evidenceSaving} />
       <div className={styles.drawerBackdrop} onClick={onClose} role="presentation">
         <aside
           className={styles.drawer}
@@ -861,6 +869,7 @@ export function TaskDetailDrawer({
                         const selected = input.files?.[0]
                         if (!selected) return
                         void (async () => {
+                          setUploadingPhoto(true)
                           try {
                             const prepared = await preparePhotoFile(selected)
                             await handlePhotoSelected(prepared)
@@ -871,6 +880,7 @@ export function TaskDetailDrawer({
                                 : 'No se pudo leer la foto',
                             )
                           } finally {
+                            setUploadingPhoto(false)
                             input.value = ''
                           }
                         })()
