@@ -33,7 +33,12 @@ import {
   VersionEditorPage,
   ZonasPanel,
 } from '@/task-pool'
-import { PhotoGalleryPage, TasksHubPage, TasksKanbanPage } from '@/tareas'
+import {
+  GalleriesHubPage,
+  PhotoGalleryPage,
+  TasksHubPage,
+  TasksKanbanPage,
+} from '@/tareas'
 import {
   WorkPlanComparePage,
   WorkPlanDetailPage,
@@ -85,6 +90,7 @@ export function App() {
                 element={<PhotoGalleryPage />}
               />
               <Route path="/tasks" element={<TasksHubPage />} />
+              <Route path="/galleries" element={<GalleriesHubPage />} />
             </Route>
 
             <Route element={<RequirePermission permission="planificacion" />}>

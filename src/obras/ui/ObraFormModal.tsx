@@ -24,6 +24,7 @@ import {
   Modal,
   TextInput,
   TextSelect,
+  UploadOverlay,
   useToast,
 } from '@/shared/ui'
 import styles from './DashboardPage.module.css'
@@ -54,6 +55,7 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [removeCover, setRemoveCover] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -158,7 +160,12 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       }
 
       if (coverFile) {
-        saved = await uploadObraCover(saved.id, coverFile)
+        setUploadingCover(true)
+        try {
+          saved = await uploadObraCover(saved.id, coverFile)
+        } finally {
+          setUploadingCover(false)
+        }
       } else if (editing && removeCover && obra?.coverImageUrl) {
         saved = await deleteObraCover(saved.id)
       }
@@ -182,6 +189,8 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
     (obra && !removeCover ? resolveObraCover(obra) : null)
 
   return (
+    <>
+    <UploadOverlay open={uploadingCover} />
     <Modal
       title={editing ? 'Editar obra' : 'Nueva obra'}
       open={open}
@@ -373,5 +382,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
         {formError ? <Alert tone="error">{formError}</Alert> : null}
       </form>
     </Modal>
+    </>
   )
 }

@@ -151,13 +151,14 @@ export type GalleryPhoto = {
   takenAt?: string | null
   createdAt?: string | null
   uploadedByName?: string | null
-  taskId: number
+  taskId?: number | null
   taskName: string
   subtaskName?: string | null
   chapterId?: number | null
   chapterName?: string | null
   budgetActivityId?: number | null
   budgetActivityName?: string | null
+  kind?: 'task' | 'obra'
 }
 
 export async function listObraPhotoGallery(params: {
@@ -165,12 +166,26 @@ export async function listObraPhotoGallery(params: {
   chapterId?: number
   budgetActivityId?: number
   taskId?: number
+  kind?: 'task' | 'obra'
   page?: number
 }): Promise<{
   photos: GalleryPhoto[]
   pagination: { totalItems: number; itemsPerPage: number; currentPage: number }
 }> {
   return apiJson(`/api/v1/operacion/tareas/galeria${buildQuery(params)}`)
+}
+
+export async function uploadObraPhotos(params: {
+  obraId: number
+  items: { file: File; description: string }[]
+}): Promise<{ photos: GalleryPhoto[] }> {
+  const form = new FormData()
+  form.append('obraId', String(params.obraId))
+  for (const item of params.items) {
+    form.append('files', item.file)
+    form.append('descriptions', item.description.trim())
+  }
+  return apiFormData('/api/v1/operacion/tareas/galeria', form, 'POST')
 }
 
 export async function uploadTaskPhoto(
