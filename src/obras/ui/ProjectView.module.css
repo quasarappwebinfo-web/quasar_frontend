@@ -226,8 +226,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.55rem;
   min-height: 3.9rem;
-  padding: 0 1.25rem;
+  padding: 0.65rem 1.25rem;
   border-bottom: 2px solid #eee;
 }
 
@@ -237,6 +239,13 @@
   font-size: 1.05rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.siteActions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
 }
 
 .menuDots {

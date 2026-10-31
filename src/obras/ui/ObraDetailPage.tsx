@@ -43,6 +43,7 @@ import {
   listTasks,
   type GalleryPhoto,
 } from '@/tareas/api/tareasApi'
+import { ObraPhotoUpload } from '@/tareas/ui/ObraPhotoUpload'
 import type { ObraFulfillment, Task } from '@/tareas/model/types'
 import { listWorkPlans } from '@/planificacion/api/planesApi'
 import {
@@ -353,17 +354,25 @@ export function ObraDetailPage() {
         <section className={styles.siteCard}>
           <div className={styles.siteHeader}>
             <h2 className={styles.siteTitle}>Sitio de trabajo</h2>
-            <button
-              type="button"
-              className={styles.menuDots}
-              aria-label="Opciones"
-              onClick={() => {
-                setAdminOpen(true)
-                setAdminTab('documentos')
-              }}
-            >
-              ···
-            </button>
+            <div className={styles.siteActions}>
+              <ObraPhotoUpload
+                obraId={obra.id}
+                label="Subir fotos"
+                size="sm"
+                onUploaded={() => void loadRecentPhotos()}
+              />
+              <button
+                type="button"
+                className={styles.menuDots}
+                aria-label="Opciones"
+                onClick={() => {
+                  setAdminOpen(true)
+                  setAdminTab('documentos')
+                }}
+              >
+                ···
+              </button>
+            </div>
           </div>
           <div className={styles.siteMain}>
             <img
@@ -387,7 +396,7 @@ export function ObraDetailPage() {
             ) : (
               recentPhotos.map((photo) => (
                 <button
-                  key={photo.id}
+                  key={`${photo.kind || 'task'}-${photo.id}`}
                   type="button"
                   className={styles.thumbBtn}
                   title={photoCaption(photo)}
@@ -799,6 +808,7 @@ export function ObraDetailPage() {
 }
 
 function photoCaption(photo: GalleryPhoto): string {
+  if (photo.kind === 'obra') return photo.description || 'Foto de la obra'
   if (photo.subtaskName) return `${photo.taskName} · ${photo.subtaskName}`
   return photo.taskName
 }

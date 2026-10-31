@@ -7,6 +7,7 @@ export type SidebarItemId =
   | 'rrhh'
   | 'proyectos'
   | 'actividades'
+  | 'galerias'
   | 'reportes'
 
 export type SidebarNavItem = {
@@ -23,6 +24,7 @@ export const SIDEBAR_NAV: SidebarNavItem[] = [
   { id: 'rrhh', label: 'RRHH', path: '/rrhh', permission: 'rrhh' },
   { id: 'proyectos', label: 'Proyectos', path: '/projects', permission: 'obras' },
   { id: 'actividades', label: 'Actividades', path: '/tasks', permission: 'tareas' },
+  { id: 'galerias', label: 'Galerías', path: '/galleries', permission: 'tareas' },
   { id: 'reportes', label: 'Reportes', path: '/reports', permission: 'obras' },
 ]
 
@@ -34,6 +36,7 @@ export function getSidebarIdFromPath(pathname: string): SidebarItemId {
   if (pathname.startsWith('/persons')) return 'personal'
   if (pathname.startsWith('/rrhh')) return 'rrhh'
   if (pathname.includes('/tareas') || pathname.startsWith('/tasks')) return 'actividades'
+  if (pathname.includes('/galeria') || pathname.startsWith('/galleries')) return 'galerias'
   if (pathname.includes('/planes') || pathname.startsWith('/dashboard/planes'))
     return 'proyectos'
   if (pathname.startsWith('/dashboard/obras')) return 'proyectos'
