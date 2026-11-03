@@ -10,25 +10,19 @@ export type Person = {
   id: number
   documentNumber: string
   name: string
-  phone: string | null
   photoUrl: string | null
-  birthDate: string | null
   createdAt?: string
 }
 
 export type PersonWrite = {
   documentNumber: string
   name: string
-  phone?: string | null
   photoUrl?: string | null
-  birthDate?: string | null
 }
 
 export type PersonUpdate = {
   name?: string
-  phone?: string | null
   photoUrl?: string | null
-  birthDate?: string | null
 }
 
 export type Role = {

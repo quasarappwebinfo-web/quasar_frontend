@@ -208,9 +208,7 @@ export function UsersPanel() {
       id: user.personId,
       documentNumber: '',
       name: user.personName ?? `Persona #${user.personId}`,
-      phone: null,
       photoUrl: null,
-      birthDate: null,
     })
     setUsername(user.username)
     setEmail(user.email ?? '')

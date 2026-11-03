@@ -9,7 +9,6 @@ import {
   cancelWorkPlanSignature,
   createWorkPlanVersion,
   getWorkPlan,
-  registerWorkPlanView,
   rejectWorkPlan,
   removeWorkPlanSigner,
   removeWorkPlanSnapshot,
@@ -112,11 +111,6 @@ export function WorkPlanDetailPage() {
   }, [load])
 
   useEffect(() => {
-    if (!detail || detail.workPlan.status !== 'pending_signature') return
-    void registerWorkPlanView(planId).catch(() => undefined)
-  }, [detail, planId])
-
-  useEffect(() => {
     void listUsers({ page: 1, statusId: 1 })
       .then((data) => setUsers(data.users))
       .catch(() => setUsers([]))
@@ -136,6 +130,9 @@ export function WorkPlanDetailPage() {
 
   const canSign =
     plan?.status === 'pending_signature' && mySigner?.status === 'pending'
+  const historyEvents = [...(current?.events || [])].filter(
+    (event) => event.eventType !== 'viewed',
+  )
   const latestSignatureRequest = [...(current?.events || [])]
     .filter((event) => event.eventType === 'requested' && event.details)
     .sort((a, b) =>
@@ -570,11 +567,11 @@ export function WorkPlanDetailPage() {
             </div>
           ) : null}
         </div>
-        {!current || current.events.length === 0 ? (
+        {historyEvents.length === 0 ? (
           <p className={styles.muted}>Sin eventos todavía.</p>
         ) : (
           <ul className={styles.timeline}>
-            {[...current.events]
+            {[...historyEvents]
               .sort((a, b) =>
                 String(b.eventAt || '').localeCompare(String(a.eventAt || '')),
               )

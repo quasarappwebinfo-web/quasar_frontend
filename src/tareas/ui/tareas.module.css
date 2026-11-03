@@ -312,6 +312,29 @@
   margin-top: auto;
 }
 
+.moveRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.moveBtn {
+  border: 1px solid #1a1c1f;
+  border-radius: 3px;
+  background: #fff;
+  color: #1a1c1f;
+  padding: 0.28rem 0.55rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moveBtn:hover {
+  background: #1a1c1f;
+  color: #fff;
+}
+
 .metaLeft,
 .metaRight {
   display: inline-flex;

@@ -1,10 +1,12 @@
 import { Button, Modal } from '@/shared/ui'
-import type { Task } from '@/tareas/model/types'
+import type { Task, TaskStatus } from '@/tareas/model/types'
+import { TASK_STATUS_LABELS } from '@/tareas/model/types'
 import styles from './tareas.module.css'
 
 type ConfirmStartModalProps = {
   open: boolean
   task: Task | null
+  toStatus: TaskStatus | null
   confirming: boolean
   onClose: () => void
   onConfirm: () => void
@@ -13,13 +15,18 @@ type ConfirmStartModalProps = {
 export function ConfirmStartModal({
   open,
   task,
+  toStatus,
   confirming,
   onClose,
   onConfirm,
 }: ConfirmStartModalProps) {
+  const fromLabel = task ? TASK_STATUS_LABELS[task.status] : ''
+  const toLabel = toStatus ? TASK_STATUS_LABELS[toStatus] : ''
+  const starting = task?.status === 'scheduled' && toStatus === 'in_progress'
+
   return (
     <Modal
-      title="Iniciar actividad"
+      title="Cambiar estado"
       open={open}
       onClose={onClose}
       footer={
@@ -27,22 +34,24 @@ export function ConfirmStartModal({
           <Button variant="ghost" disabled={confirming} onClick={onClose}>
             Cancelar
           </Button>
-          <Button disabled={confirming || !task} onClick={onConfirm}>
-            {confirming ? 'Iniciando…' : 'Sí, pasar a En progreso'}
+          <Button disabled={confirming || !task || !toStatus} onClick={onConfirm}>
+            {confirming ? 'Guardando…' : `Sí, pasar a ${toLabel}`}
           </Button>
         </>
       }
     >
       <p className={styles.confirmBody}>
-        ¿Confirmas que vas a <strong>iniciar</strong> esta actividad?
+        ¿Confirmas cambiar el estado de esta actividad?
       </p>
-      {task ? (
-        <p className={styles.confirmTaskName}>{task.name}</p>
+      {task ? <p className={styles.confirmTaskName}>{task.name}</p> : null}
+      {task && toStatus ? (
+        <p className={styles.confirmHint}>
+          Pasará de <strong>{fromLabel}</strong> a <strong>{toLabel}</strong>.
+          {starting
+            ? ' El retraso, las evidencias y marcar como hecha solo aplican cuando ya está en ejecución.'
+            : ' El cambio queda registrado en la actividad.'}
+        </p>
       ) : null}
-      <p className={styles.confirmHint}>
-        Pasará de Programadas a En progreso. El retraso, las evidencias y marcar
-        como hecha solo aplican cuando ya está en ejecución.
-      </p>
     </Modal>
   )
 }

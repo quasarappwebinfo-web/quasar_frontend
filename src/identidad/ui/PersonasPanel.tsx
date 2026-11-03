@@ -42,8 +42,6 @@ export function PersonasPanel() {
   const [editing, setEditing] = useState<Person | null>(null)
   const [documentNumber, setDocumentNumber] = useState('')
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [birthDate, setBirthDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -102,8 +100,6 @@ export function PersonasPanel() {
     setEditing(null)
     setDocumentNumber('')
     setName('')
-    setPhone('')
-    setBirthDate('')
     setFormError(null)
     resetCreateExtras()
     setModalOpen(true)
@@ -130,8 +126,6 @@ export function PersonasPanel() {
     setEditing(person)
     setDocumentNumber(person.documentNumber)
     setName(person.name)
-    setPhone(person.phone ?? '')
-    setBirthDate(person.birthDate ?? '')
     setFormError(null)
     resetCreateExtras()
     setModalOpen(true)
@@ -146,8 +140,6 @@ export function PersonasPanel() {
       if (editing) {
         await updatePerson(editing.id, {
           name: name.trim(),
-          phone: phone.trim() || null,
-          birthDate: birthDate || null,
         })
         toast.success('Persona actualizada')
         setModalOpen(false)
@@ -171,8 +163,6 @@ export function PersonasPanel() {
       const person = await createPerson({
         documentNumber: documentNumber.trim(),
         name: name.trim(),
-        phone: phone.trim() || null,
-        birthDate: birthDate || null,
       })
 
       const parts: string[] = ['Persona creada']
@@ -273,16 +263,6 @@ export function PersonasPanel() {
                   <p className={styles.cardSubtitle}>{person.documentNumber}</p>
                 </div>
               </div>
-              <div className={styles.cardMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Teléfono</span>
-                  <span className={styles.metaValue}>{person.phone || '—'}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Nacimiento</span>
-                  <span className={styles.metaValue}>{person.birthDate || '—'}</span>
-                </div>
-              </div>
               <div className={styles.rowActions}>
                 <Button variant="ghost" size="sm" onClick={() => openEdit(person)}>
                   Editar
@@ -343,24 +323,6 @@ export function PersonasPanel() {
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
-          <div className={styles.twoCol}>
-            <Field label="Teléfono">
-              <TextInput
-                disabled={saving}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </Field>
-            <Field label="Fecha de nacimiento">
-              <TextInput
-                type="date"
-                disabled={saving}
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-              />
-            </Field>
-          </div>
-
           {!editing ? (
             <>
               <label className={styles.checkRow}>
