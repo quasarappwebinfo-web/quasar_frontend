@@ -85,14 +85,6 @@ export async function cancelWorkPlanSignature(planId: number): Promise<WorkPlan>
   })
 }
 
-export async function registerWorkPlanView(
-  planId: number,
-): Promise<{ ok: boolean }> {
-  return apiJson(`/api/v1/planificacion/planes/${planId}/vista`, {
-    method: 'POST',
-  })
-}
-
 export async function signWorkPlan(
   planId: number,
   payload: WorkPlanSignPayload,

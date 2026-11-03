@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { Task, TaskStatus } from '@/tareas/model/types'
+import { ALLOWED_STATUS_TRANSITIONS } from '@/tareas/model/types'
 import {
   assigneeLabel,
   categoryColor,
@@ -14,6 +15,7 @@ type TaskCardProps = {
   onDragStart: (task: Task) => void
   onDragEnd: () => void
   onClick?: (task: Task) => void
+  onRequestMove?: (task: Task, toStatus: TaskStatus) => void
 }
 
 export function TaskCard({
@@ -22,6 +24,7 @@ export function TaskCard({
   onDragStart,
   onDragEnd,
   onClick,
+  onRequestMove,
 }: TaskCardProps) {
   const didDragRef = useRef(false)
   const assignee = assigneeLabel(task)
@@ -117,6 +120,24 @@ export function TaskCard({
           </span>
         )}
       </div>
+      {onRequestMove && ALLOWED_STATUS_TRANSITIONS[task.status].length > 0 ? (
+        <div className={styles.moveRow}>
+          {ALLOWED_STATUS_TRANSITIONS[task.status].map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={styles.moveBtn}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                onRequestMove(task, status)
+              }}
+            >
+              {moveActionLabel(task.status, status)}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -127,6 +148,17 @@ export function statusDropAllowed(
 ): boolean {
   if (to === 'rescheduled' && from !== 'rescheduled') return false
   return true
+}
+
+function moveActionLabel(from: TaskStatus, to: TaskStatus): string {
+  if (to === 'in_progress' && (from === 'scheduled' || from === 'rescheduled')) {
+    return 'Iniciar'
+  }
+  if (to === 'completed') return 'Completar'
+  if (to === 'verified') return 'Verificar'
+  if (to === 'scheduled') return from === 'rescheduled' ? 'Programar' : 'Devolver'
+  if (to === 'in_progress') return 'Reabrir'
+  return 'Mover'
 }
 
 function ClipIcon() {

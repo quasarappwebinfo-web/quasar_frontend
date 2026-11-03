@@ -68,6 +68,7 @@ export function TasksKanbanPage() {
 
   const [startConfirmOpen, setStartConfirmOpen] = useState(false)
   const [startConfirmTask, setStartConfirmTask] = useState<Task | null>(null)
+  const [startConfirmTo, setStartConfirmTo] = useState<TaskStatus | null>(null)
   const [startConfirming, setStartConfirming] = useState(false)
 
   useDocumentTitle(obraName ? `Quasar · ${obraName} · Actividades` : 'Quasar · Actividades')
@@ -246,22 +247,19 @@ export function TasksKanbanPage() {
       toast.error('Esa transición de estado no está permitida.')
       return
     }
-    // Programadas → En progreso: pedir confirmación explícita
-    if (task.status === 'scheduled' && toStatus === 'in_progress') {
-      setStartConfirmTask(task)
-      setStartConfirmOpen(true)
-      return
-    }
-    await applyStatusChange(task, toStatus)
+    setStartConfirmTask(task)
+    setStartConfirmTo(toStatus)
+    setStartConfirmOpen(true)
   }
 
   async function handleConfirmStart() {
-    if (!startConfirmTask) return
+    if (!startConfirmTask || !startConfirmTo) return
     setStartConfirming(true)
     try {
-      await applyStatusChange(startConfirmTask, 'in_progress')
+      await applyStatusChange(startConfirmTask, startConfirmTo)
       setStartConfirmOpen(false)
       setStartConfirmTask(null)
+      setStartConfirmTo(null)
     } finally {
       setStartConfirming(false)
     }
@@ -307,7 +305,8 @@ export function TasksKanbanPage() {
             >
               Plan (periodo)
             </button>{' '}
-            y elige las actividades a ejecutar; aquí las inicias con confirmación.
+            y elige las actividades a ejecutar. Para cambiar el estado, arrastra
+            la tarjeta o usa el botón; siempre pide confirmación.
           </p>
         </div>
         <div className={styles.filters}>
@@ -442,6 +441,9 @@ export function TasksKanbanPage() {
                           setDetailTaskId(item.id)
                           setDetailOpen(true)
                         }}
+                        onRequestMove={(item, toStatus) => {
+                          void moveTask(item, toStatus)
+                        }}
                       />
                     ))
                   )}
@@ -478,11 +480,13 @@ export function TasksKanbanPage() {
       <ConfirmStartModal
         open={startConfirmOpen}
         task={startConfirmTask}
+        toStatus={startConfirmTo}
         confirming={startConfirming}
         onClose={() => {
           if (startConfirming) return
           setStartConfirmOpen(false)
           setStartConfirmTask(null)
+          setStartConfirmTo(null)
         }}
         onConfirm={() => void handleConfirmStart()}
       />

@@ -166,9 +166,7 @@ export function TrabajadoresPanel() {
       id: worker.personId,
       documentNumber: worker.documentNumber ?? '',
       name: worker.personName ?? `Persona #${worker.personId}`,
-      phone: null,
       photoUrl: null,
-      birthDate: null,
     })
     setPositionId(worker.workerPositionId ? String(worker.workerPositionId) : '')
     setSpecialtyId(worker.specialtyId ? String(worker.specialtyId) : '')
