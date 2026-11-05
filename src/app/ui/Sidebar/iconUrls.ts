@@ -4,6 +4,7 @@ import rrhhUrl from './icons/rrhh.svg'
 import proyectosUrl from './icons/proyectos.svg'
 import tareasUrl from './icons/tareas.svg'
 import galeriasUrl from './icons/galerias.svg'
+import listadoUrl from './icons/listado.svg'
 import reportesUrl from './icons/reportes.svg'
 import chevronUrl from './icons/chevron.svg'
 import type { SidebarItemId } from '@/app/ui/Sidebar/nav'
@@ -14,6 +15,7 @@ export const NAV_ICON_URLS: Record<SidebarItemId, string> = {
   rrhh: rrhhUrl,
   proyectos: proyectosUrl,
   actividades: tareasUrl,
+  listado: listadoUrl,
   galerias: galeriasUrl,
   reportes: reportesUrl,
 }

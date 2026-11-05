@@ -1,5 +1,5 @@
 import type { AuthUser } from '@/auth'
-import { hasPermission } from '@/auth/model/permissions'
+import { hasAnyPermission, hasPermission } from '@/auth/model/permissions'
 
 export type SidebarItemId =
   | 'dashboard'
@@ -7,6 +7,7 @@ export type SidebarItemId =
   | 'rrhh'
   | 'proyectos'
   | 'actividades'
+  | 'listado'
   | 'galerias'
   | 'reportes'
 
@@ -15,24 +16,36 @@ export type SidebarNavItem = {
   label: string
   path: string
   /** null = visible para cualquier autenticado */
-  permission: string | null
+  permission: string | string[] | null
 }
 
 export const SIDEBAR_NAV: SidebarNavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', permission: null },
+  { id: 'dashboard', label: 'Inicio', path: '/dashboard', permission: null },
   { id: 'personal', label: 'Personal', path: '/persons', permission: 'identidad' },
   { id: 'rrhh', label: 'RRHH', path: '/rrhh', permission: 'rrhh' },
-  { id: 'proyectos', label: 'Proyectos', path: '/projects', permission: 'obras' },
-  { id: 'actividades', label: 'Actividades', path: '/tasks', permission: 'tareas' },
-  { id: 'galerias', label: 'Galerías', path: '/galleries', permission: 'tareas' },
-  { id: 'reportes', label: 'Reportes', path: '/reports', permission: 'obras' },
+  { id: 'proyectos', label: 'Obras', path: '/projects', permission: 'obras' },
+  { id: 'actividades', label: 'Bitácoras obras', path: '/tasks', permission: 'tareas' },
+  { id: 'galerias', label: 'Galerías obras', path: '/galleries', permission: 'tareas' },
+  { id: 'reportes', label: 'Reportes obras', path: '/reports', permission: 'obras' },
+  {
+    id: 'listado',
+    label: 'Listado General Act.',
+    path: '/maestros/task-pool',
+    permission: ['task_pool', 'catalogos'],
+  },
 ]
 
 export function getVisibleNav(user: AuthUser | null): SidebarNavItem[] {
-  return SIDEBAR_NAV.filter((item) => hasPermission(user, item.permission))
+  return SIDEBAR_NAV.filter((item) => {
+    if (Array.isArray(item.permission)) {
+      return hasAnyPermission(user, item.permission)
+    }
+    return hasPermission(user, item.permission)
+  })
 }
 
 export function getSidebarIdFromPath(pathname: string): SidebarItemId {
+  if (pathname.startsWith('/maestros/task-pool')) return 'listado'
   if (pathname.startsWith('/persons')) return 'personal'
   if (pathname.startsWith('/rrhh')) return 'rrhh'
   if (pathname.includes('/tareas') || pathname.startsWith('/tasks')) return 'actividades'

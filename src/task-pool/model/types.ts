@@ -23,14 +23,15 @@ export type TaskChapter = NamedCatalog & {
   stageId: number | null
   stageName: string | null
   weightPercent: number | string | null
+  isGlobal?: number
 }
 
 export type TaskChapterWrite = {
   name: string
-  stageId: number
   description?: string | null
   displayOrder?: number
   weightPercent?: number | null
+  isGlobal?: number
 }
 
 export type TaskChapterUpdate = {
@@ -39,6 +40,7 @@ export type TaskChapterUpdate = {
   description?: string | null
   displayOrder?: number
   weightPercent?: number | null
+  isGlobal?: number
   isActive?: ActiveStatus
 }
 
@@ -112,7 +114,6 @@ export type TaskTemplateWrite = {
   zoneId?: number | null
   budgetActivityId: number
   name: string
-  code: string
   description?: string | null
 }
 

@@ -26,23 +26,6 @@ export async function listActiveSaleTypes(): Promise<SaleTypeOption[]> {
   return data.saleTypes
 }
 
-export async function createSaleType(name: string): Promise<SaleTypeOption> {
-  return apiJson('/api/v1/obras/tipos-venta', {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  })
-}
-
-export async function updateSaleType(
-  id: number,
-  payload: { name?: string; isActive?: ActiveStatus },
-): Promise<SaleTypeOption> {
-  return apiJson(`/api/v1/obras/tipos-venta/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  })
-}
-
 export async function listStages(params: {
   page?: number
   search?: string
@@ -109,26 +92,3 @@ export async function listActiveDocumentTypes(): Promise<DocumentTypeOption[]> {
   return data.documentTypes
 }
 
-export async function createDocumentType(payload: {
-  name: string
-  description?: string | null
-}): Promise<DocumentTypeOption> {
-  return apiJson('/api/v1/obras/tipos-documento', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
-export async function updateDocumentType(
-  id: number,
-  payload: {
-    name?: string
-    description?: string | null
-    isActive?: ActiveStatus
-  },
-): Promise<DocumentTypeOption> {
-  return apiJson(`/api/v1/obras/tipos-documento/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  })
-}

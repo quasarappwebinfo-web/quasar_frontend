@@ -54,7 +54,6 @@ export function PlantillasPanel() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TaskTemplate | null>(null)
   const [name, setName] = useState('')
-  const [code, setCode] = useState('')
   const [formChapterId, setFormChapterId] = useState('')
   const [formZoneId, setFormZoneId] = useState('')
   const [formBudgetActivityId, setFormBudgetActivityId] = useState('')
@@ -129,7 +128,6 @@ export function PlantillasPanel() {
   function openCreate() {
     setEditing(null)
     setName('')
-    setCode('')
     setFormChapterId(chapterId || (categories[0] ? String(categories[0].id) : ''))
     setFormZoneId(zoneId || '')
     const initialCat = Number(
@@ -154,7 +152,6 @@ export function PlantillasPanel() {
   function openEdit(item: TaskTemplate) {
     setEditing(item)
     setName(item.name)
-    setCode(item.code)
     setFormChapterId(String(item.chapterId))
     setFormZoneId(item.zoneId ? String(item.zoneId) : '')
     setFormBudgetActivityId(
@@ -170,14 +167,9 @@ export function PlantillasPanel() {
     const catId = Number(formChapterId)
     const zId = formZoneId ? Number(formZoneId) : null
     const baId = Number(formBudgetActivityId)
-    if (
-      !name.trim() ||
-      (!editing && !code.trim()) ||
-      Number.isNaN(catId) ||
-      Number.isNaN(baId)
-    ) {
+    if (!name.trim() || Number.isNaN(catId) || Number.isNaN(baId)) {
       setFormError(
-        'Capítulo, actividad presupuestal, nombre y código son obligatorios.',
+        'Capítulo, actividad presupuestal y nombre son obligatorios.',
       )
       return
     }
@@ -200,7 +192,6 @@ export function PlantillasPanel() {
           zoneId: zId,
           budgetActivityId: baId,
           name: name.trim(),
-          code: code.trim().toUpperCase(),
           description: description.trim() || null,
         })
         toast.success('Actividad Registrada creada')
@@ -209,7 +200,7 @@ export function PlantillasPanel() {
       await load()
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setFormError('Ese código o nombre ya existe.')
+        setFormError('Ese nombre ya existe.')
       } else {
         setFormError(err instanceof Error ? err.message : 'No se pudo guardar')
       }
@@ -237,10 +228,10 @@ export function PlantillasPanel() {
           <div className={styles.searchGrow}>
             <Field
               label="Buscar"
-              help="Busca Actividades Registradas por nombre o código (ej. EST-LOSA-01)."
+              help="Busca Actividades Registradas por nombre."
             >
               <TextInput
-                placeholder="Nombre o código"
+                placeholder="Nombre"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -251,7 +242,7 @@ export function PlantillasPanel() {
           </div>
           <Field
             label="Capítulo"
-            help="Filtra Actividades Registradas que pertenecen a un capítulo de la Base Datos Actividades."
+            help="Filtra Actividades Registradas que pertenecen a un capítulo del listado."
           >
             <TextSelect
               value={chapterId}
@@ -340,7 +331,9 @@ export function PlantillasPanel() {
               <div className={styles.cardTop}>
                 <div>
                   <h3 className={styles.cardTitle}>{item.name}</h3>
-                  <p className={styles.cardSubtitle}>{item.code}</p>
+                  {item.description ? (
+                    <p className={styles.cardSubtitle}>{item.description}</p>
+                  ) : null}
                 </div>
                 <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
                   {item.isActive === 1 ? 'Activo' : 'Inactivo'}
@@ -360,9 +353,6 @@ export function PlantillasPanel() {
                       (item.budgetActivityId
                         ? `ID ${item.budgetActivityId}`
                         : '—')}
-                    {item.budgetWeightPercent != null
-                      ? ` · ${item.budgetWeightPercent}%`
-                      : ''}
                   </span>
                 </div>
                 <div className={styles.metaRow}>
@@ -493,18 +483,6 @@ export function PlantillasPanel() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-            />
-          </Field>
-          <Field
-            label="Código"
-            help="Identificador único e inmutable (ej. EST-LOSA-01). No se puede cambiar al editar."
-          >
-            <TextInput
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              disabled={Boolean(editing)}
-              placeholder="EST-LOSA-01"
-              required={!editing}
             />
           </Field>
           <Field

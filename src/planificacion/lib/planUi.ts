@@ -1,17 +1,8 @@
-import type { WorkPlanStatus, SignerStatus } from '@/planificacion/model/types'
+import type { WorkPlanStatus } from '@/planificacion/model/types'
 
 export function planStatusTone(
   status: WorkPlanStatus,
 ): 'neutral' | 'success' | 'danger' {
-  if (status === 'signed') return 'success'
-  if (status === 'rejected') return 'danger'
-  return 'neutral'
-}
-
-export function signerStatusTone(
-  status: SignerStatus,
-): 'neutral' | 'success' | 'danger' {
-  if (status === 'signed') return 'success'
   if (status === 'rejected') return 'danger'
   return 'neutral'
 }
@@ -40,21 +31,8 @@ export function formatDateTime(value?: string | null): string {
   })
 }
 
-export function isPlanEditable(status: WorkPlanStatus, immutable?: boolean): boolean {
-  if (immutable) return false
-  return status === 'draft'
-}
-
-export function canRequestSignature(
-  status: WorkPlanStatus,
-  taskCount: number,
-  signerCount: number,
-): boolean {
-  return (
-    (status === 'draft' || status === 'rejected') &&
-    taskCount > 0 &&
-    signerCount > 0
-  )
+export function isPlanEditable(_status: WorkPlanStatus, _immutable?: boolean): boolean {
+  return true
 }
 
 export function canCreateNewVersion(status: WorkPlanStatus): boolean {

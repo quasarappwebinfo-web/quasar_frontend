@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { listActiveStages } from '@/obras/api/catalogosObrasApi'
-import type { StageOption } from '@/obras/model/types'
 import {
   createTaskChapter,
   listTaskChapters,
@@ -37,11 +35,10 @@ export function CategoriasPanel() {
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TaskChapter | null>(null)
-  const [stages, setStages] = useState<StageOption[]>([])
   const [name, setName] = useState('')
-  const [stageId, setStageId] = useState('')
   const [description, setDescription] = useState('')
   const [weightPercent, setWeightPercent] = useState('')
+  const [isGlobal, setIsGlobal] = useState('0')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -68,18 +65,12 @@ export function CategoriasPanel() {
     void load()
   }, [load])
 
-  useEffect(() => {
-    void listActiveStages()
-      .then(setStages)
-      .catch(() => setStages([]))
-  }, [])
-
   function openCreate() {
     setEditing(null)
     setName('')
-    setStageId('')
     setDescription('')
     setWeightPercent('')
+    setIsGlobal('0')
     setFormError(null)
     setModalOpen(true)
   }
@@ -87,11 +78,11 @@ export function CategoriasPanel() {
   function openEdit(item: TaskChapter) {
     setEditing(item)
     setName(item.name)
-    setStageId(item.stageId != null ? String(item.stageId) : '')
     setDescription(item.description || '')
     setWeightPercent(
       item.weightPercent != null ? String(item.weightPercent) : '',
     )
+    setIsGlobal(item.isGlobal === 1 ? '1' : '0')
     setFormError(null)
     setModalOpen(true)
   }
@@ -101,10 +92,6 @@ export function CategoriasPanel() {
     const weight = weightPercent.trim() ? Number(weightPercent) : null
     if (!name.trim()) {
       setFormError('El nombre es obligatorio.')
-      return
-    }
-    if (!stageId) {
-      setFormError('Elige la etapa a la que pertenece el capítulo.')
       return
     }
     if (weight != null && (Number.isNaN(weight) || weight < 0 || weight > 100)) {
@@ -117,18 +104,19 @@ export function CategoriasPanel() {
       if (editing) {
         await updateTaskChapter(editing.id, {
           name: name.trim(),
-          stageId: Number(stageId),
+          stageId: null,
           description: description.trim() || null,
           weightPercent: weight,
+          isGlobal: Number(isGlobal),
           isActive: editing.isActive,
         })
         toast.success('Capítulo actualizado')
       } else {
         await createTaskChapter({
           name: name.trim(),
-          stageId: Number(stageId),
           description: description.trim() || null,
           weightPercent: weight,
+          isGlobal: Number(isGlobal),
         })
         toast.success('Capítulo creado')
       }
@@ -208,9 +196,9 @@ export function CategoriasPanel() {
               <div className={styles.cardTop}>
                 <div>
                   <h3 className={styles.cardTitle}>{item.name}</h3>
-                  <p className={styles.cardSubtitle}>
-                    {item.description || `Orden ${item.displayOrder}`}
-                  </p>
+                  {item.description ? (
+                    <p className={styles.cardSubtitle}>{item.description}</p>
+                  ) : null}
                 </div>
                 <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
                   {item.isActive === 1 ? 'Activo' : 'Inactivo'}
@@ -218,17 +206,15 @@ export function CategoriasPanel() {
               </div>
               <div className={styles.cardMeta}>
                 <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Orden</span>
-                  <span className={styles.metaValue}>{item.displayOrder}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Etapa</span>
-                  <span className={styles.metaValue}>{item.stageName || '—'}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>% de la etapa</span>
+                  <span className={styles.metaLabel}>% de la obra</span>
                   <span className={styles.metaValue}>
                     {item.weightPercent != null ? `${item.weightPercent}%` : '—'}
+                  </span>
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.metaLabel}>Alcance</span>
+                  <span className={styles.metaValue}>
+                    {item.isGlobal === 1 ? 'Todas las zonas' : 'Por zona'}
                   </span>
                 </div>
               </div>
@@ -284,25 +270,8 @@ export function CategoriasPanel() {
             />
           </Field>
           <Field
-            label="Etapa"
-            help="El capítulo pertenece a una etapa de la obra. Créala primero en la pestaña Etapas."
-          >
-            <TextSelect
-              value={stageId}
-              onChange={(e) => setStageId(e.target.value)}
-              required
-            >
-              <option value="">Seleccionar…</option>
-              {stages.map((stage) => (
-                <option key={stage.id} value={stage.id}>
-                  {stage.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="% de la etapa"
-            help="Opcional. Cuánto aporta este capítulo al 100% de su etapa. El % de la etapa es el que suma hacia la obra."
+            label="% de la obra"
+            help="Opcional. Cuánto aporta este capítulo al avance de la obra."
           >
             <TextInput
               type="number"
@@ -313,6 +282,15 @@ export function CategoriasPanel() {
               onChange={(e) => setWeightPercent(e.target.value)}
               placeholder="ej. 25"
             />
+          </Field>
+          <Field
+            label="Alcance"
+            help="Actividades preliminares se hacen una vez y el mismo avance sale en cada zona. Estructura e instalaciones se miden dentro de cada zona."
+          >
+            <TextSelect value={isGlobal} onChange={(e) => setIsGlobal(e.target.value)}>
+              <option value="0">Por zona</option>
+              <option value="1">En todas las zonas</option>
+            </TextSelect>
           </Field>
           <Field
             label="Descripción"

@@ -2,15 +2,11 @@ import { apiJson, buildQuery } from '@/shared/api/apiJson'
 import type {
   Pagination,
   WorkPlan,
-  WorkPlanAddSigner,
   WorkPlanAddTask,
   WorkPlanCompare,
   WorkPlanCreate,
   WorkPlanDetail,
   WorkPlanNewVersion,
-  WorkPlanRejectPayload,
-  WorkPlanSignPayload,
-  WorkPlanSigner,
   WorkPlanStatus,
   WorkPlanTaskSnapshot,
   WorkPlanUpdate,
@@ -73,38 +69,6 @@ export async function compareWorkPlan(
   )
 }
 
-export async function requestWorkPlanSignature(planId: number): Promise<WorkPlan> {
-  return apiJson(`/api/v1/planificacion/planes/${planId}/solicitar-firma`, {
-    method: 'POST',
-  })
-}
-
-export async function cancelWorkPlanSignature(planId: number): Promise<WorkPlan> {
-  return apiJson(`/api/v1/planificacion/planes/${planId}/cancelar-firma`, {
-    method: 'POST',
-  })
-}
-
-export async function signWorkPlan(
-  planId: number,
-  payload: WorkPlanSignPayload,
-): Promise<{ workPlan: WorkPlan; signer: WorkPlanSigner; fullySigned: boolean }> {
-  return apiJson(`/api/v1/planificacion/planes/${planId}/firmar`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
-export async function rejectWorkPlan(
-  planId: number,
-  payload: WorkPlanRejectPayload,
-): Promise<{ workPlan: WorkPlan; signer: WorkPlanSigner }> {
-  return apiJson(`/api/v1/planificacion/planes/${planId}/rechazar`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
 export async function createWorkPlanVersion(
   planId: number,
   payload: WorkPlanNewVersion = {},
@@ -127,22 +91,6 @@ export async function addWorkPlanTask(
 
 export async function removeWorkPlanSnapshot(snapshotId: number): Promise<void> {
   return apiJson(`/api/v1/planificacion/planes/snapshots/${snapshotId}`, {
-    method: 'DELETE',
-  })
-}
-
-export async function addWorkPlanSigner(
-  versionId: number,
-  payload: WorkPlanAddSigner,
-): Promise<WorkPlanSigner> {
-  return apiJson(`/api/v1/planificacion/planes/versiones/${versionId}/firmantes`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
-export async function removeWorkPlanSigner(signerId: number): Promise<void> {
-  return apiJson(`/api/v1/planificacion/planes/firmantes/${signerId}`, {
     method: 'DELETE',
   })
 }

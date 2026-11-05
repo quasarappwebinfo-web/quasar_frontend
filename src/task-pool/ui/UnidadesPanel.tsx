@@ -147,7 +147,7 @@ export function UnidadesPanel() {
           </div>
           <Field
             label="Estado"
-            help="«Solo activos» oculta unidades desactivadas. Los selects de Base Datos Actividades solo muestran activas."
+            help="«Solo activos» oculta unidades desactivadas. Los selects del listado solo muestran activas."
           >
             <TextSelect
               value={activeOnly ? '1' : '0'}

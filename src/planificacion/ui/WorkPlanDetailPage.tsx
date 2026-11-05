@@ -1,34 +1,22 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '@/auth'
-import { listUsers } from '@/identidad/api/usersApi'
-import type { AppUser } from '@/identidad/model/types'
 import {
-  addWorkPlanSigner,
   addWorkPlanTask,
-  cancelWorkPlanSignature,
   createWorkPlanVersion,
   getWorkPlan,
-  rejectWorkPlan,
-  removeWorkPlanSigner,
   removeWorkPlanSnapshot,
-  requestWorkPlanSignature,
-  signWorkPlan,
   updateWorkPlan,
 } from '@/planificacion/api/planesApi'
 import {
   canCreateNewVersion,
-  canRequestSignature,
   formatDateTime,
   formatPlanDate,
   isPlanEditable,
   planStatusTone,
-  signerStatusTone,
 } from '@/planificacion/lib/planUi'
 import type { WorkPlanDetail } from '@/planificacion/model/types'
 import {
   EVENT_TYPE_LABELS,
-  SIGNER_STATUS_LABELS,
   WORK_PLAN_STATUS_LABELS,
 } from '@/planificacion/model/types'
 import { listTasks } from '@/tareas/api/tareasApi'
@@ -41,13 +29,10 @@ import {
   Button,
   Field,
   Modal,
-  TextArea,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
-import { SignaturePad } from './SignaturePad'
-import padStyles from './SignaturePad.module.css'
 import styles from './planificacion.module.css'
 
 export function WorkPlanDetailPage() {
@@ -55,8 +40,6 @@ export function WorkPlanDetailPage() {
   const planId = Number(planIdParam)
   const navigate = useNavigate()
   const toast = useToast()
-  const { user } = useAuth()
-  const userId = Number(user?.id)
 
   const [detail, setDetail] = useState<WorkPlanDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,17 +54,6 @@ export function WorkPlanDetailPage() {
   const [addTaskOpen, setAddTaskOpen] = useState(false)
   const [availableTasks, setAvailableTasks] = useState<Task[]>([])
   const [taskToAdd, setTaskToAdd] = useState('')
-
-  const [users, setUsers] = useState<AppUser[]>([])
-  const [signerUserId, setSignerUserId] = useState('')
-  const [signerOrder, setSignerOrder] = useState('')
-
-  const [signOpen, setSignOpen] = useState(false)
-  const [signatureData, setSignatureData] = useState<string | null>(null)
-  const [signError, setSignError] = useState<string | null>(null)
-
-  const [rejectOpen, setRejectOpen] = useState(false)
-  const [rejectReason, setRejectReason] = useState('')
 
   useDocumentTitle(
     detail ? `Quasar · ${detail.workPlan.name}` : 'Quasar · Plan',
@@ -110,12 +82,6 @@ export function WorkPlanDetailPage() {
     void load()
   }, [load])
 
-  useEffect(() => {
-    void listUsers({ page: 1, statusId: 1 })
-      .then((data) => setUsers(data.users))
-      .catch(() => setUsers([]))
-  }, [])
-
   const plan = detail?.workPlan
   const current = detail?.currentVersion
   const version = current?.version
@@ -123,21 +89,9 @@ export function WorkPlanDetailPage() {
     ? isPlanEditable(plan.status, version?.isImmutable)
     : false
 
-  const mySigner = useMemo(() => {
-    if (!current || !Number.isFinite(userId)) return null
-    return current.signers.find((s) => s.userId === userId) || null
-  }, [current, userId])
-
-  const canSign =
-    plan?.status === 'pending_signature' && mySigner?.status === 'pending'
   const historyEvents = [...(current?.events || [])].filter(
-    (event) => event.eventType !== 'viewed',
+    (event) => event.eventType === 'created' || event.eventType === 'edited',
   )
-  const latestSignatureRequest = [...(current?.events || [])]
-    .filter((event) => event.eventType === 'requested' && event.details)
-    .sort((a, b) =>
-      String(b.eventAt || '').localeCompare(String(a.eventAt || '')),
-    )[0]
 
   async function runAction(label: string, action: () => Promise<unknown>) {
     setBusy(true)
@@ -192,57 +146,6 @@ export function WorkPlanDetailPage() {
     setAddTaskOpen(false)
   }
 
-  async function handleAddSigner(event: FormEvent) {
-    event.preventDefault()
-    if (!version || !signerUserId) return
-    await runAction('Firmante agregado', () =>
-      addWorkPlanSigner(version.id, {
-        userId: Number(signerUserId),
-        signatureOrder: signerOrder ? Number(signerOrder) : null,
-      }),
-    )
-    setSignerUserId('')
-    setSignerOrder('')
-  }
-
-  async function handleSign(event: FormEvent) {
-    event.preventDefault()
-    if (!signatureData) {
-      setSignError('Dibuja tu firma en el recuadro para continuar.')
-      return
-    }
-    setBusy(true)
-    setSignError(null)
-    try {
-      const result = await signWorkPlan(planId, {
-        signatureType: 'electronic',
-        signatureData,
-      })
-      toast.success(
-        result.fullySigned
-          ? 'Plan firmado por completo'
-          : 'Firma registrada',
-      )
-      setSignOpen(false)
-      setSignatureData(null)
-      await load()
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'No se pudo firmar')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleReject(event: FormEvent) {
-    event.preventDefault()
-    if (!rejectReason.trim()) return
-    await runAction('Plan rechazado', () =>
-      rejectWorkPlan(planId, { reason: rejectReason.trim() }),
-    )
-    setRejectOpen(false)
-    setRejectReason('')
-  }
-
   if (loading) {
     return <p className={styles.empty}>Cargando plan…</p>
   }
@@ -295,47 +198,6 @@ export function WorkPlanDetailPage() {
               Editar cabecera
             </Button>
           ) : null}
-          {canRequestSignature(
-            plan.status,
-            current?.tasks.length || 0,
-            current?.signers.length || 0,
-          ) ? (
-            <Button
-              disabled={busy}
-              onClick={() =>
-                void runAction('Firma solicitada', () =>
-                  requestWorkPlanSignature(planId),
-                )
-              }
-            >
-              Solicitar firma
-            </Button>
-          ) : null}
-          {plan.status === 'pending_signature' ? (
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() =>
-                void runAction('Solicitud cancelada', () =>
-                  cancelWorkPlanSignature(planId),
-                )
-              }
-            >
-              Cancelar solicitud
-            </Button>
-          ) : null}
-          {canSign ? (
-            <>
-              <Button onClick={() => {
-                setSignatureData(null)
-                setSignError(null)
-                setSignOpen(true)
-              }}>Firmar</Button>
-              <Button variant="danger" onClick={() => setRejectOpen(true)}>
-                Rechazar
-              </Button>
-            </>
-          ) : null}
           {canCreateNewVersion(plan.status) ? (
             <Button
               disabled={busy}
@@ -357,27 +219,7 @@ export function WorkPlanDetailPage() {
         </div>
       </header>
 
-      {plan.status === 'pending_signature' && latestSignatureRequest?.details ? (
-        <div className={styles.noteBox}>
-          <strong>Pendiente de firma.</strong> {latestSignatureRequest.details}
-        </div>
-      ) : null}
-
-      {version?.isImmutable || plan.status === 'signed' ? (
-        <div className={styles.noteBox}>
-          Esta versión está firmada o es inmutable. Para cambios, crea una{' '}
-          <strong>nueva versión</strong>.
-        </div>
-      ) : null}
-
-      {plan.status === 'rejected' ? (
-        <div className={styles.warnBox}>
-          El plan fue rechazado. Puedes crear una nueva versión para iterar.
-        </div>
-      ) : null}
-
-      <div className={styles.grid2}>
-        <section className={styles.panel}>
+      <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2 className={styles.panelTitle}>
               Actividades del snapshot ({current?.tasks.length || 0})
@@ -441,112 +283,6 @@ export function WorkPlanDetailPage() {
             </div>
           )}
         </section>
-
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2 className={styles.panelTitle}>
-              Firmantes ({current?.signers.length || 0})
-            </h2>
-          </div>
-          {editable ? (
-            <form className={styles.inlineForm} onSubmit={handleAddSigner}>
-              <Field label="Usuario">
-                <TextSelect
-                  value={signerUserId}
-                  onChange={(e) => setSignerUserId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar…</option>
-                  {users
-                    .filter(
-                      (u) =>
-                        !(current?.signers.some((s) => s.userId === u.id) ?? false),
-                    )
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.personName || u.username}
-                      </option>
-                    ))}
-                </TextSelect>
-              </Field>
-              <Field label="Orden">
-                <TextInput
-                  type="number"
-                  value={signerOrder}
-                  onChange={(e) => setSignerOrder(e.target.value)}
-                  placeholder="1"
-                />
-              </Field>
-              <Button type="submit" disabled={busy || !signerUserId}>
-                Agregar
-              </Button>
-            </form>
-          ) : null}
-          {!current || current.signers.length === 0 ? (
-            <p className={styles.muted}>Sin firmantes.</p>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Orden</th>
-                    <th>Usuario</th>
-                    <th>Estado</th>
-                    <th>Firma</th>
-                    {editable ? <th /> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...current.signers]
-                    .sort(
-                      (a, b) => (a.signatureOrder || 0) - (b.signatureOrder || 0),
-                    )
-                    .map((signer) => (
-                      <tr key={signer.id}>
-                        <td>{signer.signatureOrder ?? '—'}</td>
-                        <td>{signer.userName || `Usuario #${signer.userId}`}</td>
-                        <td>
-                          <Badge tone={signerStatusTone(signer.status)}>
-                            {SIGNER_STATUS_LABELS[signer.status]}
-                          </Badge>
-                          {signer.rejectionReason ? (
-                            <p className={styles.muted}>{signer.rejectionReason}</p>
-                          ) : null}
-                        </td>
-                        <td>
-                          {signer.signatureData?.startsWith('data:image/') ? (
-                            <img
-                              src={signer.signatureData}
-                              alt={`Firma de ${signer.userName || signer.userId}`}
-                              className={padStyles.preview}
-                            />
-                          ) : (
-                            <span className={styles.muted}>—</span>
-                          )}
-                        </td>
-                        {editable ? (
-                          <td>
-                            <Button
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() =>
-                                void runAction('Firmante quitado', () =>
-                                  removeWorkPlanSigner(signer.id),
-                                )
-                              }
-                            >
-                              Quitar
-                            </Button>
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
 
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
@@ -670,88 +406,6 @@ export function WorkPlanDetailPage() {
               No hay más actividades elegibles (con fechas) fuera del snapshot.
             </p>
           ) : null}
-        </form>
-      </Modal>
-
-      <Modal
-        title="Firmar plan"
-        open={signOpen}
-        onClose={() => {
-          setSignOpen(false)
-          setSignatureData(null)
-          setSignError(null)
-        }}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setSignOpen(false)
-                setSignatureData(null)
-                setSignError(null)
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              form="sign-plan"
-              disabled={busy || !signatureData}
-            >
-              Confirmar firma
-            </Button>
-          </>
-        }
-      >
-        <form id="sign-plan" className={styles.formGrid} onSubmit={handleSign}>
-          <div className={styles.noteBox}>
-            Dibuja tu firma con el mouse o el dedo. Se guarda como imagen
-            base64 en el plan.
-          </div>
-          {signError ? <Alert tone="error">{signError}</Alert> : null}
-          <Field label="Firma manuscrita" help="Obligatoria para confirmar.">
-            {signOpen ? (
-              <SignaturePad
-                disabled={busy}
-                onChange={(value) => {
-                  setSignatureData(value)
-                  if (value) setSignError(null)
-                }}
-              />
-            ) : null}
-          </Field>
-        </form>
-      </Modal>
-
-      <Modal
-        title="Rechazar plan"
-        open={rejectOpen}
-        onClose={() => setRejectOpen(false)}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setRejectOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              form="reject-plan"
-              variant="danger"
-              disabled={busy || !rejectReason.trim()}
-            >
-              Rechazar
-            </Button>
-          </>
-        }
-      >
-        <form id="reject-plan" className={styles.formGrid} onSubmit={handleReject}>
-          <Field label="Motivo" help="Obligatorio.">
-            <TextArea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={3}
-              required
-            />
-          </Field>
         </form>
       </Modal>
     </div>

@@ -5,18 +5,19 @@ import {
   updatePerson,
 } from '@/identidad/api/personasApi'
 import { listActiveRoles } from '@/identidad/api/rolesApi'
-import { createUser } from '@/identidad/api/usersApi'
+import { createUser, listUsers } from '@/identidad/api/usersApi'
 import type { Person, Role } from '@/identidad/model/types'
 import {
   listActivePositions,
   listActiveSpecialties,
 } from '@/rrhh/api/catalogosRrhhApi'
-import { createWorker } from '@/rrhh/api/trabajadoresApi'
+import { createWorker, listWorkers } from '@/rrhh/api/trabajadoresApi'
 import type { PositionOption, SpecialtyOption } from '@/rrhh/model/types'
 import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
+  Badge,
   Button,
   Field,
   Modal,
@@ -26,6 +27,28 @@ import {
   useToast,
 } from '@/shared/ui'
 import styles from './identidad.module.css'
+
+async function collectPersonIds(
+  fetchPage: (page: number) => Promise<{
+    ids: number[]
+    totalItems: number
+    itemsPerPage: number
+  }>,
+): Promise<Set<number>> {
+  const ids = new Set<number>()
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages && page <= 40) {
+    const data = await fetchPage(page)
+    for (const id of data.ids) ids.add(id)
+    const perPage = data.itemsPerPage || 15
+    totalPages = Math.max(1, Math.ceil(data.totalItems / perPage))
+    page += 1
+  }
+
+  return ids
+}
 
 export function PersonasPanel() {
   const toast = useToast()
@@ -37,6 +60,8 @@ export function PersonasPanel() {
   const [itemsPerPage, setItemsPerPage] = useState(15)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userPersonIds, setUserPersonIds] = useState<Set<number> | null>(null)
+  const [workerPersonIds, setWorkerPersonIds] = useState<Set<number> | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Person | null>(null)
@@ -65,6 +90,36 @@ export function PersonasPanel() {
       setItems(data.persons)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+
+      const apiSendsRoles = data.persons.some(
+        (person) =>
+          typeof person.isUser === 'boolean' || typeof person.isWorker === 'boolean',
+      )
+      if (apiSendsRoles || data.persons.length === 0) {
+        setUserPersonIds(null)
+        setWorkerPersonIds(null)
+      } else {
+        const [users, workers] = await Promise.all([
+          collectPersonIds(async (nextPage) => {
+            const usersPage = await listUsers({ page: nextPage })
+            return {
+              ids: usersPage.users.map((user) => user.personId),
+              totalItems: usersPage.pagination.totalItems,
+              itemsPerPage: usersPage.pagination.itemsPerPage,
+            }
+          }).catch(() => new Set<number>()),
+          collectPersonIds(async (nextPage) => {
+            const workersPage = await listWorkers({ page: nextPage })
+            return {
+              ids: workersPage.workers.map((worker) => worker.personId),
+              totalItems: workersPage.pagination.totalItems,
+              itemsPerPage: workersPage.pagination.itemsPerPage,
+            }
+          }).catch(() => new Set<number>()),
+        ])
+        setUserPersonIds(users)
+        setWorkerPersonIds(workers)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar personas')
     } finally {
@@ -254,22 +309,33 @@ export function PersonasPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay personas. Crea la primera.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((person) => (
-            <article key={person.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div>
-                  <h3 className={styles.cardTitle}>{person.name}</h3>
-                  <p className={styles.cardSubtitle}>{person.documentNumber}</p>
+        <div className={styles.cardGridPhone}>
+          {items.map((person) => {
+            const isUser = person.isUser ?? userPersonIds?.has(person.id) ?? false
+            const isWorker =
+              person.isWorker ?? workerPersonIds?.has(person.id) ?? false
+            return (
+              <article key={person.id} className={styles.card}>
+                <div className={styles.cardTop}>
+                  <div>
+                    <h3 className={styles.cardTitle}>{person.name}</h3>
+                    <p className={styles.cardSubtitle}>{person.documentNumber}</p>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.rowActions}>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(person)}>
-                  Editar
-                </Button>
-              </div>
-            </article>
-          ))}
+                {isUser || isWorker ? (
+                  <div className={styles.roleTags}>
+                    {isUser ? <Badge tone="user">Usuario</Badge> : null}
+                    {isWorker ? <Badge tone="worker">Trabajador</Badge> : null}
+                  </div>
+                ) : null}
+                <div className={styles.rowActions}>
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(person)}>
+                    Editar
+                  </Button>
+                </div>
+              </article>
+            )
+          })}
         </div>
       )}
 

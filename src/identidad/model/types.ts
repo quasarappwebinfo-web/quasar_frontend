@@ -12,6 +12,8 @@ export type Person = {
   name: string
   photoUrl: string | null
   createdAt?: string
+  isUser?: boolean
+  isWorker?: boolean
 }
 
 export type PersonWrite = {

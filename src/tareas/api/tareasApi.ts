@@ -54,6 +54,9 @@ export async function addActivityToPeriod(payload: {
   templateId?: number | null
   name?: string | null
   description?: string | null
+  chapterId?: number | null
+  budgetActivityId?: number | null
+  zoneId?: number | null
   justification: string
 }): Promise<{
   task: Task

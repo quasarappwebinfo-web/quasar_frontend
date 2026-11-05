@@ -225,19 +225,13 @@ export function CatalogSimplePanel({
               <div className={styles.cardTop}>
                 <div>
                   <h3 className={styles.cardTitle}>{item.name}</h3>
-                  <p className={styles.cardSubtitle}>
-                    {item.description || `Orden ${item.displayOrder}`}
-                  </p>
+                  {item.description ? (
+                    <p className={styles.cardSubtitle}>{item.description}</p>
+                  ) : null}
                 </div>
                 <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
                   {item.isActive === 1 ? 'Activo' : 'Inactivo'}
                 </Badge>
-              </div>
-              <div className={styles.cardMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Orden</span>
-                  <span className={styles.metaValue}>{item.displayOrder}</span>
-                </div>
               </div>
               <div className={styles.rowActions}>
                 <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>

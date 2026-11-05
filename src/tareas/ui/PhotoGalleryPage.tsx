@@ -136,7 +136,16 @@ export function PhotoGalleryPage() {
     })
   }, [tasks, chapterId, budgetId])
 
-  const openPhoto = openIndex != null ? photos[openIndex] : null
+  const orderedPhotos = useMemo(() => {
+    const when = (photo: GalleryPhoto) => {
+      const raw = photo.takenAt || photo.createdAt
+      const time = raw ? new Date(raw).getTime() : 0
+      return Number.isNaN(time) ? 0 : time
+    }
+    return [...photos].sort((a, b) => when(b) - when(a) || b.id - a.id)
+  }, [photos])
+
+  const openPhoto = openIndex != null ? orderedPhotos[openIndex] : null
 
   useEffect(() => {
     if (openIndex == null) return
@@ -144,7 +153,9 @@ export function PhotoGalleryPage() {
       if (event.key === 'Escape') setOpenIndex(null)
       if (event.key === 'ArrowRight') {
         setOpenIndex((current) =>
-          current == null || current >= photos.length - 1 ? current : current + 1,
+          current == null || current >= orderedPhotos.length - 1
+            ? current
+            : current + 1,
         )
       }
       if (event.key === 'ArrowLeft') {
@@ -155,7 +166,7 @@ export function PhotoGalleryPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openIndex, photos.length])
+  }, [openIndex, orderedPhotos.length])
 
   return (
     <div className={styles.page}>
@@ -174,26 +185,6 @@ export function PhotoGalleryPage() {
           descripción.
         </p>
       </header>
-
-      <section className={styles.upload}>
-        <div className={styles.uploadHead}>
-          <h2 className={styles.uploadTitle}>Fotos de la obra</h2>
-          <p className={styles.uploadHint}>
-            Para cuando todavía no hay actividades. Al elegirlas se abre un
-            formulario para la descripción.
-          </p>
-        </div>
-        <ObraPhotoUpload
-          obraId={obraId}
-          onUploaded={() => {
-            setOpenIndex(null)
-            const stayOnObra = kind === 'obra' && page === 1
-            setKind('obra')
-            setPage(1)
-            if (stayOnObra) void load()
-          }}
-        />
-      </section>
 
       <div className={styles.filters}>
         <Field label="Origen">
@@ -271,12 +262,12 @@ export function PhotoGalleryPage() {
 
       {error ? <Alert tone="error">{error}</Alert> : null}
       {loading ? <p className={styles.empty}>Cargando fotos…</p> : null}
-      {!loading && photos.length === 0 ? (
+      {!loading && orderedPhotos.length === 0 ? (
         <p className={styles.empty}>No hay evidencias con esos filtros.</p>
       ) : null}
 
       <ul className={styles.grid}>
-        {photos.map((photo, index) => (
+        {orderedPhotos.map((photo, index) => (
           <li key={`${photo.kind || 'task'}-${photo.id}`}>
             <button
               type="button"
@@ -303,6 +294,26 @@ export function PhotoGalleryPage() {
           setOpenIndex(null)
         }}
       />
+
+      <section className={styles.upload}>
+        <div className={styles.uploadHead}>
+          <h2 className={styles.uploadTitle}>Fotos de la obra</h2>
+          <p className={styles.uploadHint}>
+            Para cuando todavía no hay actividades. Al elegirlas se abre un
+            formulario para la descripción.
+          </p>
+        </div>
+        <ObraPhotoUpload
+          obraId={obraId}
+          onUploaded={() => {
+            setOpenIndex(null)
+            const stayOnObra = kind === 'obra' && page === 1
+            setKind('obra')
+            setPage(1)
+            if (stayOnObra) void load()
+          }}
+        />
+      </section>
 
       {openPhoto ? (
         <div className={styles.lightbox} role="dialog" aria-modal="true">
@@ -348,7 +359,7 @@ export function PhotoGalleryPage() {
           <button
             type="button"
             className={styles.navBtn}
-            disabled={openIndex === photos.length - 1}
+            disabled={openIndex === orderedPhotos.length - 1}
             aria-label="Foto siguiente"
             onClick={() =>
               setOpenIndex((current) => (current == null ? current : current + 1))
@@ -368,7 +379,7 @@ export function GalleriesHubPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useDocumentTitle('Quasar · Galerías')
+  useDocumentTitle('Quasar · Galerías obras')
 
   useEffect(() => {
     setLoading(true)
@@ -384,7 +395,7 @@ export function GalleriesHubPage() {
     <div className={pickStyles.page}>
       <header className={pickStyles.header}>
         <div className={pickStyles.titleBlock}>
-          <h1 className={pickStyles.title}>Galerías</h1>
+          <h1 className={pickStyles.title}>Galerías obras</h1>
           <p className={pickStyles.subtitle}>
             Elige un proyecto para abrir su galería de fotos.
           </p>

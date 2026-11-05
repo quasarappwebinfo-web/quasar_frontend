@@ -376,7 +376,7 @@ export function UsersPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay usuarios con ese filtro.</p>
       ) : (
-        <div className={styles.cardGrid}>
+        <div className={styles.cardGridPhone}>
           {items.map((user) => {
             const manageable = canManageUser(actor, user)
             return (

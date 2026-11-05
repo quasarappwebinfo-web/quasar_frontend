@@ -2,10 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { listTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuestalesApi'
 import { listTaskChapters } from '@/task-pool/api/capitulosApi'
 import { listTaskTemplates } from '@/task-pool/api/plantillasApi'
+import { listTaskZones } from '@/task-pool/api/zonasApi'
 import type {
   TaskBudgetActivity,
   TaskChapter,
   TaskTemplate,
+  TaskZone,
 } from '@/task-pool/model/types'
 import { addActivityToPeriod, listTasks } from '@/tareas/api/tareasApi'
 import { ApiError } from '@/shared/api/apiJson'
@@ -54,10 +56,12 @@ export function CreateTaskFromTemplateModal({
   const toast = useToast()
   const [origin, setOrigin] = useState<Origin>('pool')
   const [chapters, setChapters] = useState<TaskChapter[]>([])
+  const [zones, setZones] = useState<TaskZone[]>([])
   const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>([])
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [chapterId, setChapterId] = useState('')
   const [budgetActivityId, setBudgetActivityId] = useState('')
+  const [zoneId, setZoneId] = useState('')
   const [templateId, setTemplateId] = useState('')
   const [usedTemplateIds, setUsedTemplateIds] = useState<number[]>([])
   const [poolAlreadyUsed, setPoolAlreadyUsed] = useState(false)
@@ -72,6 +76,7 @@ export function CreateTaskFromTemplateModal({
     setOrigin('pool')
     setChapterId('')
     setBudgetActivityId('')
+    setZoneId('')
     setBudgetActivities([])
     setTemplates([])
     setTemplateId('')
@@ -89,13 +94,20 @@ export function CreateTaskFromTemplateModal({
         })),
       ).catch(() => [] as TaskChapter[]),
       listEvery((page) =>
+        listTaskZones({ page, activeOnly: true }).then((data) => ({
+          rows: data.zones,
+          total: data.pagination.totalItems,
+        })),
+      ).catch(() => [] as TaskZone[]),
+      listEvery((page) =>
         listTasks({ obraId, page, parentOnly: true }).then((data) => ({
           rows: data.tasks,
           total: data.pagination.totalItems,
         })),
       ).catch(() => []),
-    ]).then(([chapterRows, obraTasks]) => {
+    ]).then(([chapterRows, zoneRows, obraTasks]) => {
       setChapters(chapterRows)
+      setZones(zoneRows)
       setUsedTemplateIds(
         obraTasks
           .map((task) => task.sourceTemplateId)
@@ -183,8 +195,13 @@ export function CreateTaskFromTemplateModal({
       setError('Selecciona la actividad del pool.')
       return
     }
-    if (origin === 'obra' && !name.trim()) {
-      setError('El nombre es obligatorio para una actividad de esta obra.')
+    if (
+      origin === 'obra' &&
+      (!name.trim() || !chapterId || !budgetActivityId || !zoneId)
+    ) {
+      setError(
+        'La actividad de esta obra necesita nombre, capítulo, actividad presupuestal y zona.',
+      )
       return
     }
     setSaving(true)
@@ -195,10 +212,13 @@ export function CreateTaskFromTemplateModal({
         templateId: origin === 'pool' ? Number(templateId) : null,
         name: name.trim() || null,
         description: description.trim() || null,
+        chapterId: origin === 'obra' ? Number(chapterId) : null,
+        budgetActivityId: origin === 'obra' ? Number(budgetActivityId) : null,
+        zoneId: origin === 'obra' ? Number(zoneId) : null,
         justification: justification.trim(),
       })
       toast.success(
-        `«${result.task.name}» quedó en el periodo. Los administradores deben firmar de nuevo.`,
+        `«${result.task.name}» quedó en el periodo.`,
       )
       onCreated()
       onClose()
@@ -221,7 +241,7 @@ export function CreateTaskFromTemplateModal({
             Cancelar
           </Button>
           <Button type="submit" form="create-task-template" disabled={saving}>
-            {saving ? 'Guardando…' : 'Agregar y pedir firma'}
+            {saving ? 'Guardando…' : 'Agregar'}
           </Button>
         </>
       }
@@ -230,8 +250,7 @@ export function CreateTaskFromTemplateModal({
         {error ? <Alert tone="error">{error}</Alert> : null}
         <div className={styles.noteBox}>
           Puede salir del pool, sin versión ni rendimiento, o ser única de esta
-          obra. Al guardarla se avisa a los administradores, queda la
-          justificación y el plan del periodo vuelve a pedir firma.
+          obra. Al guardarla queda en el periodo, con la justificación.
         </div>
         <Field label="Origen">
           <TextSelect
@@ -253,7 +272,6 @@ export function CreateTaskFromTemplateModal({
               <option value="">Seleccionar…</option>
               {chapters.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.stageName ? `${item.stageName} · ` : ''}
                   {item.name}
                 </option>
               ))}
@@ -291,7 +309,7 @@ export function CreateTaskFromTemplateModal({
               <option value="">Seleccionar…</option>
               {templates.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code} — {item.name}
+                  {item.name}
                 </option>
               ))}
             </TextSelect>
@@ -299,6 +317,49 @@ export function CreateTaskFromTemplateModal({
           </>
         ) : (
           <>
+            <Field label="Capítulo">
+              <TextSelect
+                value={chapterId}
+                onChange={(e) => setChapterId(e.target.value)}
+                required
+              >
+                <option value="">Seleccionar…</option>
+                {chapters.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label="Actividad presupuestal">
+              <TextSelect
+                value={budgetActivityId}
+                onChange={(e) => setBudgetActivityId(e.target.value)}
+                required
+                disabled={!chapterId}
+              >
+                <option value="">Seleccionar…</option>
+                {budgetActivities.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label="Zona">
+              <TextSelect
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                required
+              >
+                <option value="">Seleccionar…</option>
+                {zones.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
             <Field
               label="Nombre"
               help="Esta actividad no se guarda en el pool. Solo existe en esta obra."

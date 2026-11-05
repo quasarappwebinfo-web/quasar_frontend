@@ -10,14 +10,7 @@ import { IdentidadPage } from '@/identidad'
 import { PersonasPanel } from '@/identidad/ui/PersonasPanel'
 import { RolesPanel } from '@/identidad/ui/RolesPanel'
 import { UsersPanel } from '@/identidad/ui/UsersPanel'
-import {
-  DashboardPage,
-  EtapasObraPanel,
-  MaestrosObrasPage,
-  ObraDetailPage,
-  TiposDocumentoPanel,
-  TiposVentaPanel,
-} from '@/obras'
+import { DashboardPage, ObraDetailPage } from '@/obras'
 import { ReportsPage } from '@/reportes/ui/ReportsPage'
 import { RrhhPage } from '@/rrhh'
 import { CargosPanel } from '@/rrhh/ui/CargosPanel'
@@ -65,20 +58,9 @@ export function App() {
             </Route>
 
             <Route
-              element={
-                <RequirePermission permission={['catalogos', 'obras']} />
-              }
-            >
-              <Route path="/dashboard/maestros" element={<MaestrosObrasPage />}>
-                <Route index element={<Navigate to="tipos-venta" replace />} />
-                <Route path="tipos-venta" element={<TiposVentaPanel />} />
-                <Route
-                  path="etapas"
-                  element={<Navigate to="/maestros/task-pool/etapas" replace />}
-                />
-                <Route path="tipos-documento" element={<TiposDocumentoPanel />} />
-              </Route>
-            </Route>
+              path="/dashboard/maestros/*"
+              element={<Navigate to="/dashboard" replace />}
+            />
 
             <Route element={<RequirePermission permission="tareas" />}>
               <Route
@@ -114,8 +96,11 @@ export function App() {
               }
             >
               <Route path="/maestros/task-pool" element={<TaskPoolPage />}>
-                <Route index element={<Navigate to="etapas" replace />} />
-                <Route path="etapas" element={<EtapasObraPanel />} />
+                <Route index element={<Navigate to="plantillas" replace />} />
+                <Route
+                  path="etapas"
+                  element={<Navigate to="/maestros/task-pool/plantillas" replace />}
+                />
                 <Route path="capitulos" element={<CategoriasPanel />} />
                 <Route
                   path="categorias"
