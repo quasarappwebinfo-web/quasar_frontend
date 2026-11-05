@@ -42,7 +42,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
   const [saleTypes, setSaleTypes] = useState<SaleTypeOption[]>([])
   const [stages, setStages] = useState<StageOption[]>([])
   const [name, setName] = useState('')
-  const [code, setCode] = useState('')
   const [saleTypeId, setSaleTypeId] = useState('')
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
@@ -72,7 +71,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
     if (!open) return
     if (obra) {
       setName(obra.name)
-      setCode(obra.code || '')
       setSaleTypeId(String(obra.saleTypeId))
       setAddress(obra.address || '')
       setCity(obra.city || '')
@@ -84,7 +82,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       setCoverPreview(obra.coverImageUrl || null)
     } else {
       setName('')
-      setCode('')
       setSaleTypeId('')
       setAddress('')
       setCity('')
@@ -135,7 +132,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       if (obra) {
         saved = await updateObra(obra.id, {
           name: name.trim(),
-          code: code.trim() || null,
           saleTypeId: Number(saleTypeId),
           address: address.trim() || null,
           city: city.trim() || null,
@@ -147,7 +143,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       } else {
         saved = await createObra({
           name: name.trim(),
-          code: code.trim() || null,
           saleTypeId: Number(saleTypeId),
           address: address.trim() || null,
           city: city.trim() || null,
@@ -175,7 +170,7 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       onClose()
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setFormError(err.message || 'El código de obra ya existe.')
+        setFormError(err.message || 'No se pudo guardar la obra.')
       } else {
         setFormError(err instanceof Error ? err.message : 'No se pudo guardar')
       }
@@ -210,8 +205,7 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       <form id="obra-form" className={styles.formGrid} onSubmit={handleSubmit}>
         {saleTypes.length === 0 ? (
           <Alert tone="info">
-            No hay tipos de venta activos. Créalos en Configuración Global antes de
-            guardar.
+            No hay tipos de venta activos.
           </Alert>
         ) : null}
 
@@ -273,14 +267,6 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
           />
         </Field>
         <div className={styles.formRow}>
-          <Field label="Código" hint="Único si se envía">
-            <TextInput
-              disabled={saving}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="OBR-001"
-            />
-          </Field>
           <Field label="Tipo de venta">
             <TextSelect
               required

@@ -85,7 +85,7 @@ export function WorkPlanComparePage() {
           </button>
           <h1 className={styles.title}>Comparar planificado / real</h1>
           <p className={styles.subtitle}>
-            {planName || `Plan #${planId}`} · lo firmado vs lo que pasó
+            {planName || `Plan #${planId}`} · lo planificado vs lo que pasó
           </p>
         </div>
         <div className={styles.actions}>

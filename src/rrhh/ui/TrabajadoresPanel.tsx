@@ -314,7 +314,7 @@ export function TrabajadoresPanel() {
           No hay trabajadores. Crea una persona en Personal y luego regístrala aquí.
         </p>
       ) : (
-        <div className={styles.cardGrid}>
+        <div className={styles.cardGridPhone}>
           {items.map((worker) => (
             <article key={worker.id} className={styles.card}>
               <div className={styles.cardTop}>

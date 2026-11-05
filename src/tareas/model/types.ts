@@ -165,8 +165,9 @@ export type TaskBoard = {
 export type TaskCreateFromTemplate = {
   uuid?: string
   obraId: number
-  sourceTemplateVersionId: number
-  plannedQuantity: number
+  templateId?: number | null
+  sourceTemplateVersionId?: number | null
+  plannedQuantity?: number | null
   approvedDurationDays?: number | null
   plannedStartDate?: string | null
   plannedEndDate?: string | null
@@ -182,6 +183,9 @@ export type TaskCreateManual = {
   parentTaskId?: number | null
   name: string
   description?: string | null
+  chapterId?: number | null
+  budgetActivityId?: number | null
+  zoneId?: number | null
   plannedStartDate?: string | null
   plannedEndDate?: string | null
   weightPercent?: number | null
@@ -274,9 +278,47 @@ export type PeriodFulfillment = {
   progressPercent: number | string
 }
 
+export type ActivityShare = {
+  taskId: number
+  taskName: string
+  sharePercent: number | string
+  progressPercent: number | string
+}
+
+export type BudgetActivityFulfillment = {
+  budgetActivityId?: number | null
+  budgetActivityName?: string | null
+  weightPercent?: number | string | null
+  progressPercent: number | string
+  activities?: ActivityShare[]
+}
+
+export type ChapterFulfillment = {
+  chapterId?: number | null
+  chapterName?: string | null
+  weightPercent?: number | string | null
+  progressPercent: number | string
+  budgetActivities?: BudgetActivityFulfillment[]
+}
+
+export type ZoneChapterProgress = {
+  chapterId: number
+  chapterName: string
+  progressPercent: number | string
+  isGlobal?: number
+}
+
+export type ZoneFulfillment = {
+  zoneId: number
+  zoneName: string
+  chapters?: ZoneChapterProgress[]
+}
+
 export type ObraFulfillment = {
   obraId: number
   progressPercent: number | string
+  chapters?: ChapterFulfillment[]
+  zones?: ZoneFulfillment[]
   period?: PeriodFulfillment | null
   activityStatus?: ActivityStatusSummary | null
 }

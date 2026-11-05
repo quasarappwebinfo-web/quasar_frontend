@@ -2,7 +2,7 @@ import { cn } from '@/shared/lib/cn'
 import styles from './Badge.module.css'
 
 type BadgeProps = {
-  tone?: 'neutral' | 'success' | 'danger'
+  tone?: 'neutral' | 'success' | 'danger' | 'user' | 'worker'
   children: string
 }
 

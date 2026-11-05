@@ -224,7 +224,7 @@ export function CreatePlanModal({
   const selectedCount = selectedTasks.length + selectedTemplates.length
 
   function toggleTemplate(item: TaskTemplate) {
-    const label = `${item.code} — ${item.name}`
+    const label = item.name
     setSelectedTemplates((current) =>
       current.includes(item.id)
         ? current.filter((id) => id !== item.id)
@@ -426,7 +426,6 @@ export function CreatePlanModal({
                     <option value="">Seleccionar…</option>
                     {chapters.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.stageName ? `${item.stageName} · ` : ''}
                         {item.name}
                       </option>
                     ))}
@@ -485,7 +484,6 @@ export function CreatePlanModal({
                       />
                       <span className={styles.taskOptionBody}>
                         <span className={styles.taskOptionName}>{item.name}</span>
-                        <span className={styles.taskOptionMeta}>{item.code}</span>
                       </span>
                     </label>
                   ))}

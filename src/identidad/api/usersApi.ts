@@ -20,9 +20,9 @@ export const FALLBACK_PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { code: 'obras', label: 'Obras', description: 'Obras / clientes / docs' },
   { code: 'rrhh', label: 'RRHH', description: 'Trabajadores y cuadrillas' },
   { code: 'asistencia', label: 'Asistencia', description: 'Asistencia diaria' },
-  { code: 'task_pool', label: 'Base Datos Actividades', description: 'Task Pool / plantillas' },
-  { code: 'tareas', label: 'Actividades', description: 'Actividades en obra' },
-  { code: 'planificacion', label: 'Planificación', description: 'Planes y firmas' },
+  { code: 'task_pool', label: 'Listado General Act.', description: 'Catálogo de actividades registradas' },
+  { code: 'tareas', label: 'Bitácoras obras', description: 'Bitácoras de obra' },
+  { code: 'planificacion', label: 'Planificación', description: 'Planes de obra' },
   { code: 'sync', label: 'Sync', description: 'Sync offline' },
 ]
 

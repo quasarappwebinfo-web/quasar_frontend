@@ -24,3 +24,13 @@
   background: rgba(180, 35, 24, 0.08);
   color: var(--color-danger);
 }
+
+.user {
+  background: rgba(1, 76, 189, 0.12);
+  color: var(--color-brand-blue);
+}
+
+.worker {
+  background: rgba(15, 122, 78, 0.12);
+  color: #0b6b43;
+}

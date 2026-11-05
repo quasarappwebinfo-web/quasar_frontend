@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/auth'
-import {
-  listActiveDocumentTypes,
-  listActiveStages,
-} from '@/obras/api/catalogosObrasApi'
+import { listActiveDocumentTypes } from '@/obras/api/catalogosObrasApi'
 import {
   addObraClient,
   closeObraClient,
@@ -16,18 +13,12 @@ import {
   updateObraDocument,
 } from '@/obras/api/documentosApi'
 import { getObra, updateObra } from '@/obras/api/obrasApi'
-import {
-  coverForObra,
-  resolveObraCover,
-  stageStepLabel,
-  stageStepState,
-} from '@/obras/lib/obraUi'
+import { coverForObra, resolveObraCover } from '@/obras/lib/obraUi'
 import type {
   DocumentTypeOption,
   Obra,
   ObraClient,
   ObraDocument,
-  StageOption,
 } from '@/obras/model/types'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
 import { AsistenciaModal } from '@/obras/ui/AsistenciaModal'
@@ -40,11 +31,11 @@ import type { ObraDailyAttendance } from '@/obras/model/asistenciaTypes'
 import {
   getObraFulfillment,
   listObraPhotoGallery,
-  listTasks,
   type GalleryPhoto,
 } from '@/tareas/api/tareasApi'
 import { ObraPhotoUpload } from '@/tareas/ui/ObraPhotoUpload'
-import type { ObraFulfillment, Task } from '@/tareas/model/types'
+import type { ObraFulfillment } from '@/tareas/model/types'
+import { ObraActivityModal } from '@/obras/ui/ObraActivityModal'
 import { listWorkPlans } from '@/planificacion/api/planesApi'
 import {
   formatPlanDate,
@@ -74,7 +65,6 @@ import styles from './ProjectView.module.css'
 type AdminTab = 'clientes' | 'documentos'
 
 const RECENT_PHOTO_COUNT = 8
-const RECENT_ACTIVITY_COUNT = 5
 
 const CLIENT_ROLES = [
   { value: 'comprador', label: 'Comprador' },
@@ -89,7 +79,6 @@ export function ObraDetailPage() {
   const { logout } = useAuth()
   const toast = useToast()
   const [obra, setObra] = useState<Obra | null>(null)
-  const [stages, setStages] = useState<StageOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
@@ -102,8 +91,9 @@ export function ObraDetailPage() {
   const [planesLoading, setPlanesLoading] = useState(false)
   const [recentPhotos, setRecentPhotos] = useState<GalleryPhoto[]>([])
   const [photosLoading, setPhotosLoading] = useState(false)
-  const [actividadesEnProgreso, setActividadesEnProgreso] = useState<Task[]>([])
-  const [actividadesLoading, setActividadesLoading] = useState(false)
+  const [activityOrigin, setActivityOrigin] = useState<'pool' | 'obra' | null>(
+    null,
+  )
   const [fulfillment, setFulfillment] = useState<ObraFulfillment | null>(null)
 
   useDocumentTitle(obra ? `Quasar · ${obra.name}` : 'Quasar · Obra')
@@ -151,27 +141,6 @@ export function ObraDetailPage() {
     }
   }, [id])
 
-  const loadActividadesEnProgreso = useCallback(async () => {
-    if (!Number.isFinite(id)) return
-    setActividadesLoading(true)
-    try {
-      const data = await listTasks({
-        obraId: id,
-        status: 'in_progress',
-        parentOnly: true,
-        page: 1,
-      })
-      const latest = [...data.tasks]
-        .sort((a, b) => taskRecency(b) - taskRecency(a))
-        .slice(0, RECENT_ACTIVITY_COUNT)
-      setActividadesEnProgreso(latest)
-    } catch {
-      setActividadesEnProgreso([])
-    } finally {
-      setActividadesLoading(false)
-    }
-  }, [id])
-
   const load = useCallback(async () => {
     if (!Number.isFinite(id)) {
       setError('Obra inválida')
@@ -181,18 +150,15 @@ export function ObraDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [obraData, stageList, fulfillmentData] = await Promise.all([
+      const [obraData, fulfillmentData] = await Promise.all([
         getObra(id),
-        listActiveStages(),
         getObraFulfillment(id).catch(() => null),
       ])
       setObra(obraData)
-      setStages(stageList)
       setFulfillment(fulfillmentData)
       void loadAsistenciaHoy()
       void loadPlanesRecientes()
       void loadRecentPhotos()
-      void loadActividadesEnProgreso()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar la obra')
     } finally {
@@ -203,14 +169,14 @@ export function ObraDetailPage() {
     loadAsistenciaHoy,
     loadPlanesRecientes,
     loadRecentPhotos,
-    loadActividadesEnProgreso,
   ])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const globalProgress = asPercent(fulfillment?.progressPercent)
+  const globalProgress = housePercent(fulfillment?.progressPercent)
+  const globalLabel = formatHousePercent(globalProgress)
   const periodProgress = asPercent(fulfillment?.period?.progressPercent)
   const activityStatus = fulfillment?.activityStatus
   const completedCount = activityStatus?.completed ?? 0
@@ -263,7 +229,7 @@ export function ObraDetailPage() {
             className={styles.back}
             onClick={() => navigate('/dashboard')}
           >
-            ← Dashboard
+            ← Inicio
           </button>
           <h1 className={styles.title}>{obra.name}</h1>
           <p className={styles.subtitle}>Vista General Del Proyecto</p>
@@ -291,58 +257,40 @@ export function ObraDetailPage() {
 
       <section className={styles.progressCard}>
         <h2 className={styles.sectionTitle}>Progreso de la construcción</h2>
-        {stages.length === 0 ? (
-          <p className={styles.muted}>
-            No hay etapas activas. Configúralas en Base Datos Actividades.
-          </p>
+        {(fulfillment?.zones ?? []).length === 0 ? (
+          <p className={styles.muted}>No hay zonas activas.</p>
         ) : (
-          <div className={styles.stepper}>
-            {stages.map((stage, index) => {
-              const state = stageStepState(
-                stage.id,
-                stages,
-                obra.currentStageId,
-                obra.status,
-              )
-              const isLast = index === stages.length - 1
+          <div className={styles.zoneBoard}>
+            {(fulfillment?.zones ?? []).map((zone) => {
+              const chapters = zone.chapters ?? []
               return (
-                <div key={stage.id} className={styles.step}>
-                  {!isLast ? (
-                    <span
-                      className={cn(
-                        styles.stepLine,
-                        state === 'done' && styles.stepLineDone,
-                        state === 'current' && styles.stepLineCurrent,
-                      )}
-                    />
-                  ) : null}
-                  <span
-                    className={cn(
-                      styles.stepDot,
-                      state === 'done' && styles.stepDotDone,
-                      state === 'current' && styles.stepDotCurrent,
-                      state === 'next' && styles.stepDotNext,
-                    )}
-                  >
-                    {state === 'done' ? (
-                      <img
-                        className={styles.checkIcon}
-                        src="/obras/check.svg"
-                        alt=""
-                        width={18}
-                        height={14}
-                      />
-                    ) : null}
-                  </span>
-                  <p className={styles.stepName}>{stage.name}</p>
-                  <p
-                    className={cn(
-                      styles.stepStatus,
-                      state === 'current' && styles.stepStatusCurrent,
-                    )}
-                  >
-                    {stageStepLabel(state)}
-                  </p>
+                <div key={zone.zoneId} className={styles.zoneBlock}>
+                  <p className={styles.zoneLabel}>{zone.zoneName}</p>
+                  <div className={styles.stepper}>
+                    {chapters.map((chapter, index) => {
+                      const progress = asPercent(chapter.progressPercent)
+                      const state =
+                        progress >= 100 ? 'done' : progress > 0 ? 'current' : 'next'
+                      const isLast = index === chapters.length - 1
+                      return (
+                        <div key={chapter.chapterId} className={styles.step}>
+                          {!isLast ? <span className={styles.stepLine} /> : null}
+                          <span
+                            className={cn(
+                              styles.stepDot,
+                              state === 'done' && styles.stepDotDone,
+                              state === 'current' && styles.stepDotCurrent,
+                              state === 'next' && styles.stepDotNext,
+                            )}
+                            aria-label={`${chapter.chapterName} ${progress}%`}
+                          >
+                            <span className={styles.stepPercent}>{progress}%</span>
+                          </span>
+                          <p className={styles.stepName}>{chapter.chapterName}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })}
@@ -355,12 +303,6 @@ export function ObraDetailPage() {
           <div className={styles.siteHeader}>
             <h2 className={styles.siteTitle}>Sitio de trabajo</h2>
             <div className={styles.siteActions}>
-              <ObraPhotoUpload
-                obraId={obra.id}
-                label="Subir fotos"
-                size="sm"
-                onUploaded={() => void loadRecentPhotos()}
-              />
               <button
                 type="button"
                 className={styles.menuDots}
@@ -379,8 +321,6 @@ export function ObraDetailPage() {
               className={styles.siteMainImg}
               src={resolveObraCover(obra)}
               alt=""
-              width={598}
-              height={291}
               onError={(e) => {
                 e.currentTarget.src = coverForObra(obra.id)
               }}
@@ -413,6 +353,21 @@ export function ObraDetailPage() {
               ))
             )}
           </div>
+          <div className={styles.photoActions}>
+            <button
+              type="button"
+              className={styles.galleryBtn}
+              onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
+            >
+              Ver galería
+            </button>
+            <ObraPhotoUpload
+              obraId={obra.id}
+              label="Subir fotos"
+              size="sm"
+              onUploaded={() => void loadRecentPhotos()}
+            />
+          </div>
         </section>
 
         <div className={styles.rightColumn}>
@@ -424,7 +379,14 @@ export function ObraDetailPage() {
                   className={styles.ring}
                   style={{ ['--pct' as string]: globalProgress }}
                 >
-                  <span className={styles.ringValue}>{globalProgress}</span>
+                  <span
+                    className={cn(
+                      styles.ringValue,
+                      globalLabel.length > 3 && styles.ringValueCompact,
+                    )}
+                  >
+                    {globalLabel}
+                  </span>
                 </div>
               </div>
               <p className={styles.metricHint}>% de la obra</p>
@@ -576,87 +538,88 @@ export function ObraDetailPage() {
           <section className={styles.tasksCard}>
             <div className={styles.tasksHeader}>
               <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
-                Actividades recientes
+                Actividades de la obra
               </h2>
               <div className={styles.headerActions}>
                 <button
                   type="button"
                   className={styles.galleryBtn}
-                  onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
+                  onClick={() => setActivityOrigin('pool')}
                 >
-                  Galería de fotos
+                  Del listado
                 </button>
                 <button
                   type="button"
                   className={styles.newTaskBtn}
-                  onClick={() =>
-                    navigate(`/dashboard/obras/${obra.id}/tareas?nueva=1`)
-                  }
+                  onClick={() => setActivityOrigin('obra')}
                 >
-                  + Nueva Actividad
+                  Solo esta obra
                 </button>
               </div>
             </div>
-            {actividadesLoading ? (
+            {(fulfillment?.chapters ?? []).length === 0 ? (
               <div className={styles.tasksEmpty}>
-                <p>Cargando…</p>
-              </div>
-            ) : actividadesEnProgreso.length === 0 ? (
-              <div className={styles.tasksEmpty}>
-                <p>No hay actividades en progreso.</p>
-                <button
-                  type="button"
-                  className={styles.seeAll}
-                  onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
-                >
-                  Ver todas las actividades →
-                </button>
+                <p>
+                  Aún no hay actividades asignadas. El porcentaje del capítulo
+                  se reparte en partes iguales entre las que agregues.
+                </p>
               </div>
             ) : (
-              <>
-                <table className={styles.tasksTable}>
-                  <thead>
-                    <tr>
-                      <th>Actividad</th>
-                      <th>Avance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {actividadesEnProgreso.map((task) => (
-                      <tr
-                        key={task.id}
-                        className={styles.planRow}
-                        onClick={() =>
-                          navigate(
-                            `/dashboard/obras/${obra.id}/tareas?tarea=${task.id}`,
-                          )
-                        }
+              <div className={styles.activityGroups}>
+                {(fulfillment?.chapters ?? []).map((chapter) => (
+                  <article
+                    key={chapter.chapterId ?? chapter.chapterName}
+                    className={styles.activityChapter}
+                  >
+                    <header className={styles.activityChapterHead}>
+                      <strong>{chapter.chapterName || 'Sin capítulo'}</strong>
+                      <span>
+                        {formatShare(chapter.weightPercent)}% de la obra · avance{' '}
+                        {asPercent(chapter.progressPercent)}%
+                      </span>
+                    </header>
+                    {(chapter.budgetActivities ?? []).map((group) => (
+                      <div
+                        key={group.budgetActivityId ?? group.budgetActivityName}
+                        className={styles.activityGroup}
                       >
-                        <td>
-                          <strong>{task.name}</strong>
-                          <div className={styles.asistenciaMeta}>
-                            {task.chapterName ||
-                              task.budgetActivityName ||
-                              'Sin capítulo'}
-                            {task.updatedAt
-                              ? ` · ${formatActivityDate(task.updatedAt) || ''}`
-                              : ''}
-                          </div>
-                        </td>
-                        <td>{asPercent(task.progressPercent)}%</td>
-                      </tr>
+                        <div className={styles.activityGroupTitle}>
+                          {group.budgetActivityName || 'Sin actividad presupuestal'}
+                          <span>
+                            {formatShare(group.weightPercent)}% del capítulo
+                          </span>
+                        </div>
+                        {(group.activities ?? []).map((activity) => (
+                          <button
+                            key={activity.taskId}
+                            type="button"
+                            className={styles.activityLine}
+                            onClick={() =>
+                              navigate(
+                                `/dashboard/obras/${obra.id}/tareas?tarea=${activity.taskId}`,
+                              )
+                            }
+                          >
+                            <span>{activity.taskName}</span>
+                            <span>
+                              {formatShare(activity.sharePercent)}% del capítulo ·{' '}
+                              {asPercent(activity.progressPercent)}% avance
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-                <button
-                  type="button"
-                  className={styles.seeAll}
-                  onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
-                >
-                  Ver todas las actividades →
-                </button>
-              </>
+                  </article>
+                ))}
+              </div>
             )}
+            <button
+              type="button"
+              className={styles.seeAll}
+              onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
+            >
+              Ver la bitácora de la obra →
+            </button>
           </section>
 
           <section className={styles.tasksCard}>
@@ -803,6 +766,15 @@ export function ObraDetailPage() {
         onClose={() => setAsistenciaOpen(false)}
         onChanged={() => void loadAsistenciaHoy()}
       />
+      {activityOrigin ? (
+        <ObraActivityModal
+          open
+          obraId={obra.id}
+          origin={activityOrigin}
+          onClose={() => setActivityOrigin(null)}
+          onCreated={() => void load()}
+        />
+      ) : null}
     </div>
   )
 }
@@ -813,11 +785,17 @@ function photoCaption(photo: GalleryPhoto): string {
   return photo.taskName
 }
 
-function taskRecency(task: Task): number {
-  const raw = task.updatedAt || task.actualStartDate || task.createdAt
-  if (!raw) return 0
-  const time = new Date(raw).getTime()
-  return Number.isNaN(time) ? 0 : time
+function housePercent(value: number | string | null | undefined): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 0
+  return Math.max(0, Math.min(100, Math.round(parsed * 100) / 100))
+}
+
+function formatHousePercent(value: number): string {
+  return value.toLocaleString('es-CO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 function asPercent(value: number | string | null | undefined): number {
@@ -842,15 +820,10 @@ function activityDonutStyle(
   }
 }
 
-function formatActivityDate(value?: string | null): string | null {
-  if (!value) return null
-  const date = new Date(value.includes('T') ? value : `${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString('es-CO', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric',
-  })
+function formatShare(value: number | string | null | undefined): string {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return '0'
+  return parsed.toLocaleString('es-CO', { maximumFractionDigits: 2 })
 }
 
 function formatShortDate(value: string | null): string | null {

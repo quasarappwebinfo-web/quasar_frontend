@@ -106,6 +106,25 @@
   background: #fff;
 }
 
+.zoneBoard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.zoneBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.zoneLabel {
+  margin: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .sectionTitle {
   margin: 0 0 1.25rem;
   font-family: 'Questrial', var(--font-sans);
@@ -118,38 +137,31 @@
 .stepper {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0;
   overflow-x: auto;
   padding-bottom: 0.25rem;
 }
 
 .step {
+  --dot: 3.6rem;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.55rem;
-  min-width: 6.5rem;
-  flex: 1;
+  min-width: 7.4rem;
+  flex: 0 0 7.4rem;
   text-align: center;
 }
 
 .stepLine {
   position: absolute;
-  top: 1.15rem;
-  left: calc(50% + 1.2rem);
-  right: calc(-50% + 1.2rem);
+  top: calc(var(--dot) / 2);
+  left: calc(50% + var(--dot) / 2 + 0.2rem);
+  right: calc(-50% + var(--dot) / 2 + 0.2rem);
   height: 2px;
   background: #e5e5e5;
-}
-
-.stepLineDone {
-  background: #3aa76d;
-}
-
-.stepLineCurrent {
-  background: linear-gradient(90deg, #3aa76d 0%, #e5e5e5 100%);
 }
 
 .stepDot {
@@ -157,31 +169,37 @@
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
-  border: 2px solid #d0d0d0;
-  background: #fff;
+  border: 2px solid #cfcfcf;
+  background: #e6e6e6;
+  color: #5c5c5c;
 }
 
 .stepDotDone {
   border-color: #3aa76d;
   background: #3aa76d;
+  color: #fff;
 }
 
 .stepDotCurrent {
   border-color: #d95a0c;
-  background: #fff;
+  background: #d95a0c;
+  color: #fff;
 }
 
 .stepDotNext {
-  border-color: #d8d8d8;
-  background: #fff;
+  border-color: #cfcfcf;
+  background: #e6e6e6;
+  color: #5c5c5c;
 }
 
-.checkIcon {
-  width: 1.15rem;
-  height: 1.15rem;
+.stepPercent {
+  font-family: 'Questrial', var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .stepName {
@@ -258,15 +276,17 @@
 }
 
 .siteMain {
-  position: relative;
-  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
   background: #f0f0f0;
 }
 
 .siteMainImg {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: 32rem;
+  object-fit: contain;
+  object-position: center;
   display: block;
 }
 
@@ -274,7 +294,15 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
-  padding: 1rem 1.1rem 1.2rem;
+  padding: 1rem 1.1rem 0.85rem;
+}
+
+.photoActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  padding: 0 1.1rem 1.15rem;
 }
 
 .thumb {
@@ -405,6 +433,10 @@
   color: var(--color-text);
 }
 
+.ringValueCompact {
+  font-size: 1.15rem;
+}
+
 .ringOrange {
   --ring: #d95a0c;
 }
@@ -509,6 +541,62 @@
   min-height: 12rem;
   text-align: center;
   color: #717171;
+  font-family: 'Questrial', var(--font-sans);
+}
+
+.activityGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activityChapter {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 0.85rem 0.9rem;
+}
+
+.activityChapterHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin-bottom: 0.7rem;
+  font-family: 'Questrial', var(--font-sans);
+}
+
+.activityChapterHead span,
+.activityGroupTitle span,
+.activityLine span:last-child {
+  color: #555;
+  font-size: 0.82rem;
+}
+
+.activityGroup + .activityGroup {
+  margin-top: 0.75rem;
+}
+
+.activityGroupTitle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.activityLine {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border: 0;
+  border-top: 1px solid #f0f0f0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
   font-family: 'Questrial', var(--font-sans);
 }
 
@@ -820,6 +908,10 @@
     border-width: 1px;
   }
 
+  .zoneBoard {
+    gap: 1.35rem;
+  }
+
   .sectionTitle {
     margin-bottom: 0.9rem;
     font-size: 0.82rem;
@@ -834,20 +926,14 @@
   }
 
   .step {
-    min-width: 5.25rem;
-    flex: 0 0 5.25rem;
+    --dot: 3.15rem;
+    min-width: 6.4rem;
+    flex: 0 0 6.4rem;
     scroll-snap-align: start;
   }
 
-  .stepDot {
-    width: 2rem;
-    height: 2rem;
-  }
-
-  .stepLine {
-    top: 1rem;
-    left: calc(50% + 1rem);
-    right: calc(-50% + 1rem);
+  .stepPercent {
+    font-size: 0.7rem;
   }
 
   .stepName {
@@ -868,8 +954,8 @@
     font-size: 0.9rem;
   }
 
-  .siteMain {
-    aspect-ratio: 16 / 11;
+  .siteMainImg {
+    max-height: 22rem;
   }
 
   .thumbGrid {

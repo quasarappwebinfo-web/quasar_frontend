@@ -71,7 +71,7 @@ export function TasksKanbanPage() {
   const [startConfirmTo, setStartConfirmTo] = useState<TaskStatus | null>(null)
   const [startConfirming, setStartConfirming] = useState(false)
 
-  useDocumentTitle(obraName ? `Quasar · ${obraName} · Actividades` : 'Quasar · Actividades')
+  useDocumentTitle(obraName ? `Quasar · ${obraName} · Bitácoras obras` : 'Quasar · Bitácoras obras')
 
   useEffect(() => {
     if (openedCreateFromQuery.current) return
@@ -518,7 +518,7 @@ export function TasksHubPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useDocumentTitle('Quasar · Actividades')
+  useDocumentTitle('Quasar · Bitácoras obras')
 
   useEffect(() => {
     setLoading(true)
@@ -534,7 +534,7 @@ export function TasksHubPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Actividades</h1>
+          <h1 className={styles.title}>Bitácoras obras</h1>
           <p className={styles.subtitle}>
             Elige un proyecto para abrir su tablero Kanban.
           </p>

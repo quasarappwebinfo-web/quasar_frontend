@@ -13,7 +13,7 @@ function isoDate(date: Date): string {
 }
 
 export function ReportsPage() {
-  useDocumentTitle('Quasar · Reportes')
+  useDocumentTitle('Quasar · Reportes obras')
   const today = new Date()
   const [dateFrom, setDateFrom] = useState(
     isoDate(new Date(today.getFullYear(), today.getMonth(), 1)),
@@ -76,7 +76,7 @@ export function ReportsPage() {
     <div className={styles.page}>
       <header>
         <p className={styles.eyebrow}>Operación</p>
-        <h1 className={styles.title}>Reportes</h1>
+        <h1 className={styles.title}>Reportes obras</h1>
         <p className={styles.subtitle}>
           La liquidación sale de la asistencia ya registrada. Cada día presente
           cuenta una vez, se multiplica por el valor día del trabajador y el

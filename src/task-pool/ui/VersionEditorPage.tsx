@@ -124,7 +124,7 @@ export function VersionEditorPage() {
 
   useDocumentTitle(
     version
-      ? `Quasar · ${version.templateCode || 'Versión'} v${version.versionNumber}`
+      ? `Quasar · ${version.templateName || 'Versión'} v${version.versionNumber}`
       : 'Quasar · Versión',
   )
 
@@ -338,7 +338,7 @@ export function VersionEditorPage() {
               )
             }
           >
-            ← {version.templateCode || 'Actividad Registrada'}
+            ← {version.templateName || 'Actividad Registrada'}
           </button>
           <p className={styles.eyebrow}>
             {version.templateName} · v{version.versionNumber}
@@ -484,12 +484,6 @@ export function VersionEditorPage() {
         <section className={styles.panel}>
           <h2 className={styles.panelTitle}>Resumen</h2>
           <div className={styles.cardMeta} style={{ border: 0, padding: 0 }}>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Código Actividad Registrada</span>
-              <span className={styles.metaValue}>
-                {version.templateCode || '—'}
-              </span>
-            </div>
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Unidad primaria</span>
               <span className={styles.metaValue}>{unitLabel || 'Sin definir'}</span>
@@ -1278,12 +1272,12 @@ function SubactividadesTab({
       ) : (
         <div className={styles.listStack}>
           {[...detail.subtasks]
-            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .sort((a, b) => a.name.localeCompare(b.name, 'es'))
             .map((item) => (
               <div key={item.id} className={styles.listItem}>
                 <div className={styles.listItemBody}>
                   <p className={styles.listItemTitle}>
-                    {item.displayOrder}. {item.name} · {Number(item.weightPercent || 0)}%
+                    {item.name} · {Number(item.weightPercent || 0)}%
                   </p>
                   <p className={styles.listItemMeta}>
                     {item.description || 'Sin descripción'}
@@ -1393,7 +1387,7 @@ function DependenciasTab({
               <option value="">Seleccionar…</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.code} — {t.name}
+                  {t.name}
                 </option>
               ))}
             </TextSelect>

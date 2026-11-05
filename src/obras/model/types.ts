@@ -31,7 +31,6 @@ export type Obra = {
 
 export type ObraCreate = {
   name: string
-  code?: string | null
   saleTypeId: number
   address?: string | null
   city?: string | null
@@ -44,7 +43,6 @@ export type ObraCreate = {
 
 export type ObraUpdate = {
   name?: string
-  code?: string | null
   saleTypeId?: number
   address?: string | null
   city?: string | null

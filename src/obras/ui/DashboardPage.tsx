@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { listActiveStages } from '@/obras/api/catalogosObrasApi'
 import { listObras } from '@/obras/api/obrasApi'
 import { isObraActiveWork, isObraDelayed } from '@/obras/lib/obraUi'
@@ -23,7 +23,7 @@ import styles from './DashboardPage.module.css'
 export function DashboardPage() {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
-  useDocumentTitle('Quasar · Dashboard')
+  useDocumentTitle('Quasar · Inicio')
 
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
@@ -124,7 +124,7 @@ export function DashboardPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Dashboard</h1>
+          <h1 className={styles.title}>Inicio</h1>
           <p className={styles.subtitle}>
             Vista general de todos los proyectos activos/construidos
           </p>
@@ -144,19 +144,6 @@ export function DashboardPage() {
             <SearchIcon className={styles.searchIcon} />
           </div>
           <div className={styles.actionRow}>
-            {hasPermission('catalogos') || hasPermission('obras') ? (
-              <Button variant="ghost" onClick={() => navigate('/dashboard/maestros')}>
-                Configuración Global
-              </Button>
-            ) : null}
-            {hasPermission('task_pool') || hasPermission('catalogos') ? (
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/maestros/task-pool')}
-              >
-                Base Datos Actividades
-              </Button>
-            ) : null}
             {hasPermission('obras') ? (
               <Button onClick={() => setFormOpen(true)}>Nueva obra</Button>
             ) : null}
@@ -264,22 +251,13 @@ export function DashboardPage() {
         </article>
       </div>
 
-      <div className={styles.toolbarRow}>
-        <p className={styles.subtitle}>
-          Proyectos ·{' '}
-          <Link to="/dashboard/maestros">tipos de venta y documentos</Link>
-          {' · '}
-          <Link to="/maestros/task-pool">Base Datos Actividades</Link>
-        </p>
-      </div>
-
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       {loading ? (
         <p className={styles.empty}>Cargando proyectos…</p>
       ) : obras.length === 0 ? (
         <p className={styles.empty}>
-          No hay obras todavía. Crea la primera o ve a Configuración Global.
+          No hay obras todavía. Crea la primera.
         </p>
       ) : (
         <div className={styles.projectGrid}>

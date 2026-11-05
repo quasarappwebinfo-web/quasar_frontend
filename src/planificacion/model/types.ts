@@ -195,9 +195,9 @@ export type WorkPlanCompare = {
 
 export const WORK_PLAN_STATUS_LABELS: Record<WorkPlanStatus, string> = {
   draft: 'Borrador',
-  pending_signature: 'Pendiente de firma',
-  signed: 'Firmado',
-  rejected: 'Rechazado',
+  pending_signature: 'Borrador',
+  signed: 'Borrador',
+  rejected: 'Borrador',
 }
 
 export const SIGNER_STATUS_LABELS: Record<SignerStatus, string> = {
@@ -209,9 +209,9 @@ export const SIGNER_STATUS_LABELS: Record<SignerStatus, string> = {
 export const EVENT_TYPE_LABELS: Record<SignatureEventType, string> = {
   created: 'Creación',
   edited: 'Edición',
-  requested: 'Solicitud de firma',
+  requested: 'Solicitud',
   viewed: 'Vista registrada',
-  signed: 'Firma',
+  signed: 'Aprobación',
   rejected: 'Rechazo',
   cancelled: 'Solicitud cancelada',
 }

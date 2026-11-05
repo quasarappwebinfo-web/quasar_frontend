@@ -128,13 +128,7 @@ export function WorkPlansPage() {
               }}
             >
               <option value="">Todos</option>
-              {(Object.keys(WORK_PLAN_STATUS_LABELS) as WorkPlanStatus[]).map(
-                (key) => (
-                  <option key={key} value={key}>
-                    {WORK_PLAN_STATUS_LABELS[key]}
-                  </option>
-                ),
-              )}
+              <option value="draft">Borrador</option>
             </TextSelect>
           </Field>
         </div>

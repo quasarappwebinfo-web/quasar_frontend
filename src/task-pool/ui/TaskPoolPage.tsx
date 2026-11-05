@@ -1,21 +1,20 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import { cn } from '@/shared/lib/cn'
 import { Button, Modal } from '@/shared/ui'
 import styles from './taskPool.module.css'
 
 const TABS = [
-  { to: '/maestros/task-pool/etapas', label: 'Etapas', end: true },
-  { to: '/maestros/task-pool/capitulos', label: 'Capítulo', end: true },
+  { to: '/maestros/task-pool/plantillas', label: 'Actividades Registradas', end: true },
+  { to: '/maestros/task-pool/capitulos', label: 'Capítulos', end: true },
   {
     to: '/maestros/task-pool/actividades-presupuestales',
-    label: 'Act. presupuestal',
+    label: 'Act. Presupuestales',
     end: true,
   },
   { to: '/maestros/task-pool/zonas', label: 'Zonas', end: true },
   { to: '/maestros/task-pool/unidades', label: 'Unidades', end: true },
-  { to: '/maestros/task-pool/plantillas', label: 'Actividades Registradas', end: true },
 ] as const
 
 const GUIDE_STEPS = [
@@ -24,12 +23,12 @@ const GUIDE_STEPS = [
     text: 'En la pestaña Unidades, crea las que uses (m², m³, und…). Luego podrás elegirlas en cada versión de Actividad Registrada.',
   },
   {
-    title: 'Crea la etapa y después el capítulo',
-    text: 'En Etapas define la fase de la obra y su % del total. En Capítulo elige esa etapa: el % del capítulo es dentro de la etapa, no de toda la obra.',
+    title: 'Crea el capítulo',
+    text: 'En Capítulos define el grupo de la obra y, si quieres, qué porcentaje aporta al avance. A partir de ahí se arman las actividades presupuestales y las actividades registradas.',
   },
   {
     title: 'Crea la Actividad Registrada',
-    text: 'Ve a Actividades Registradas → «Nueva Actividad Registrada». Capítulo, actividad presupuestal, nombre y código son obligatorios. La zona es opcional. El código no se podrá cambiar después.',
+    text: 'Ve a Actividades Registradas → «Nueva Actividad Registrada». Capítulo, actividad presupuestal y nombre son obligatorios. La zona es opcional.',
   },
   {
     title: 'Abre la Actividad Registrada y crea una versión',
@@ -50,8 +49,7 @@ const GUIDE_STEPS = [
 ] as const
 
 function titleFromPath(pathname: string): string {
-  if (pathname.includes('/etapas')) return 'Etapas'
-  if (pathname.includes('/capitulos')) return 'Capítulo'
+  if (pathname.includes('/capitulos')) return 'Capítulos'
   if (pathname.includes('/zonas')) return 'Zonas'
   if (pathname.includes('/actividades-presupuestales')) {
     return 'Actividades presupuestales'
@@ -62,26 +60,18 @@ function titleFromPath(pathname: string): string {
 
 export function TaskPoolPage() {
   const location = useLocation()
-  const navigate = useNavigate()
   const [helpOpen, setHelpOpen] = useState(false)
   const section = titleFromPath(location.pathname)
-  useDocumentTitle(`Quasar · Base Datos Actividades · ${section}`)
+  useDocumentTitle(`Quasar · Listado General Act. · ${section}`)
 
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <button
-            type="button"
-            className={styles.back}
-            onClick={() => navigate('/dashboard')}
-          >
-            ← Dashboard
-          </button>
-          <p className={styles.eyebrow}>Configuración Global</p>
+          <p className={styles.eyebrow}>Catálogo</p>
           <div className={styles.titleRow}>
-            <h1 className={styles.title}>Base Datos Actividades</h1>
+            <h1 className={styles.title}>Listado General Act.</h1>
             <button
               type="button"
               className={styles.helpBtn}
@@ -99,7 +89,7 @@ export function TaskPoolPage() {
         </div>
       </header>
 
-      <div className={styles.tabs} role="tablist" aria-label="Base Datos Actividades">
+      <div className={styles.tabs} role="tablist" aria-label="Listado General Act.">
         {TABS.map((item) => (
           <NavLink
             key={item.to}
@@ -126,7 +116,7 @@ export function TaskPoolPage() {
       >
         <div className={styles.helpGuide}>
           <p className={styles.helpLead}>
-            La Base Datos Actividades no son actividades de una obra: es el catálogo
+            El listado no son las actividades de una obra: es el catálogo
             de Actividades Registradas reutilizables. Sigue estos pasos desde cero:
           </p>
           <ol className={styles.helpSteps}>

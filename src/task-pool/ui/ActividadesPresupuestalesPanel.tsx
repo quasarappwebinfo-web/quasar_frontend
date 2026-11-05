@@ -48,7 +48,6 @@ export function ActividadesPresupuestalesPanel() {
   const [formZoneId, setFormZoneId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [chapterWeightPercent, setChapterWeightPercent] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -97,7 +96,6 @@ export function ActividadesPresupuestalesPanel() {
     setFormZoneId('')
     setName('')
     setDescription('')
-    setChapterWeightPercent('')
     setFormError(null)
     setModalOpen(true)
   }
@@ -108,11 +106,6 @@ export function ActividadesPresupuestalesPanel() {
     setFormZoneId(item.zoneId ? String(item.zoneId) : '')
     setName(item.name)
     setDescription(item.description || '')
-    setChapterWeightPercent(
-      item.chapterWeightPercent != null
-        ? String(item.chapterWeightPercent)
-        : '',
-    )
     setFormError(null)
     setModalOpen(true)
   }
@@ -121,15 +114,8 @@ export function ActividadesPresupuestalesPanel() {
     event.preventDefault()
     const catId = Number(formChapterId)
     const zoneIdNum = formZoneId ? Number(formZoneId) : null
-    const catWeight = chapterWeightPercent
-      ? Number(chapterWeightPercent)
-      : null
     if (!name.trim() || Number.isNaN(catId)) {
       setFormError('Capítulo y nombre son obligatorios.')
-      return
-    }
-    if (catWeight != null && (Number.isNaN(catWeight) || catWeight < 0 || catWeight > 100)) {
-      setFormError('El % hacia el capítulo debe estar entre 0 y 100.')
       return
     }
     setSaving(true)
@@ -141,7 +127,6 @@ export function ActividadesPresupuestalesPanel() {
           zoneId: zoneIdNum,
           name: name.trim(),
           description: description.trim() || null,
-          chapterWeightPercent: catWeight,
           isActive: editing.isActive,
         })
         toast.success('Actividad presupuestal actualizada')
@@ -151,7 +136,6 @@ export function ActividadesPresupuestalesPanel() {
           zoneId: zoneIdNum,
           name: name.trim(),
           description: description.trim() || null,
-          chapterWeightPercent: catWeight,
         })
         toast.success('Actividad presupuestal creada')
       }
@@ -248,9 +232,9 @@ export function ActividadesPresupuestalesPanel() {
               <div className={styles.cardTop}>
                 <div>
                   <h3 className={styles.cardTitle}>{item.name}</h3>
-                  <p className={styles.cardSubtitle}>
-                    {item.description || `Orden ${item.displayOrder}`}
-                  </p>
+                  {item.description ? (
+                    <p className={styles.cardSubtitle}>{item.description}</p>
+                  ) : null}
                 </div>
                 <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
                   {item.isActive === 1 ? 'Activo' : 'Inactivo'}
@@ -262,9 +246,6 @@ export function ActividadesPresupuestalesPanel() {
                   <span className={styles.metaValue}>
                     {item.chapterName ||
                       (item.chapterId ? `ID ${item.chapterId}` : 'Sin capítulo')}
-                    {item.chapterWeightPercent != null
-                      ? ` · ${item.chapterWeightPercent}%`
-                      : ''}
                   </span>
                 </div>
                 <div className={styles.metaRow}>
@@ -273,10 +254,6 @@ export function ActividadesPresupuestalesPanel() {
                     {item.zoneName ||
                       (item.zoneId ? `ID ${item.zoneId}` : 'Sin zona')}
                   </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Orden</span>
-                  <span className={styles.metaValue}>{item.displayOrder}</span>
                 </div>
               </div>
               <div className={styles.rowActions}>
@@ -348,20 +325,6 @@ export function ActividadesPresupuestalesPanel() {
                 </option>
               ))}
             </TextSelect>
-          </Field>
-          <Field
-            label="% hacia el capítulo"
-            help="Cuánto aporta esta actividad presupuestal al 100% de su capítulo."
-          >
-            <TextInput
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={chapterWeightPercent}
-              onChange={(e) => setChapterWeightPercent(e.target.value)}
-              placeholder="ej. 25"
-            />
           </Field>
           <Field
             label="Zona"

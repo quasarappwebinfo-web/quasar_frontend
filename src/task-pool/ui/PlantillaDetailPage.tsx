@@ -77,7 +77,7 @@ export function PlantillaDetailPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   useDocumentTitle(
-    template ? `Quasar · ${template.code}` : 'Quasar · Actividad Registrada',
+    template ? `Quasar · ${template.name}` : 'Quasar · Actividad Registrada',
   )
 
   const load = useCallback(async () => {
@@ -194,7 +194,6 @@ export function PlantillaDetailPage() {
           >
             ← Actividades Registradas
           </button>
-          <p className={styles.eyebrow}>{template.code}</p>
           <h1 className={styles.title}>{template.name}</h1>
           <p className={styles.subtitle}>
             {template.chapterName || 'Sin capítulo'}
