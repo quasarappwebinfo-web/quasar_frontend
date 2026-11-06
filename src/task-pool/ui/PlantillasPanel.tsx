@@ -169,7 +169,7 @@ export function PlantillasPanel() {
     const baId = Number(formBudgetActivityId)
     if (!name.trim() || Number.isNaN(catId) || Number.isNaN(baId)) {
       setFormError(
-        'Capítulo, actividad presupuestal y nombre son obligatorios.',
+        'Capítulo, subcapítulo y nombre son obligatorios.',
       )
       return
     }
@@ -261,7 +261,7 @@ export function PlantillasPanel() {
             </TextSelect>
           </Field>
           <Field
-            label="Actividad presupuestal"
+            label="Subcapítulo"
             help={
               chapterId
                 ? 'Solo actividades del capítulo filtrado.'
@@ -347,7 +347,7 @@ export function PlantillasPanel() {
                   </span>
                 </div>
                 <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Act. presupuestal</span>
+                  <span className={styles.metaLabel}>Subcapítulo</span>
                   <span className={styles.metaValue}>
                     {item.budgetActivityName ||
                       (item.budgetActivityId
@@ -417,7 +417,7 @@ export function PlantillasPanel() {
           {formError ? <Alert tone="error">{formError}</Alert> : null}
           <Field
             label="Capítulo"
-            help="Grupo constructivo amplio (ej. Estructura). Define qué actividades presupuestales puedes elegir."
+            help="Grupo constructivo amplio (ej. Estructura). Define qué subcapítulos puedes elegir."
           >
             <TextSelect
               value={formChapterId}
@@ -436,7 +436,7 @@ export function PlantillasPanel() {
             </TextSelect>
           </Field>
           <Field
-            label="Actividad presupuestal"
+            label="Subcapítulo"
             help="Solo se listan actividades del capítulo elegido."
           >
             <TextSelect

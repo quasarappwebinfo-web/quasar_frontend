@@ -594,7 +594,7 @@ export function TaskDetailDrawer({
                 </div>
                 {task.budgetActivityName ? (
                   <div>
-                    <p className={styles.metaLabel}>Act. presupuestal</p>
+                    <p className={styles.metaLabel}>Subcapítulo</p>
                     <p className={styles.metaValue}>{task.budgetActivityName}</p>
                   </div>
                 ) : null}

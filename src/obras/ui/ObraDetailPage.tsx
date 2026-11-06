@@ -373,7 +373,7 @@ export function ObraDetailPage() {
         <div className={styles.rightColumn}>
           <section className={styles.metricsCard}>
             <div className={styles.metricCell}>
-              <p className={styles.metricLabel}>Global</p>
+              <p className={styles.metricLabel}>% global obra ejecutada</p>
               <div className={styles.metricRow}>
                 <div
                   className={styles.ring}
@@ -392,7 +392,7 @@ export function ObraDetailPage() {
               <p className={styles.metricHint}>% de la obra</p>
             </div>
             <div className={styles.metricCell}>
-              <p className={styles.metricLabel}>Periodo</p>
+              <p className={styles.metricLabel}>% cumplimiento bitácora actual</p>
               <div className={styles.metricRow}>
                 <div
                   className={cn(styles.ring, styles.ringOrange)}
@@ -584,7 +584,7 @@ export function ObraDetailPage() {
                         className={styles.activityGroup}
                       >
                         <div className={styles.activityGroupTitle}>
-                          {group.budgetActivityName || 'Sin actividad presupuestal'}
+                          {group.budgetActivityName || 'Sin subcapítulo'}
                           <span>
                             {formatShare(group.weightPercent)}% del capítulo
                           </span>

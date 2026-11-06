@@ -431,7 +431,7 @@ export function CreatePlanModal({
                     ))}
                   </TextSelect>
                 </Field>
-                <Field label="Actividad presupuestal">
+                <Field label="Subcapítulo">
                   <TextSelect
                     value={budgetActivityId}
                     onChange={(e) => setBudgetActivityId(e.target.value)}
@@ -458,20 +458,20 @@ export function CreatePlanModal({
                 <p className={styles.muted}>Cargando actividades del pool…</p>
               ) : !chapterId ? (
                 <p className={styles.muted}>
-                  Elige un capítulo. Después verás sus actividades presupuestales
-                  y, al elegir una, las actividades del pool.
+                  Elige un capítulo. Después verás sus subcapítulos
+                  y, al elegir uno, las actividades del pool.
                 </p>
               ) : !budgetActivityId ? (
                 <p className={styles.muted}>
                   {budgetActivities.length === 0
-                    ? 'Este capítulo no tiene actividades presupuestales.'
-                    : 'Elige la actividad presupuestal para ver las del pool.'}
+                    ? 'Este capítulo no tiene subcapítulos.'
+                    : 'Elige el subcapítulo para ver las del pool.'}
                 </p>
               ) : templates.length === 0 ? (
                 <p className={styles.muted}>
                   {poolAlreadyPending
                     ? 'Esas actividades ya se usaron en esta obra: están planeadas, en progreso o terminadas. No se vuelven a ofrecer.'
-                    : 'Esta actividad presupuestal no tiene actividades en el pool.'}
+                    : 'Este subcapítulo no tiene actividades en el pool.'}
                 </p>
               ) : (
                 <div className={styles.taskPick}>

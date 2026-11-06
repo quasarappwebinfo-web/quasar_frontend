@@ -10,7 +10,7 @@ const TABS = [
   { to: '/maestros/task-pool/capitulos', label: 'Capítulos', end: true },
   {
     to: '/maestros/task-pool/actividades-presupuestales',
-    label: 'Act. Presupuestales',
+    label: 'Subcapítulos',
     end: true,
   },
   { to: '/maestros/task-pool/zonas', label: 'Zonas', end: true },
@@ -24,11 +24,11 @@ const GUIDE_STEPS = [
   },
   {
     title: 'Crea el capítulo',
-    text: 'En Capítulos define el grupo de la obra y, si quieres, qué porcentaje aporta al avance. A partir de ahí se arman las actividades presupuestales y las actividades registradas.',
+    text: 'En Capítulos define el grupo de la obra y, si quieres, qué porcentaje aporta al avance. A partir de ahí se arman los subcapítulos y las actividades registradas.',
   },
   {
     title: 'Crea la Actividad Registrada',
-    text: 'Ve a Actividades Registradas → «Nueva Actividad Registrada». Capítulo, actividad presupuestal y nombre son obligatorios. La zona es opcional.',
+    text: 'Ve a Actividades Registradas → «Nueva Actividad Registrada». Capítulo, subcapítulo y nombre son obligatorios. La zona es opcional.',
   },
   {
     title: 'Abre la Actividad Registrada y crea una versión',
@@ -52,7 +52,7 @@ function titleFromPath(pathname: string): string {
   if (pathname.includes('/capitulos')) return 'Capítulos'
   if (pathname.includes('/zonas')) return 'Zonas'
   if (pathname.includes('/actividades-presupuestales')) {
-    return 'Actividades presupuestales'
+    return 'Subcapítulos'
   }
   if (pathname.includes('/unidades')) return 'Unidades'
   return 'Actividades Registradas'

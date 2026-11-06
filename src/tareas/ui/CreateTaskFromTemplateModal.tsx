@@ -200,7 +200,7 @@ export function CreateTaskFromTemplateModal({
       (!name.trim() || !chapterId || !budgetActivityId || !zoneId)
     ) {
       setError(
-        'La actividad de esta obra necesita nombre, capítulo, actividad presupuestal y zona.',
+        'La actividad de esta obra necesita nombre, capítulo, subcapítulo y zona.',
       )
       return
     }
@@ -277,7 +277,7 @@ export function CreateTaskFromTemplateModal({
               ))}
             </TextSelect>
           </Field>
-          <Field label="Actividad presupuestal">
+          <Field label="Subcapítulo">
             <TextSelect
               value={budgetActivityId}
               onChange={(e) => setBudgetActivityId(e.target.value)}
@@ -331,7 +331,7 @@ export function CreateTaskFromTemplateModal({
                 ))}
               </TextSelect>
             </Field>
-            <Field label="Actividad presupuestal">
+            <Field label="Subcapítulo">
               <TextSelect
                 value={budgetActivityId}
                 onChange={(e) => setBudgetActivityId(e.target.value)}
