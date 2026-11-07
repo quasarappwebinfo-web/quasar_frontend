@@ -1,25 +1,23 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/auth'
-import { listActiveDocumentTypes } from '@/obras/api/catalogosObrasApi'
 import {
   addObraClient,
   closeObraClient,
   listObraClients,
 } from '@/obras/api/clientesApi'
 import {
-  createObraDocument,
   listObraDocuments,
   updateObraDocument,
+  uploadObraDocuments,
 } from '@/obras/api/documentosApi'
 import { getObra, updateObra } from '@/obras/api/obrasApi'
 import { coverForObra, resolveObraCover } from '@/obras/lib/obraUi'
-import type {
-  DocumentTypeOption,
-  Obra,
-  ObraClient,
-  ObraDocument,
-} from '@/obras/model/types'
+import type { Obra, ObraClient, ObraDocument } from '@/obras/model/types'
+import {
+  DocumentPrepareError,
+  prepareDocumentFile,
+} from '@/shared/lib/prepareDocument'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
 import { AsistenciaModal } from '@/obras/ui/AsistenciaModal'
 import { listObraAttendance } from '@/obras/api/asistenciaApi'
@@ -1043,18 +1041,33 @@ function ClientesTab({ obraId }: { obraId: number }) {
   )
 }
 
+type DocumentDraft = {
+  key: string
+  file: File
+  name: string
+  description: string
+  visible: boolean
+}
+
+function fileTitle(name: string): string {
+  const base = name.replace(/\.[^.]+$/, '').trim()
+  return base || name || 'Archivo'
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function DocumentosTab({ obraId }: { obraId: number }) {
   const toast = useToast()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<ObraDocument[]>([])
-  const [types, setTypes] = useState<DocumentTypeOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [fileUrl, setFileUrl] = useState('')
-  const [documentTypeId, setDocumentTypeId] = useState('')
-  const [visible, setVisible] = useState(false)
+  const [drafts, setDrafts] = useState<DocumentDraft[]>([])
+  const [preparing, setPreparing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -1062,12 +1075,8 @@ function DocumentosTab({ obraId }: { obraId: number }) {
     setLoading(true)
     setError(null)
     try {
-      const [docs, docTypes] = await Promise.all([
-        listObraDocuments(obraId),
-        listActiveDocumentTypes(),
-      ])
+      const docs = await listObraDocuments(obraId)
       setItems(docs.documents)
-      setTypes(docTypes)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron cargar documentos')
     } finally {
@@ -1079,23 +1088,78 @@ function DocumentosTab({ obraId }: { obraId: number }) {
     void load()
   }, [load])
 
+  function closeForm() {
+    setOpen(false)
+    setDrafts([])
+    setFormError(null)
+  }
+
+  async function addFiles(selected: File[]) {
+    if (!selected.length) return
+    if (drafts.length + selected.length > 10) {
+      setFormError('Puedes subir hasta 10 archivos, de 25 MB cada uno.')
+      return
+    }
+    setPreparing(true)
+    setFormError(null)
+    const next: DocumentDraft[] = []
+    try {
+      for (const file of selected) {
+        const prepared = await prepareDocumentFile(file)
+        next.push({
+          key: `${prepared.name}-${prepared.size}-${Date.now()}-${next.length}`,
+          file: prepared,
+          name: fileTitle(file.name),
+          description: '',
+          visible: false,
+        })
+      }
+      setDrafts((current) => [...current, ...next])
+    } catch (err) {
+      setFormError(
+        err instanceof DocumentPrepareError
+          ? err.message
+          : 'No se pudo preparar un archivo',
+      )
+    } finally {
+      setPreparing(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  function updateDraft(key: string, patch: Partial<DocumentDraft>) {
+    setDrafts((current) =>
+      current.map((draft) => (draft.key === key ? { ...draft, ...patch } : draft)),
+    )
+  }
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
+    if (!drafts.length) {
+      setFormError('Elige al menos un archivo.')
+      return
+    }
+    if (drafts.some((draft) => !draft.name.trim())) {
+      setFormError('Cada archivo necesita un nombre.')
+      return
+    }
     setSaving(true)
     setFormError(null)
     try {
-      await createObraDocument(obraId, {
-        documentTypeId: Number(documentTypeId),
-        name: name.trim(),
-        description: description.trim() || null,
-        fileUrl: fileUrl.trim(),
-        isVisibleToClient: visible ? 1 : 0,
-      })
-      toast.success('Documento registrado')
-      setOpen(false)
+      await uploadObraDocuments(
+        obraId,
+        drafts.map((draft) => ({
+          file: draft.file,
+          name: draft.name.trim(),
+          description: draft.description.trim(),
+          visible: draft.visible,
+        })),
+      )
+      toast.success(drafts.length === 1 ? 'Archivo guardado' : `${drafts.length} archivos guardados`)
+      closeForm()
       await load()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'No se pudo crear')
+      setFormError(err instanceof Error ? err.message : 'No se pudieron guardar')
     } finally {
       setSaving(false)
     }
@@ -1104,8 +1168,18 @@ function DocumentosTab({ obraId }: { obraId: number }) {
   return (
     <section>
       <div className={styles.toolbar}>
-        <p className={styles.muted}>Metadatos + URL.</p>
-        <Button onClick={() => setOpen(true)}>Nuevo documento</Button>
+        <p className={styles.muted}>
+          Máximo 10 archivos, de 25 MB cada uno. Las imágenes se comprimen al guardarlas.
+        </p>
+        <Button
+          onClick={() => {
+            setDrafts([])
+            setFormError(null)
+            setOpen(true)
+          }}
+        >
+          Subir archivos
+        </Button>
       </div>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {loading ? (
@@ -1119,9 +1193,9 @@ function DocumentosTab({ obraId }: { obraId: number }) {
               <div className={styles.cardTop}>
                 <div>
                   <h3 className={styles.cardTitle}>{doc.name}</h3>
-                  <p className={styles.cardSubtitle}>
-                    {doc.documentTypeName || `Tipo #${doc.documentTypeId}`}
-                  </p>
+                  {doc.description ? (
+                    <p className={styles.cardSubtitle}>{doc.description}</p>
+                  ) : null}
                 </div>
                 <Badge tone={doc.isVisibleToClient === 1 ? 'success' : 'neutral'}>
                   {doc.isVisibleToClient === 1 ? 'Visible' : 'Interno'}
@@ -1149,63 +1223,77 @@ function DocumentosTab({ obraId }: { obraId: number }) {
       )}
 
       <Modal
-        title="Nuevo documento"
+        title="Subir archivos"
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={closeForm}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button variant="ghost" onClick={closeForm}>
               Cancelar
             </Button>
-            <Button type="submit" form="doc-form" disabled={saving}>
-              {saving ? 'Guardando…' : 'Guardar'}
+            <Button type="submit" form="doc-form" disabled={saving || preparing || drafts.length === 0}>
+              {saving ? 'Guardando…' : preparing ? 'Comprimiendo…' : 'Guardar'}
             </Button>
           </>
         }
       >
         <form id="doc-form" className={styles.formGrid} onSubmit={handleCreate}>
-          <Field label="Tipo">
-            <TextSelect
-              required
-              value={documentTypeId}
-              onChange={(e) => setDocumentTypeId(e.target.value)}
-            >
-              <option value="">Selecciona…</option>
-              {types.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
+          <p className={styles.muted}>
+            Hasta 10 archivos, de 25 MB cada uno. Un plano, un PDF o una imagen.
+            Las imágenes se comprimen antes de subirlas.
+          </p>
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            hidden
+            onChange={(event) => void addFiles(Array.from(event.target.files ?? []))}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={preparing || saving || drafts.length >= 10}
+            onClick={() => fileRef.current?.click()}
+          >
+            Elegir archivos
+          </Button>
+          {drafts.length > 0 ? (
+            <div className={styles.docDrafts}>
+              {drafts.map((draft) => (
+                <div key={draft.key} className={styles.docDraft}>
+                  <div className={styles.docDraftHead}>
+                    <span>{draft.file.name}</span>
+                    <span>{formatFileSize(draft.file.size)}</span>
+                  </div>
+                  <Field label="Nombre">
+                    <TextInput
+                      required
+                      value={draft.name}
+                      onChange={(event) => updateDraft(draft.key, { name: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="Descripción">
+                    <TextArea
+                      value={draft.description}
+                      onChange={(event) =>
+                        updateDraft(draft.key, { description: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <label className={styles.muted}>
+                    <input
+                      type="checkbox"
+                      checked={draft.visible}
+                      onChange={(event) =>
+                        updateDraft(draft.key, { visible: event.target.checked })
+                      }
+                    />{' '}
+                    Visible al cliente
+                  </label>
+                </div>
               ))}
-            </TextSelect>
-          </Field>
-          <Field label="Nombre">
-            <TextInput
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </Field>
-          <Field label="Descripción">
-            <TextArea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </Field>
-          <Field label="URL del archivo">
-            <TextInput
-              required
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-            />
-          </Field>
-          <label className={styles.muted}>
-            <input
-              type="checkbox"
-              checked={visible}
-              onChange={(e) => setVisible(e.target.checked)}
-            />{' '}
-            Visible al cliente
-          </label>
+            </div>
+          ) : null}
           {formError ? <Alert tone="error">{formError}</Alert> : null}
         </form>
       </Modal>

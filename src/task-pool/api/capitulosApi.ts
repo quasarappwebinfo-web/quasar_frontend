@@ -21,8 +21,16 @@ export async function listTaskChapters(params: {
 }
 
 export async function listActiveTaskChapters(): Promise<TaskChapter[]> {
-  const data = await listTaskChapters({ page: 1, activeOnly: true })
-  return data.chapters
+  const all: TaskChapter[] = []
+  let page = 1
+  let total = 0
+  do {
+    const data = await listTaskChapters({ page, activeOnly: true })
+    all.push(...data.chapters)
+    total = data.pagination.totalItems
+    page += 1
+  } while (all.length < total && page <= 40)
+  return all
 }
 
 export async function getTaskChapter(id: number): Promise<TaskChapter> {

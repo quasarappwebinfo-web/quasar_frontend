@@ -147,6 +147,9 @@ export function PlantillasPanel() {
     setDescription('')
     setFormError(null)
     setModalOpen(true)
+    void listActiveTaskBudgetActivities()
+      .then(setBudgetActivities)
+      .catch(() => setBudgetActivities([]))
   }
 
   function openEdit(item: TaskTemplate) {

@@ -725,6 +725,30 @@
   align-items: flex-end;
 }
 
+.docDrafts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.docDraft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.docDraftHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: #666;
+  font-size: 0.82rem;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
