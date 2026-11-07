@@ -91,7 +91,7 @@ export type ObraDocument = {
   id: number
   uuid: string
   obraId: number
-  documentTypeId: number
+  documentTypeId: number | null
   documentTypeName: string | null
   name: string
   description: string | null

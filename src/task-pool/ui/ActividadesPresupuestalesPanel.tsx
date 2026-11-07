@@ -77,7 +77,7 @@ export function ActividadesPresupuestalesPanel() {
       setError(
         err instanceof Error
           ? err.message
-          : 'No se pudieron cargar actividades presupuestales',
+          : 'No se pudieron cargar los subcapítulos',
       )
     } finally {
       setLoading(false)
@@ -129,7 +129,7 @@ export function ActividadesPresupuestalesPanel() {
           description: description.trim() || null,
           isActive: editing.isActive,
         })
-        toast.success('Actividad presupuestal actualizada')
+        toast.success('Subcapítulo actualizado')
       } else {
         await createTaskBudgetActivity({
           chapterId: catId,
@@ -137,7 +137,7 @@ export function ActividadesPresupuestalesPanel() {
           name: name.trim(),
           description: description.trim() || null,
         })
-        toast.success('Actividad presupuestal creada')
+        toast.success('Subcapítulo creado')
       }
       setModalOpen(false)
       await load()
@@ -159,8 +159,8 @@ export function ActividadesPresupuestalesPanel() {
       })
       toast.success(
         item.isActive === 1
-          ? 'Actividad presupuestal desactivada'
-          : 'Actividad presupuestal activada',
+          ? 'Subcapítulo desactivado'
+          : 'Subcapítulo activado',
       )
       await load()
     } catch (err) {
@@ -173,9 +173,9 @@ export function ActividadesPresupuestalesPanel() {
       <div className={styles.toolbar}>
         <div className={styles.filters}>
           <div className={styles.searchGrow}>
-            <Field label="Buscar" help="Filtra por nombre de actividad.">
+            <Field label="Buscar" help="Filtra por nombre de subcapítulo.">
               <TextInput
-                placeholder="Nombre de actividad"
+                placeholder="Nombre del subcapítulo"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -186,7 +186,7 @@ export function ActividadesPresupuestalesPanel() {
           </div>
           <Field
             label="Capítulo"
-            help="Cada actividad presupuestal pertenece a un capítulo."
+            help="Cada subcapítulo pertenece a un capítulo."
           >
             <TextSelect
               value={chapterId}
@@ -216,7 +216,7 @@ export function ActividadesPresupuestalesPanel() {
             </TextSelect>
           </Field>
         </div>
-        <Button onClick={openCreate}>Nueva actividad</Button>
+        <Button onClick={openCreate}>Nuevo subcapítulo</Button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -224,7 +224,7 @@ export function ActividadesPresupuestalesPanel() {
       {loading ? (
         <p className={styles.empty}>Cargando…</p>
       ) : items.length === 0 ? (
-        <p className={styles.empty}>No hay actividades presupuestales.</p>
+        <p className={styles.empty}>No hay subcapítulos.</p>
       ) : (
         <div className={styles.cardGrid}>
           {items.map((item) => (
@@ -283,8 +283,8 @@ export function ActividadesPresupuestalesPanel() {
       <Modal
         title={
           editing
-            ? 'Editar actividad presupuestal'
-            : 'Nueva actividad presupuestal'
+            ? 'Editar subcapítulo'
+            : 'Nuevo subcapítulo'
         }
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -311,7 +311,7 @@ export function ActividadesPresupuestalesPanel() {
           {formError ? <Alert tone="error">{formError}</Alert> : null}
           <Field
             label="Capítulo"
-            help="La actividad queda ligada a este capítulo (ej. Estructura → Estructura metálica)."
+            help="El subcapítulo queda ligado a este capítulo (ej. Estructura → Estructura metálica)."
           >
             <TextSelect
               value={formChapterId}
@@ -328,7 +328,7 @@ export function ActividadesPresupuestalesPanel() {
           </Field>
           <Field
             label="Zona"
-            help="Zona a la que contribuye esta actividad presupuestal (opcional)."
+            help="Zona a la que contribuye este subcapítulo (opcional)."
           >
             <TextSelect
               value={formZoneId}
@@ -344,7 +344,7 @@ export function ActividadesPresupuestalesPanel() {
           </Field>
           <Field
             label="Nombre"
-            help="Rubro presupuestal concreto (ej. Estructura metálica)."
+            help="Nombre del subcapítulo (ej. Estructura metálica)."
           >
             <TextInput
               value={name}

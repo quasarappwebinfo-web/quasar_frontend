@@ -220,7 +220,7 @@ export function PhotoGalleryPage() {
             ))}
           </TextSelect>
         </Field>
-        <Field label="Actividad presupuestal">
+        <Field label="Subcapítulo">
           <TextSelect
             value={budgetId}
             disabled={!chapterId}

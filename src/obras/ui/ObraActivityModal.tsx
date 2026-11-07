@@ -238,7 +238,7 @@ export function ObraActivityModal({
             ))}
           </TextSelect>
         </Field>
-        <Field label="Actividad presupuestal">
+        <Field label="Subcapítulo">
           <TextSelect
             value={budgetActivityId}
             onChange={(e) => setBudgetActivityId(e.target.value)}

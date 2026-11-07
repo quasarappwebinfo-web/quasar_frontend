@@ -25,12 +25,20 @@ export async function listTaskBudgetActivities(params: {
 export async function listActiveTaskBudgetActivities(params?: {
   chapterId?: number
 }): Promise<TaskBudgetActivity[]> {
-  const data = await listTaskBudgetActivities({
-    page: 1,
-    activeOnly: true,
-    chapterId: params?.chapterId,
-  })
-  return data.budgetActivities
+  const all: TaskBudgetActivity[] = []
+  let page = 1
+  let total = 0
+  do {
+    const data = await listTaskBudgetActivities({
+      page,
+      activeOnly: true,
+      chapterId: params?.chapterId,
+    })
+    all.push(...data.budgetActivities)
+    total = data.pagination.totalItems
+    page += 1
+  } while (all.length < total && page <= 40)
+  return all
 }
 
 export async function createTaskBudgetActivity(

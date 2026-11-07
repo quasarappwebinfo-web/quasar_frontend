@@ -79,7 +79,7 @@ export function TaskCard({
             </span>
           ) : null}
           {task.budgetActivityName ? (
-            <span className={styles.budgetChip} title="Actividad presupuestal">
+            <span className={styles.budgetChip} title="Subcapítulo">
               {task.budgetActivityName}
             </span>
           ) : null}

@@ -21,8 +21,16 @@ export async function listTaskZones(params: {
 }
 
 export async function listActiveTaskZones(): Promise<TaskZone[]> {
-  const data = await listTaskZones({ page: 1, activeOnly: true })
-  return data.zones
+  const all: TaskZone[] = []
+  let page = 1
+  let total = 0
+  do {
+    const data = await listTaskZones({ page, activeOnly: true })
+    all.push(...data.zones)
+    total = data.pagination.totalItems
+    page += 1
+  } while (all.length < total && page <= 40)
+  return all
 }
 
 export async function createTaskZone(

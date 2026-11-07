@@ -1,4 +1,4 @@
-import { apiJson, buildQuery } from '@/shared/api/apiJson'
+import { apiFormData, apiJson, buildQuery } from '@/shared/api/apiJson'
 import type { ObraDocument, Pagination } from '@/obras/model/types'
 
 type DocumentsResponse = {
@@ -17,6 +17,20 @@ export async function listObraDocuments(
       visible_to_client: params?.visibleToClient,
     })}`,
   )
+}
+
+export async function uploadObraDocuments(
+  obraId: number,
+  items: { file: File; name: string; description: string; visible: boolean }[],
+): Promise<{ documents: ObraDocument[] }> {
+  const form = new FormData()
+  for (const item of items) {
+    form.append('files', item.file)
+    form.append('names', item.name.trim())
+    form.append('descriptions', item.description.trim())
+    form.append('visibles', item.visible ? '1' : '0')
+  }
+  return apiFormData(`/api/v1/obras/${obraId}/documentos/archivos`, form, 'POST')
 }
 
 export async function createObraDocument(
