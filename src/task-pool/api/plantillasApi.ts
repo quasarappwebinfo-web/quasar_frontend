@@ -13,6 +13,7 @@ export async function listTaskTemplates(params: {
   zoneId?: number
   budgetActivityId?: number
   activeOnly?: boolean
+  fixedOnly?: boolean
 }): Promise<{ templates: TaskTemplate[]; pagination: Pagination }> {
   return apiJson(
     `/api/v1/catalogo/plantillas${buildQuery({
@@ -22,6 +23,7 @@ export async function listTaskTemplates(params: {
       zone_id: params.zoneId,
       budget_activity_id: params.budgetActivityId,
       active_only: params.activeOnly,
+      fixedOnly: params.fixedOnly,
     })}`,
   )
 }

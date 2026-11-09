@@ -16,6 +16,8 @@ import {
   type UserNotification,
 } from '@/app/ui/Sidebar/notificationsApi'
 import { useAuth } from '@/auth'
+import { changeMyPassword } from '@/identidad/api/usersApi'
+import { Alert, Button, Field, Modal, TextInput } from '@/shared/ui'
 import quasarLogo from '@/shared/assets/quasar-logo.png'
 import { cn } from '@/shared/lib/cn'
 import styles from './Sidebar.module.css'
@@ -43,6 +45,11 @@ export function Sidebar({
   const { user, logout, offlineSession } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [savingPassword, setSavingPassword] = useState(false)
   const [notices, setNotices] = useState<UserNotification[]>([])
   const [unread, setUnread] = useState(0)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -90,6 +97,26 @@ export function Sidebar({
     document.addEventListener('pointerdown', handlePointerDown)
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [])
+
+  async function submitMyPassword() {
+    setPasswordError(null)
+    if (!currentPassword || newPassword.length < 8) {
+      setPasswordError('La contraseña nueva debe tener al menos 8 caracteres.')
+      return
+    }
+    setSavingPassword(true)
+    try {
+      await changeMyPassword({ currentPassword, newPassword })
+      setPasswordOpen(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      await logout()
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'No se pudo cambiar')
+    } finally {
+      setSavingPassword(false)
+    }
+  }
 
   return (
     <>
@@ -200,6 +227,20 @@ export function Sidebar({
                 className={styles.userMenuItem}
                 onClick={() => {
                   setMenuOpen(false)
+                  setCurrentPassword('')
+                  setNewPassword('')
+                  setPasswordError(null)
+                  setPasswordOpen(true)
+                }}
+              >
+                Mi contraseña
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.userMenuItem}
+                onClick={() => {
+                  setMenuOpen(false)
                   void logout()
                 }}
               >
@@ -209,6 +250,41 @@ export function Sidebar({
           ) : null}
         </div>
       </aside>
+      <Modal
+        title="Cambiar mi contraseña"
+        open={passwordOpen}
+        onClose={() => {
+          if (!savingPassword) setPasswordOpen(false)
+        }}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setPasswordOpen(false)} disabled={savingPassword}>
+              Cancelar
+            </Button>
+            <Button disabled={savingPassword} onClick={() => void submitMyPassword()}>
+              {savingPassword ? 'Guardando…' : 'Guardar'}
+            </Button>
+          </>
+        }
+      >
+        <Field label="Contraseña actual">
+          <TextInput
+            type="password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            autoComplete="current-password"
+          />
+        </Field>
+        <Field label="Nueva contraseña" help="Mínimo 8 caracteres. Al guardar se cierra la sesión.">
+          <TextInput
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            autoComplete="new-password"
+          />
+        </Field>
+        {passwordError ? <Alert tone="error">{passwordError}</Alert> : null}
+      </Modal>
     </>
   )
 }

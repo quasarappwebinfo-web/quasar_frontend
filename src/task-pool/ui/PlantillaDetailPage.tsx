@@ -201,6 +201,7 @@ export function PlantillaDetailPage() {
               ? ` · ${template.budgetActivityName}`
               : ''}
             {template.zoneName ? ` · ${template.zoneName}` : ''}
+            {template.isFixed === 1 ? ' · Fija' : ''}
             {template.description ? ` · ${template.description}` : ''}
           </p>
         </div>

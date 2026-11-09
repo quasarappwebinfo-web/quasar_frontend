@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   canManageUser,
+  isSuperUser,
   roleHasFullAccess,
   useAuth,
 } from '@/auth'
@@ -322,8 +323,8 @@ export function UsersPanel() {
   async function confirmPassword() {
     if (!passwordUser) return
     setPasswordError(null)
-    if (newPassword.trim().length < 6) {
-      setPasswordError('Usa al menos 6 caracteres')
+    if (newPassword.trim().length < 8) {
+      setPasswordError('Usa al menos 8 caracteres')
       return
     }
     try {
@@ -379,6 +380,7 @@ export function UsersPanel() {
         <div className={styles.cardGridPhone}>
           {items.map((user) => {
             const manageable = canManageUser(actor, user)
+            const canResetPassword = manageable && isSuperUser(actor)
             return (
               <article key={user.id} className={styles.card}>
                 <div className={styles.cardTop}>
@@ -423,17 +425,19 @@ export function UsersPanel() {
                       >
                         Editar
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setPasswordUser(user)
-                          setNewPassword('')
-                          setPasswordError(null)
-                        }}
-                      >
-                        Password
-                      </Button>
+                      {canResetPassword ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPasswordUser(user)
+                            setNewPassword('')
+                            setPasswordError(null)
+                          }}
+                        >
+                          Restablecer contraseña
+                        </Button>
+                      ) : null}
                       <Button
                         variant={user.isActive === 1 ? 'danger' : 'ghost'}
                         size="sm"

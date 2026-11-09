@@ -105,6 +105,7 @@ export type TaskTemplate = {
   code: string
   description: string | null
   budgetWeightPercent: number | string | null
+  isFixed: 0 | 1
   isActive: ActiveStatus
   createdAt?: string | null
 }
@@ -115,6 +116,7 @@ export type TaskTemplateWrite = {
   budgetActivityId: number
   name: string
   description?: string | null
+  isFixed?: 0 | 1
 }
 
 export type TaskTemplateUpdate = {
@@ -123,6 +125,7 @@ export type TaskTemplateUpdate = {
   budgetActivityId?: number | null
   name?: string
   description?: string | null
+  isFixed?: 0 | 1
   isActive?: ActiveStatus
 }
 

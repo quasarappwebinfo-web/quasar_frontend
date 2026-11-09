@@ -94,6 +94,27 @@ export async function getTask(taskId: number): Promise<TaskDetail> {
   return getTaskDetail(taskId)
 }
 
+export async function deleteTask(taskId: number): Promise<void> {
+  await apiJson<void>(`/api/v1/operacion/tareas/${taskId}`, {
+    method: 'DELETE',
+  })
+}
+
+export type TaskRemoval = {
+  id: number
+  taskName: string
+  detail: string
+  removedBy: number
+  removedByName?: string | null
+  removedAt: string
+}
+
+export async function listTaskRemovals(
+  obraId: number,
+): Promise<{ removals: TaskRemoval[] }> {
+  return apiJson(`/api/v1/operacion/tareas/bajas${buildQuery({ obraId })}`)
+}
+
 export async function updateTask(
   taskId: number,
   payload: TaskUpdate,

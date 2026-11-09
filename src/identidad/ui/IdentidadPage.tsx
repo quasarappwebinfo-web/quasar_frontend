@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '@/auth'
 import { changeMyPassword } from '@/identidad/api/usersApi'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import { Alert, Button, Field, Modal, TextInput, useToast } from '@/shared/ui'
@@ -14,6 +15,7 @@ const TABS = [
 
 export function IdentidadPage() {
   const toast = useToast()
+  const { logout } = useAuth()
   const location = useLocation()
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -32,13 +34,18 @@ export function IdentidadPage() {
 
   async function submitMyPassword() {
     setPasswordError(null)
+    if (!currentPassword || newPassword.length < 8) {
+      setPasswordError('La contraseña nueva debe tener al menos 8 caracteres.')
+      return
+    }
     setSavingPassword(true)
     try {
       await changeMyPassword({ currentPassword, newPassword })
       setPasswordOpen(false)
       setCurrentPassword('')
       setNewPassword('')
-      toast.success('Tu contraseña fue actualizada')
+      toast.success('Contraseña actualizada. Vuelve a iniciar sesión.')
+      await logout()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo cambiar'
       setPasswordError(message)

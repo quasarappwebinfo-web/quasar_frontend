@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/ui/useAuth'
 import quasarLogo from '@/shared/assets/quasar-logo.png'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
@@ -82,6 +83,9 @@ export function LoginPage() {
           >
             {submitting ? 'Entrando…' : 'Entrar'}
           </Button>
+          <Link className={styles.textLink} to="/recuperar">
+            Olvidé mi contraseña
+          </Link>
         </form>
       </div>
     </main>

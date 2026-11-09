@@ -281,6 +281,7 @@ export type PeriodFulfillment = {
 export type ActivityShare = {
   taskId: number
   taskName: string
+  status?: TaskStatus
   sharePercent: number | string
   progressPercent: number | string
 }

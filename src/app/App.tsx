@@ -5,12 +5,12 @@ import {
   PublicOnlyRoute,
   RequirePermission,
 } from '@/app/routing/RouteGuards'
-import { LoginPage } from '@/auth'
+import { LoginPage, RecoverAccessPage } from '@/auth'
 import { IdentidadPage } from '@/identidad'
 import { PersonasPanel } from '@/identidad/ui/PersonasPanel'
 import { RolesPanel } from '@/identidad/ui/RolesPanel'
 import { UsersPanel } from '@/identidad/ui/UsersPanel'
-import { DashboardPage, ObraDetailPage } from '@/obras'
+import { DashboardPage, ObraActivitiesPage, ObraDetailPage } from '@/obras'
 import { ReportsPage } from '@/reportes/ui/ReportsPage'
 import { RrhhPage } from '@/rrhh'
 import { CargosPanel } from '@/rrhh/ui/CargosPanel'
@@ -45,6 +45,7 @@ export function App() {
         <Routes>
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/recuperar" element={<RecoverAccessPage />} />
           </Route>
 
           <Route element={<ProtectedRoute />}>
@@ -54,6 +55,10 @@ export function App() {
 
             <Route element={<RequirePermission permission="obras" />}>
               <Route path="/dashboard/obras/:obraId" element={<ObraDetailPage />} />
+              <Route
+                path="/dashboard/obras/:obraId/actividades"
+                element={<ObraActivitiesPage />}
+              />
               <Route path="/reports" element={<ReportsPage />} />
             </Route>
 
