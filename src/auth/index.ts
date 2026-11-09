@@ -1,6 +1,7 @@
 export { AuthProvider } from './ui/AuthProvider'
 export { useAuth } from './ui/useAuth'
 export { LoginPage } from './ui/LoginPage'
+export { RecoverAccessPage } from './ui/RecoverAccessPage'
 export { apiFetch } from './api/apiFetch'
 export { getAccessToken } from './model/accessToken'
 export {

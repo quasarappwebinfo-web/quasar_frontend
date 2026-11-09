@@ -39,6 +39,7 @@ export function PlantillasPanel() {
   const [zoneId, setZoneId] = useState('')
   const [budgetActivityId, setBudgetActivityId] = useState('')
   const [activeOnly, setActiveOnly] = useState(false)
+  const [fixedOnly, setFixedOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<TaskTemplate[]>([])
   const [categories, setCategories] = useState<TaskChapter[]>([])
@@ -58,6 +59,7 @@ export function PlantillasPanel() {
   const [formZoneId, setFormZoneId] = useState('')
   const [formBudgetActivityId, setFormBudgetActivityId] = useState('')
   const [description, setDescription] = useState('')
+  const [isFixed, setIsFixed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -110,6 +112,7 @@ export function PlantillasPanel() {
           ? Number(budgetActivityId)
           : undefined,
         activeOnly: activeOnly || undefined,
+        fixedOnly: fixedOnly || undefined,
       })
       setItems(data.templates)
       setTotalItems(data.pagination.totalItems)
@@ -119,7 +122,7 @@ export function PlantillasPanel() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, chapterId, zoneId, budgetActivityId, activeOnly])
+  }, [page, debouncedSearch, chapterId, zoneId, budgetActivityId, activeOnly, fixedOnly])
 
   useEffect(() => {
     void load()
@@ -145,6 +148,7 @@ export function PlantillasPanel() {
           : '',
     )
     setDescription('')
+    setIsFixed(false)
     setFormError(null)
     setModalOpen(true)
     void listActiveTaskBudgetActivities()
@@ -161,6 +165,7 @@ export function PlantillasPanel() {
       item.budgetActivityId ? String(item.budgetActivityId) : '',
     )
     setDescription(item.description || '')
+    setIsFixed(item.isFixed === 1)
     setFormError(null)
     setModalOpen(true)
   }
@@ -186,6 +191,7 @@ export function PlantillasPanel() {
           budgetActivityId: baId,
           name: name.trim(),
           description: description.trim() || null,
+          isFixed: isFixed ? 1 : 0,
           isActive: editing.isActive,
         })
         toast.success('Actividad Registrada actualizada')
@@ -196,6 +202,7 @@ export function PlantillasPanel() {
           budgetActivityId: baId,
           name: name.trim(),
           description: description.trim() || null,
+          isFixed: isFixed ? 1 : 0,
         })
         toast.success('Actividad Registrada creada')
       }
@@ -317,6 +324,21 @@ export function PlantillasPanel() {
               <option value="1">Solo activos</option>
             </TextSelect>
           </Field>
+          <Field
+            label="Fijas"
+            help="Las fijas se copian solas al crear una obra."
+          >
+            <TextSelect
+              value={fixedOnly ? '1' : '0'}
+              onChange={(e) => {
+                setFixedOnly(e.target.value === '1')
+                setPage(1)
+              }}
+            >
+              <option value="0">Todas</option>
+              <option value="1">Solo fijas</option>
+            </TextSelect>
+          </Field>
         </div>
         <Button onClick={openCreate}>Nueva Actividad Registrada</Button>
       </div>
@@ -338,9 +360,12 @@ export function PlantillasPanel() {
                     <p className={styles.cardSubtitle}>{item.description}</p>
                   ) : null}
                 </div>
-                <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
-                  {item.isActive === 1 ? 'Activo' : 'Inactivo'}
-                </Badge>
+                <div className={styles.cardBadges}>
+                  {item.isFixed === 1 ? <Badge>Fija</Badge> : null}
+                  <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
+                    {item.isActive === 1 ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </div>
               </div>
               <div className={styles.cardMeta}>
                 <div className={styles.metaRow}>
@@ -498,6 +523,21 @@ export function PlantillasPanel() {
               rows={3}
             />
           </Field>
+          <label className={styles.checkRow}>
+            <input
+              type="checkbox"
+              checked={isFixed}
+              onChange={(e) => setIsFixed(e.target.checked)}
+            />
+            <span>
+              <strong>Fija</strong>
+              <span className={styles.checkHelp}>
+                Al crear una obra se copia sola y queda programada. Si no
+                aplica en esa obra, se quita ahí. Marcarla o desmarcarla no
+                cambia las obras que ya existen.
+              </span>
+            </span>
+          </label>
         </form>
       </Modal>
     </section>

@@ -121,6 +121,36 @@
   animation: riseIn 0.35s var(--ease-out) both;
 }
 
+.hint,
+.notice {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.notice {
+  color: var(--color-text);
+}
+
+.textLink,
+.textButton {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--color-brand-blue);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.textLink:hover,
+.textButton:hover {
+  text-decoration: underline;
+}
+
 .submit {
   margin-top: 0.5rem;
   width: 100%;

@@ -174,6 +174,13 @@
   gap: 0.85rem;
 }
 
+.cardBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
 .cardTitle {
   margin: 0;
   font-family: 'Questrial', var(--font-sans);
@@ -246,6 +253,25 @@
 .formGrid {
   display: grid;
   gap: 1rem;
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.92rem;
+}
+
+.checkRow input {
+  margin-top: 0.2rem;
+}
+
+.checkHelp {
+  display: block;
+  margin-top: 0.2rem;
+  color: #717171;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .personPick {

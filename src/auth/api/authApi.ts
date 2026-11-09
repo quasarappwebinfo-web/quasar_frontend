@@ -7,6 +7,16 @@ import { normalizeAuthUser } from '@/auth/model/normalizeAuthUser'
 import type { AuthUser, LoginResponse, MeResponse } from '@/auth/model/types'
 import { API_BASE_URL } from '@/shared/api/config'
 
+export class AuthRequestError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'AuthRequestError'
+    this.status = status
+  }
+}
+
 async function parseError(res: Response, fallback: string): Promise<never> {
   let detail = fallback
   try {
@@ -22,7 +32,7 @@ async function parseError(res: Response, fallback: string): Promise<never> {
   } catch {
     // ignore body parse errors
   }
-  throw new Error(detail)
+  throw new AuthRequestError(res.status, detail)
 }
 
 function readAccessToken(data: Record<string, unknown>): string | null {
@@ -125,6 +135,30 @@ export async function fetchMe(): Promise<AuthUser> {
 
   const data = (await res.json()) as MeResponse & Record<string, unknown>
   return normalizeAuthUser(data)
+}
+
+export async function requestPasswordRecovery(identifier: string): Promise<void> {
+  const res = await fetch(apiUrl('/api/v1/auth/recuperar'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ identifier }),
+  })
+  if (!res.ok) await parseError(res, 'No se pudo enviar el código')
+}
+
+export async function confirmPasswordRecovery(payload: {
+  identifier: string
+  code: string
+  newPassword: string
+}): Promise<void> {
+  const res = await fetch(apiUrl('/api/v1/auth/recuperar/confirmar'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) await parseError(res, 'No se pudo actualizar la contraseña')
 }
 
 export async function logout(): Promise<void> {

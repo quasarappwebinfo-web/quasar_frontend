@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '@/auth'
+import { isSuperUser, useAuth } from '@/auth'
 import {
   addObraClient,
   closeObraClient,
@@ -33,7 +33,6 @@ import {
 } from '@/tareas/api/tareasApi'
 import { ObraPhotoUpload } from '@/tareas/ui/ObraPhotoUpload'
 import type { ObraFulfillment } from '@/tareas/model/types'
-import { ObraActivityModal } from '@/obras/ui/ObraActivityModal'
 import { listWorkPlans } from '@/planificacion/api/planesApi'
 import {
   formatPlanDate,
@@ -74,7 +73,8 @@ export function ObraDetailPage() {
   const { obraId } = useParams()
   const id = Number(obraId)
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
+  const canDeactivateObra = isSuperUser(user)
   const toast = useToast()
   const [obra, setObra] = useState<Obra | null>(null)
   const [loading, setLoading] = useState(true)
@@ -89,9 +89,6 @@ export function ObraDetailPage() {
   const [planesLoading, setPlanesLoading] = useState(false)
   const [recentPhotos, setRecentPhotos] = useState<GalleryPhoto[]>([])
   const [photosLoading, setPhotosLoading] = useState(false)
-  const [activityOrigin, setActivityOrigin] = useState<'pool' | 'obra' | null>(
-    null,
-  )
   const [fulfillment, setFulfillment] = useState<ObraFulfillment | null>(null)
 
   useDocumentTitle(obra ? `Quasar · ${obra.name}` : 'Quasar · Obra')
@@ -538,86 +535,22 @@ export function ObraDetailPage() {
               <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
                 Actividades de la obra
               </h2>
-              <div className={styles.headerActions}>
-                <button
-                  type="button"
-                  className={styles.galleryBtn}
-                  onClick={() => setActivityOrigin('pool')}
-                >
-                  Del listado
-                </button>
-                <button
-                  type="button"
-                  className={styles.newTaskBtn}
-                  onClick={() => setActivityOrigin('obra')}
-                >
-                  Solo esta obra
-                </button>
-              </div>
             </div>
-            {(fulfillment?.chapters ?? []).length === 0 ? (
-              <div className={styles.tasksEmpty}>
-                <p>
-                  Aún no hay actividades asignadas. El porcentaje del capítulo
-                  se reparte en partes iguales entre las que agregues.
-                </p>
-              </div>
-            ) : (
-              <div className={styles.activityGroups}>
-                {(fulfillment?.chapters ?? []).map((chapter) => (
-                  <article
-                    key={chapter.chapterId ?? chapter.chapterName}
-                    className={styles.activityChapter}
-                  >
-                    <header className={styles.activityChapterHead}>
-                      <strong>{chapter.chapterName || 'Sin capítulo'}</strong>
-                      <span>
-                        {formatShare(chapter.weightPercent)}% de la obra · avance{' '}
-                        {asPercent(chapter.progressPercent)}%
-                      </span>
-                    </header>
-                    {(chapter.budgetActivities ?? []).map((group) => (
-                      <div
-                        key={group.budgetActivityId ?? group.budgetActivityName}
-                        className={styles.activityGroup}
-                      >
-                        <div className={styles.activityGroupTitle}>
-                          {group.budgetActivityName || 'Sin subcapítulo'}
-                          <span>
-                            {formatShare(group.weightPercent)}% del capítulo
-                          </span>
-                        </div>
-                        {(group.activities ?? []).map((activity) => (
-                          <button
-                            key={activity.taskId}
-                            type="button"
-                            className={styles.activityLine}
-                            onClick={() =>
-                              navigate(
-                                `/dashboard/obras/${obra.id}/tareas?tarea=${activity.taskId}`,
-                              )
-                            }
-                          >
-                            <span>{activity.taskName}</span>
-                            <span>
-                              {formatShare(activity.sharePercent)}% del capítulo ·{' '}
-                              {asPercent(activity.progressPercent)}% avance
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ))}
-                  </article>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              className={styles.seeAll}
-              onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
-            >
-              Ver la bitácora de la obra →
-            </button>
+            <div className={styles.tasksEmpty}>
+              <p>
+                El avance por capítulo, el subcapítulo, la zona y quitar las
+                que no aplican están en su propia vista.
+              </p>
+              <button
+                type="button"
+                className={styles.seeAll}
+                onClick={() =>
+                  navigate(`/dashboard/obras/${obra.id}/actividades`)
+                }
+              >
+                Ver actividades de la obra →
+              </button>
+            </div>
           </section>
 
           <section className={styles.tasksCard}>
@@ -713,12 +646,14 @@ export function ObraDetailPage() {
         >
           {adminOpen ? 'Ocultar administración' : 'Administrar obra'}
         </Button>
-        <Button
-          variant={obra.isActive === 1 ? 'danger' : 'ghost'}
-          onClick={() => void toggleActive()}
-        >
-          {obra.isActive === 1 ? 'Dar de baja' : 'Reactivar'}
-        </Button>
+        {canDeactivateObra ? (
+          <Button
+            variant={obra.isActive === 1 ? 'danger' : 'ghost'}
+            onClick={() => void toggleActive()}
+          >
+            {obra.isActive === 1 ? 'Dar de baja' : 'Reactivar'}
+          </Button>
+        ) : null}
         <Badge tone={obra.isActive === 1 ? 'success' : 'danger'}>
           {obra.isActive === 1 ? 'Activa' : 'Inactiva'}
         </Badge>
@@ -764,15 +699,6 @@ export function ObraDetailPage() {
         onClose={() => setAsistenciaOpen(false)}
         onChanged={() => void loadAsistenciaHoy()}
       />
-      {activityOrigin ? (
-        <ObraActivityModal
-          open
-          obraId={obra.id}
-          origin={activityOrigin}
-          onClose={() => setActivityOrigin(null)}
-          onCreated={() => void load()}
-        />
-      ) : null}
     </div>
   )
 }
@@ -816,12 +742,6 @@ function activityDonutStyle(
   return {
     background: `conic-gradient(#054c09 0 ${completedEnd}%, #d95a0c ${completedEnd}% ${progressEnd}%, #c8c8c8 ${progressEnd}% 100%)`,
   }
-}
-
-function formatShare(value: number | string | null | undefined): string {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return '0'
-  return parsed.toLocaleString('es-CO', { maximumFractionDigits: 2 })
 }
 
 function formatShortDate(value: string | null): string | null {
