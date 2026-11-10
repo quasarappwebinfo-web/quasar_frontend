@@ -1,3 +1,4 @@
+import { sortChapters } from '@/task-pool/lib/chapterOrder'
 import { apiJson, buildQuery } from '@/shared/api/apiJson'
 import type {
   Pagination,
@@ -30,7 +31,7 @@ export async function listActiveTaskChapters(): Promise<TaskChapter[]> {
     total = data.pagination.totalItems
     page += 1
   } while (all.length < total && page <= 40)
-  return all
+  return sortChapters(all)
 }
 
 export async function getTaskChapter(id: number): Promise<TaskChapter> {

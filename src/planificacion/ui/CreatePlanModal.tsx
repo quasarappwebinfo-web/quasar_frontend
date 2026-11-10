@@ -6,6 +6,7 @@ import {
 import type { UnfinishedPlanActivity } from '@/planificacion/model/types'
 import { listTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuestalesApi'
 import { listTaskChapters } from '@/task-pool/api/capitulosApi'
+import { sortChapters } from '@/task-pool/lib/chapterOrder'
 import { listTaskTemplates } from '@/task-pool/api/plantillasApi'
 import type {
   TaskBudgetActivity,
@@ -134,7 +135,7 @@ export function CreatePlanModal({
     ])
       .then(([pendingData, obraTasks, chapterRows]) => {
         setPending(pendingData.tasks)
-        setChapters(chapterRows)
+        setChapters(sortChapters(chapterRows))
         const used = new Set<number>()
         for (const task of obraTasks) {
           if (task.sourceTemplateId != null) used.add(task.sourceTemplateId)

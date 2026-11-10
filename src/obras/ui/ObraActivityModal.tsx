@@ -3,6 +3,7 @@ import { listTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuesta
 import { listTaskChapters } from '@/task-pool/api/capitulosApi'
 import { listTaskTemplates } from '@/task-pool/api/plantillasApi'
 import { listTaskZones } from '@/task-pool/api/zonasApi'
+import { sortChapters } from '@/task-pool/lib/chapterOrder'
 import type {
   TaskBudgetActivity,
   TaskChapter,
@@ -99,7 +100,7 @@ export function ObraActivityModal({
         })),
       ).catch(() => []),
     ]).then(([chapterRows, zoneRows, obraTasks]) => {
-      setChapters(chapterRows)
+      setChapters(sortChapters(chapterRows))
       setZones(zoneRows)
       setUsedTemplateIds(
         obraTasks

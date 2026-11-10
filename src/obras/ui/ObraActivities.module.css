@@ -1,11 +1,40 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.1rem;
   min-width: 0;
+  font-family: 'Questrial', var(--font-sans);
+  font-weight: 400;
 }
 
-.header {
+.page button,
+.page h1,
+.page h2,
+.page h3,
+.page p,
+.page span,
+.page input,
+.page select {
+  font-family: 'Questrial', var(--font-sans);
+  font-weight: 400;
+}
+
+.page button {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.back {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.boardHead {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -13,89 +42,106 @@
   gap: 1rem;
 }
 
-.back {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: #014cbd;
-  cursor: pointer;
-  font-family: 'Questrial', var(--font-sans);
-}
-
 .title {
-  margin: 0.25rem 0 0;
-  font-family: 'Questrial', var(--font-sans);
-  font-size: 1.7rem;
-  font-weight: 400;
+  margin: 0;
+  font-size: clamp(1.45rem, 2.4vw, 1.8rem);
 }
 
 .subtitle {
-  margin: 0.35rem 0 0;
-  max-width: 40rem;
-  color: #666;
+  margin: 0.3rem 0 0;
+  color: #6d7682;
   line-height: 1.4;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-end;
+  align-items: center;
+  gap: 0.55rem;
 }
 
-.filters > * {
-  min-width: 14rem;
+.filters .filterSelect,
+.filters .search {
+  min-height: 2.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #1a1c1f;
+  font-size: 0.92rem;
+}
+
+.filters .filterSelect {
+  width: auto;
+  max-width: none;
+  min-width: 12.5rem;
+  padding: 0 2rem 0 0.95rem;
+}
+
+.search {
+  width: 14rem;
+  padding: 0 0.95rem;
 }
 
 .board {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(17rem, 22rem);
+  grid-auto-columns: minmax(16.5rem, 19rem);
   gap: 0.85rem;
   overflow-x: auto;
-  padding-bottom: 0.4rem;
+  padding: 0.15rem 0.1rem 0.45rem;
   align-items: start;
 }
 
 .column {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  min-height: 16rem;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: #f6f7f8;
+  gap: 0.7rem;
+  min-height: 18rem;
+  padding: 0.85rem;
+  border: 1px solid #e6edf5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(28, 55, 96, 0.05);
 }
 
 .columnHeader {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.columnMark,
+.cardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+}
+
+.columnMark {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
+.columnMark svg,
+.cardIcon svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .columnTitle {
+  min-width: 0;
   margin: 0;
-  font-family: 'Questrial', var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.98rem;
+  line-height: 1.25;
 }
 
-.progressBadge {
-  flex: 0 0 auto;
-  min-width: 2.6rem;
-  padding: 0.2rem 0.45rem;
+.count {
+  margin-left: auto;
+  min-width: 1.6rem;
+  padding: 0.12rem 0.45rem;
   border-radius: 999px;
-  background: #014cbd;
-  color: #fff;
   text-align: center;
   font-size: 0.82rem;
 }
@@ -103,20 +149,24 @@
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.65rem;
 }
 
 .card {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.85rem 0.85rem 0.75rem;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border: 1px solid #e8eef5;
+  border-radius: 12px;
   background: #fff;
 }
 
 .cardOpen {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
   border: 0;
   padding: 0;
   background: transparent;
@@ -124,73 +174,113 @@
   cursor: pointer;
 }
 
+.cardIcon {
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.05rem;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
 .cardTitle {
   margin: 0;
-  font-family: 'Questrial', var(--font-sans);
-  font-size: 1rem;
-  font-weight: 400;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.chip,
-.chipDone,
-.chipProgress,
-.chipIdle,
-.chipZone {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 0.15rem 0.45rem;
-  border-radius: 3px;
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   line-height: 1.3;
 }
 
-.chip {
-  background: #f3f4f5;
-  color: #3a3f46;
+.cardMeta {
+  margin: 0;
+  color: #7b8490;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
-.chipZone {
-  background: #e8f0fb;
-  color: #014cbd;
+.meterRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.28rem;
+  margin-top: 0.35rem;
 }
 
-.chipDone {
-  background: #e5f6ec;
-  color: #146c36;
+.meterRow strong {
+  font-size: 0.78rem;
 }
 
-.chipProgress {
-  background: #fff1e6;
-  color: #d95a0c;
+.meter {
+  width: 100%;
+  height: 0.38rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef2f6;
 }
 
-.chipIdle {
-  background: #eeeeee;
-  color: #666;
+.meterFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.more {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  padding: 0.15rem;
+  cursor: pointer;
+  font-size: 0.86rem;
 }
 
 .remove {
   align-self: flex-start;
+  margin-left: 2.65rem;
   border: 0;
   background: transparent;
   padding: 0;
   color: #9a3b12;
   cursor: pointer;
-  font-family: 'Questrial', var(--font-sans);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .columnEmpty,
 .empty {
   margin: 0;
-  color: #717171;
+  color: #7b8490;
+  font-size: 0.88rem;
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid #e6edf5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(28, 55, 96, 0.05);
+}
+
+.bannerTitle {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.bannerText {
+  margin: 0.25rem 0 0;
+  color: #6d7682;
+}
+
+.bannerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .log {
@@ -201,15 +291,13 @@
 
 .logTitle {
   margin: 0;
-  font-family: 'Questrial', var(--font-sans);
-  font-size: 1.15rem;
-  font-weight: 400;
+  font-size: 1.05rem;
 }
 
 .logList {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.55rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -219,15 +307,15 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #e6edf5;
+  border-radius: 12px;
   background: #fff;
 }
 
 .logList span {
-  color: #555;
-  font-size: 0.86rem;
+  color: #5c6772;
+  font-size: 0.84rem;
 }
 
 .confirmText {

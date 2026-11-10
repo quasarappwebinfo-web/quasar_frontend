@@ -1,16 +1,18 @@
 import { useRef } from 'react'
 import type { Task, TaskStatus } from '@/tareas/model/types'
 import { ALLOWED_STATUS_TRANSITIONS } from '@/tareas/model/types'
-import {
-  assigneeLabel,
-  categoryColor,
-  formatTaskDate,
-  progressValue,
-} from '@/tareas/lib/taskUi'
-import styles from './tareas.module.css'
+import { assigneeLabel, formatTaskDate, progressValue } from '@/tareas/lib/taskUi'
+import styles from './BitacoraBoard.module.css'
+
+export type BoardAccent = {
+  ink: string
+  soft: string
+  bar: string
+}
 
 type TaskCardProps = {
   task: Task
+  accent: BoardAccent
   dragging?: boolean
   onDragStart: (task: Task) => void
   onDragEnd: () => void
@@ -20,6 +22,7 @@ type TaskCardProps = {
 
 export function TaskCard({
   task,
+  accent,
   dragging,
   onDragStart,
   onDragEnd,
@@ -29,20 +32,16 @@ export function TaskCard({
   const didDragRef = useRef(false)
   const assignee = assigneeLabel(task)
   const progress = progressValue(task)
-  const showProgress = task.status === 'in_progress'
   const attachments =
-    task.attachmentCount ??
-    task.photoCount + (task.documentCount ?? 0)
+    task.attachmentCount ?? task.photoCount + (task.documentCount ?? 0)
   const dateLabel =
     task.status === 'rescheduled' && !task.plannedStartDate
-      ? null
+      ? 'Movida'
       : formatTaskDate(task.plannedStartDate || task.plannedEndDate)
 
   return (
     <article
-      className={`${styles.card} ${dragging ? styles.cardDragging : ''} ${
-        onClick ? styles.cardClickable : ''
-      }`}
+      className={`${styles.card} ${dragging ? styles.cardDragging : ''}`}
       draggable
       onClick={() => {
         if (didDragRef.current) {
@@ -59,66 +58,41 @@ export function TaskCard({
       }}
       onDragEnd={() => {
         onDragEnd()
-        // Keep flag until click (synthetic after drag) is consumed
         window.setTimeout(() => {
           didDragRef.current = false
         }, 0)
       }}
     >
-      <h3 className={styles.cardTitle}>{task.name}</h3>
-      {task.chapterName || task.budgetActivityName ? (
-        <div className={styles.chipRow}>
-          {task.chapterName ? (
-            <span
-              className={styles.categoryChip}
-              style={{
-                background: categoryColor(task.chapterName, task.chapterId),
-              }}
-            >
-              {task.chapterName}
-            </span>
-          ) : null}
-          {task.budgetActivityName ? (
-            <span className={styles.budgetChip} title="Subcapítulo">
-              {task.budgetActivityName}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className={styles.assigneeRow}>
-        <span className={styles.avatar}>{assignee.initials}</span>
-        <div className={styles.assigneeMeta}>
-          <p className={styles.assigneeName}>{assignee.name}</p>
-          <p className={styles.assigneeRole}>{assignee.role}</p>
-        </div>
-      </div>
-
-      {showProgress ? (
-        <div className={styles.progressBlock}>
-          <div className={styles.progressTop}>{progress}%</div>
-          <div className={styles.progressTrack}>
-            <div className={styles.progressFill} style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-      ) : null}
-
-      <div className={styles.cardFooter}>
-        <span className={styles.metaLeft}>
-          <ClipIcon />
-          {attachments}
+      <div className={styles.cardOpen}>
+        <span className={styles.cardIcon} style={{ color: accent.ink, background: accent.soft }}>
+          <BoardGlyph />
         </span>
-        {task.status === 'rescheduled' && !dateLabel ? (
-          <span className={styles.movedNote}>
-            <CalendarIcon accent />
-            Movido…
-          </span>
-        ) : (
-          <span className={styles.metaRight}>
-            <CalendarIcon />
+        <span className={styles.cardBody}>
+          <h3 className={styles.cardTitle}>{task.name}</h3>
+          <p className={styles.cardMeta}>
+            {task.budgetActivityName || task.chapterName || 'Sin subcapítulo'}
+            {' · '}
+            {task.zoneName || 'Sin zona'}
+          </p>
+          <p className={styles.cardMeta}>
+            {assignee.name}
+            {' · '}
             {dateLabel}
+            {attachments > 0 ? ` · ${attachments} archivo${attachments === 1 ? '' : 's'}` : ''}
+          </p>
+          <span className={styles.meterRow}>
+            <strong style={{ color: progress > 0 ? accent.ink : '#94a3b8' }}>{progress}%</strong>
+            <span className={styles.meter}>
+              <span
+                className={styles.meterFill}
+                style={{
+                  width: `${progress}%`,
+                  background: progress > 0 ? accent.bar : '#e2e8f0',
+                }}
+              />
+            </span>
           </span>
-        )}
+        </span>
       </div>
       {onRequestMove && ALLOWED_STATUS_TRANSITIONS[task.status].length > 0 ? (
         <div className={styles.moveRow}>
@@ -127,6 +101,7 @@ export function TaskCard({
               key={status}
               type="button"
               className={styles.moveBtn}
+              style={{ color: accent.ink }}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation()
@@ -161,29 +136,12 @@ function moveActionLabel(from: TaskStatus, to: TaskStatus): string {
   return 'Mover'
 }
 
-function ClipIcon() {
+function BoardGlyph() {
   return (
-    <svg width="12" height="14" viewBox="0 0 22 25" aria-hidden="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="currentColor"
-        d="M7.2 24.2a5.2 5.2 0 0 1-3.7-8.9L14.3 4.4a3.5 3.5 0 0 1 5 5L8.5 20.2a1.8 1.8 0 1 1-2.5-2.5l9.3-9.3 1.3 1.3-9.3 9.3a.1.1 0 0 0 0 .1.5.5 0 0 0 .7.7L19 8.1a2.2 2.2 0 0 0-3.1-3.1L5.1 15.8a3.9 3.9 0 1 0 5.5 5.5l10.8-10.8 1.3 1.3L11.9 22.6a5.2 5.2 0 0 1-4.7 1.6Z"
-      />
-    </svg>
-  )
-}
-
-function CalendarIcon({ accent }: { accent?: boolean }) {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      style={accent ? { color: '#d95a0c' } : undefined}
-    >
-      <path
-        fill="currentColor"
-        d="M7 2h2v2h6V2h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3V2Zm13 8H4v10h16V10Zm0-2V6H4v2h16Z"
+        d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Zm2 1v4h5v-4H6Zm7 0v4h5v-4h-5ZM6 12.5v5h5v-5H6Zm7 0v5h5v-5h-5Z"
       />
     </svg>
   )

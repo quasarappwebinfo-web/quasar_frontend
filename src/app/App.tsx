@@ -10,7 +10,7 @@ import { IdentidadPage } from '@/identidad'
 import { PersonasPanel } from '@/identidad/ui/PersonasPanel'
 import { RolesPanel } from '@/identidad/ui/RolesPanel'
 import { UsersPanel } from '@/identidad/ui/UsersPanel'
-import { DashboardPage, ObraActivitiesPage, ObraDetailPage } from '@/obras'
+import { DashboardPage, ObraActivitiesPage, ObraAttendancePage, ObraDetailPage } from '@/obras'
 import { ReportsPage } from '@/reportes/ui/ReportsPage'
 import { RrhhPage } from '@/rrhh'
 import { CargosPanel } from '@/rrhh/ui/CargosPanel'
@@ -58,6 +58,10 @@ export function App() {
               <Route
                 path="/dashboard/obras/:obraId/actividades"
                 element={<ObraActivitiesPage />}
+              />
+              <Route
+                path="/dashboard/obras/:obraId/asistencia"
+                element={<ObraAttendancePage />}
               />
               <Route path="/reports" element={<ReportsPage />} />
             </Route>

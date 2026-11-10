@@ -26,6 +26,7 @@ export type Obra = {
   status: ObraStatus | string
   isActive: ActiveStatus
   coverImageUrl?: string | null
+  progressPercent?: number | string | null
   createdAt?: string | null
 }
 

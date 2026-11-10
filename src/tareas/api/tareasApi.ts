@@ -192,6 +192,7 @@ export async function listObraPhotoGallery(params: {
   taskId?: number
   kind?: 'task' | 'obra'
   page?: number
+  pageSize?: number
 }): Promise<{
   photos: GalleryPhoto[]
   pagination: { totalItems: number; itemsPerPage: number; currentPage: number }

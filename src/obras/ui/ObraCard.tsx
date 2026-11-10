@@ -1,6 +1,5 @@
-import type { Obra, StageOption } from '@/obras/model/types'
+import type { Obra } from '@/obras/model/types'
 import {
-  estimateObraProgress,
   formatObraLocation,
   isObraDelayed,
   isObraFinished,
@@ -11,13 +10,12 @@ import styles from './DashboardPage.module.css'
 
 type ObraCardProps = {
   obra: Obra
-  stages: StageOption[]
   peopleOnSite?: number
   onOpen: (obra: Obra) => void
 }
 
-export function ObraCard({ obra, stages, peopleOnSite = 0, onOpen }: ObraCardProps) {
-  const progress = estimateObraProgress(obra, stages)
+export function ObraCard({ obra, peopleOnSite = 0, onOpen }: ObraCardProps) {
+  const progress = housePercent(obra.progressPercent)
   const timeline = obraTimelineLabel(obra)
   const finished = isObraFinished(obra)
   const delayed = isObraDelayed(obra)
@@ -47,8 +45,8 @@ export function ObraCard({ obra, stages, peopleOnSite = 0, onOpen }: ObraCardPro
 
         <div className={styles.progressBlock}>
           <div className={styles.progressTop}>
-            <span>{obra.currentStageName || 'Sin etapa'}</span>
-            <span className={styles.progressPct}>{progress}%</span>
+            <span>Cumplimiento global</span>
+            <span className={styles.progressPct}>{formatHousePercent(progress)}%</span>
           </div>
           <div className={styles.progressTrack}>
             <div
@@ -87,6 +85,21 @@ export function ObraCard({ obra, stages, peopleOnSite = 0, onOpen }: ObraCardPro
       </div>
     </button>
   )
+}
+
+function housePercent(value: number | string | null | undefined): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 0
+  return Math.max(0, Math.min(100, Math.round(parsed * 100) / 100))
+}
+
+function formatHousePercent(value: number): string {
+  const rounded = Math.round(value * 100) / 100
+  if (Number.isInteger(rounded)) return String(rounded)
+  return rounded.toLocaleString('es-CO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
 }
 
 function LocationPin({ className }: { className?: string }) {

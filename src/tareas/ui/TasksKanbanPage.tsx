@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { listObras } from '@/obras/api/obrasApi'
 import type { Obra } from '@/obras/model/types'
@@ -19,15 +19,14 @@ import { syncChangeTaskStatus, useSync, buildLocalTaskBoard, cacheBoardTasks } f
 import {
   Alert,
   Button,
-  Field,
-  TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
 import { BlockedDepsModal } from './BlockedDepsModal'
+import board from './BitacoraBoard.module.css'
 import { ConfirmStartModal } from './ConfirmStartModal'
 import { CreateTaskFromTemplateModal } from './CreateTaskFromTemplateModal'
-import { TaskCard } from './TaskCard'
+import { TaskCard, type BoardAccent } from './TaskCard'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
 import styles from './tareas.module.css'
 
@@ -42,7 +41,7 @@ export function TasksKanbanPage() {
   const [obraName, setObraName] = useState('')
   const [obras, setObras] = useState<Obra[]>([])
   const [chapters, setChapters] = useState<TaskChapter[]>([])
-  const [board, setBoard] = useState<TaskBoard | null>(null)
+  const [boardData, setBoard] = useState<TaskBoard | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,6 +50,8 @@ export function TasksKanbanPage() {
   )
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '')
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '')
+  const [query, setQuery] = useState('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const [createOpen, setCreateOpen] = useState(false)
   const openedCreateFromQuery = useRef(false)
@@ -185,17 +186,6 @@ export function TasksKanbanPage() {
     setSearchParams(next, { replace: true })
   }, [chapterId, dateFrom, dateTo, setSearchParams])
 
-  const totalTasks = useMemo(() => {
-    if (!board) return 0
-    return (
-      board.counts.scheduled +
-      board.counts.inProgress +
-      board.counts.completed +
-      board.counts.verified +
-      board.counts.rescheduled
-    )
-  }, [board])
-
   async function applyStatusChange(task: Task, toStatus: TaskStatus) {
     try {
       const result = await syncChangeTaskStatus({
@@ -285,109 +275,110 @@ export function TasksKanbanPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleBlock}>
-          <button
-            type="button"
-            className={styles.back}
-            onClick={() => navigate(`/dashboard/obras/${obraId}`)}
-          >
-            ← Project View
-          </button>
-          <h1 className={styles.title}>{obraName || `Obra #${obraId}`}</h1>
-          <p className={styles.subtitle}>
-            Tablero de ejecución. Primero define un{' '}
-            <button
-              type="button"
-              className={styles.inlineLink}
-              onClick={() => navigate(`/dashboard/obras/${obraId}/planes`)}
-            >
-              Plan (periodo)
-            </button>{' '}
-            y elige las actividades a ejecutar. Para cambiar el estado, arrastra
-            la tarjeta o usa el botón; siempre pide confirmación.
+    <div className={board.page}>
+      <button
+        type="button"
+        className={board.back}
+        onClick={() => navigate(`/dashboard/obras/${obraId}`)}
+      >
+        ← Volver a la obra
+      </button>
+
+      <header className={board.boardHead}>
+        <div>
+          <h1 className={board.title}>Tablero de Bitácora</h1>
+          <p className={board.subtitle}>
+            {obraName || `Obra #${obraId}`}. Arrastra una tarjeta o usa el botón para cambiar el estado.
           </p>
         </div>
-        <div className={styles.filters}>
-          <div className={styles.filterField}>
-            <Field label="Filtrar por proyecto">
-              <TextSelect
-                value={String(obraId)}
-                onChange={(e) =>
-                  navigate(`/dashboard/obras/${e.target.value}/tareas`)
-                }
-              >
-                {obras.length === 0 ? (
-                  <option value={obraId}>{obraName || `Obra #${obraId}`}</option>
-                ) : null}
-                {obras.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-          </div>
-          <div className={styles.filterField}>
-            <Field label="Filtrar por capítulo">
-              <TextSelect
-                value={chapterId}
-                onChange={(e) => setChapterId(e.target.value)}
-              >
-                <option value="">Todas</option>
-                {chapters.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-          </div>
-          <div className={styles.filterField}>
-            <Field label="Desde">
-              <TextInput
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className={styles.filterField}>
-            <Field label="Hasta">
-              <TextInput
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </Field>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/dashboard/obras/${obraId}/planes`)}
+        <div className={board.filters}>
+          <TextSelect
+            className={board.filterSelect}
+            aria-label="Obra"
+            value={String(obraId)}
+            onChange={(event) => navigate(`/dashboard/obras/${event.target.value}/tareas`)}
           >
-            Planes
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>+ Nueva Actividad</Button>
+            {obras.length === 0 ? (
+              <option value={obraId}>{obraName || `Obra #${obraId}`}</option>
+            ) : null}
+            {obras.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </TextSelect>
+          <TextSelect
+            className={board.filterSelect}
+            aria-label="Capítulo"
+            value={chapterId}
+            onChange={(event) => setChapterId(event.target.value)}
+          >
+            <option value="">Todos los capítulos</option>
+            {chapters.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </TextSelect>
+          <input
+            className={board.search}
+            type="date"
+            aria-label="Desde"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+          />
+          <input
+            className={board.search}
+            type="date"
+            aria-label="Hasta"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(event) => setDateTo(event.target.value)}
+          />
+          <input
+            className={board.search}
+            type="search"
+            value={query}
+            placeholder="Buscar actividad..."
+            onChange={(event) => setQuery(event.target.value)}
+          />
         </div>
       </header>
+
+      <section className={board.banner}>
+        <div>
+          <h2 className={board.bannerTitle}>¿Necesitas agregar una actividad?</h2>
+          <p className={board.bannerText}>
+            Agrégala a la bitácora de esta obra o revisa sus planes.
+          </p>
+        </div>
+        <div className={board.bannerActions}>
+          <Button variant="ghost" onClick={() => navigate(`/dashboard/obras/${obraId}/planes`)}>
+            Planes
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>Agregar actividad</Button>
+        </div>
+      </section>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       {loading ? (
-        <p className={styles.empty}>Cargando tablero…</p>
-      ) : !board ? (
-        <p className={styles.empty}>Sin datos del tablero.</p>
+        <p className={board.empty}>Cargando tablero…</p>
+      ) : !boardData ? (
+        <p className={board.empty}>Sin datos del tablero.</p>
       ) : (
-        <div className={styles.board}>
+        <div className={board.board}>
           {BOARD_COLUMNS.map((column) => {
-            const tasks = board.columns[column.key]
-            const count = board.counts[column.countKey]
+            const tasks = filterBoardTasks(boardData.columns[column.key], query)
+            const accent = STATUS_ACCENT[column.status]
+            const open = expanded[column.key] === true
+            const shown = open ? tasks : tasks.slice(0, 4)
+            const hidden = tasks.length - shown.length
             return (
               <section
                 key={column.key}
-                className={`${styles.column} ${
-                  dragOverStatus === column.status ? styles.columnDragOver : ''
+                className={`${board.column} ${
+                  dragOverStatus === column.status ? board.columnDragOver : ''
                 }`}
                 onDragOver={(event) => {
                   event.preventDefault()
@@ -404,33 +395,34 @@ export function TasksKanbanPage() {
                   const task =
                     draggingTask ||
                     findTaskById(
-                      board,
+                      boardData,
                       Number(event.dataTransfer.getData('text/task-id')),
                     )
                   if (task) void moveTask(task, column.status)
                   setDraggingTask(null)
                 }}
               >
-                <div className={styles.columnHeader}>
-                  <h2 className={styles.columnTitle}>{column.label}</h2>
-                  <span className={styles.countBadge}>{count}</span>
-                  <button
-                    type="button"
-                    className={styles.addBtn}
-                    aria-label={`Nueva actividad en ${column.label}`}
-                    onClick={() => setCreateOpen(true)}
+                <header className={board.columnHeader}>
+                  <span
+                    className={board.columnMark}
+                    style={{ color: accent.ink, background: accent.soft }}
                   >
-                    +
-                  </button>
-                </div>
-                <div className={styles.cards}>
+                    <ColumnGlyph />
+                  </span>
+                  <h2 className={board.columnTitle}>{column.label}</h2>
+                  <span className={board.count} style={{ color: accent.ink, background: accent.soft }}>
+                    {tasks.length}
+                  </span>
+                </header>
+                <div className={board.cards}>
                   {tasks.length === 0 ? (
-                    <p className={styles.emptyColumn}>Sin actividades</p>
+                    <p className={board.columnEmpty}>Sin actividades en esta columna.</p>
                   ) : (
-                    tasks.map((task) => (
+                    shown.map((task) => (
                       <TaskCard
                         key={task.id}
                         task={task}
+                        accent={accent}
                         dragging={draggingTask?.id === task.id}
                         onDragStart={setDraggingTask}
                         onDragEnd={() => {
@@ -448,18 +440,23 @@ export function TasksKanbanPage() {
                     ))
                   )}
                 </div>
+                {tasks.length > 4 ? (
+                  <button
+                    type="button"
+                    className={board.more}
+                    style={{ color: accent.ink }}
+                    onClick={() =>
+                      setExpanded((current) => ({ ...current, [column.key]: !open }))
+                    }
+                  >
+                    {open ? 'Ver menos' : `Ver más (${hidden})`}
+                  </button>
+                ) : null}
               </section>
             )
           })}
         </div>
       )}
-
-      {!loading && board && totalTasks === 0 ? (
-        <p className={styles.hint}>
-          Aún no hay actividades. Usa «+ Nueva Actividad» para agregar una del pool
-          o una que exista solo en esta obra.
-        </p>
-      ) : null}
 
       <CreateTaskFromTemplateModal
         open={createOpen}
@@ -501,6 +498,44 @@ export function TasksKanbanPage() {
         onChanged={() => void load()}
       />
     </div>
+  )
+}
+
+const STATUS_ACCENT: Record<TaskStatus, BoardAccent> = {
+  scheduled: { ink: '#1d4ed8', soft: '#e8f1ff', bar: '#2563eb' },
+  in_progress: { ink: '#c2410c', soft: '#fff1e8', bar: '#f97316' },
+  completed: { ink: '#15803d', soft: '#e8f7ee', bar: '#16a34a' },
+  verified: { ink: '#0f766e', soft: '#e6f7f4', bar: '#14b8a6' },
+  rescheduled: { ink: '#6d28d9', soft: '#f3e8ff', bar: '#8b5cf6' },
+}
+
+function filterBoardTasks(tasks: Task[], query: string): Task[] {
+  const needle = query.trim().toLocaleLowerCase('es')
+  if (!needle) return tasks
+  return tasks.filter((task) => {
+    const haystack = [
+      task.name,
+      task.chapterName,
+      task.budgetActivityName,
+      task.zoneName,
+      task.primaryAssignee?.workerName,
+      task.primaryAssignee?.crewName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLocaleLowerCase('es')
+    return haystack.includes(needle)
+  })
+}
+
+function ColumnGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Zm2 1v4h5v-4H6Zm7 0v4h5v-4h-5ZM6 12.5v5h5v-5H6Zm7 0v5h5v-5h-5Z"
+      />
+    </svg>
   )
 }
 
