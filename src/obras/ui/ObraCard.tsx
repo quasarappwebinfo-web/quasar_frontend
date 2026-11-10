@@ -65,7 +65,7 @@ export function ObraCard({ obra, peopleOnSite = 0, onOpen }: ObraCardProps) {
         <div className={styles.cardFooter}>
           <span className={styles.people}>
             <PeopleIcon />
-            {peopleOnSite} en el sitio
+            {peopleOnSite} {peopleOnSite === 1 ? 'asignado' : 'asignados'}
           </span>
           <span className={styles.statusPill}>
             <span

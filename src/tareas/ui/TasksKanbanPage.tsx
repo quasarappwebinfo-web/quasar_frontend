@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { listObras } from '@/obras/api/obrasApi'
+import { getObra, listObras } from '@/obras/api/obrasApi'
+import { OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import type { Obra } from '@/obras/model/types'
+import { formatPlanDate } from '@/planificacion/lib/planUi'
+import { CreatePlanModal } from '@/planificacion/ui/CreatePlanModal'
+import { WORK_PLAN_STATUS_LABELS, type WorkPlanStatus } from '@/planificacion/model/types'
 import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
 import type { TaskChapter } from '@/task-pool/model/types'
-import { changeTaskStatus, getTaskBoard } from '@/tareas/api/tareasApi'
+import {
+  changeTaskStatus,
+  getObraFulfillment,
+  getTaskBoard,
+  listObraBitacoras,
+  type ObraBitacora,
+} from '@/tareas/api/tareasApi'
 import { canTransition } from '@/tareas/lib/taskUi'
 import type {
   BlockingDependency,
@@ -15,20 +25,16 @@ import type {
 import { BOARD_COLUMNS } from '@/tareas/model/types'
 import { ApiError } from '@/shared/api/apiJson'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
-import { syncChangeTaskStatus, useSync, buildLocalTaskBoard, cacheBoardTasks } from '@/sync'
-import {
-  Alert,
-  Button,
-  TextSelect,
-  useToast,
-} from '@/shared/ui'
+import { syncChangeTaskStatus, useSync, cacheBoardTasks } from '@/sync'
+import { Alert, useToast } from '@/shared/ui'
+import look from '@/task-pool/ui/taskPool.module.css'
+import { CatalogPager } from '@/task-pool/ui/CatalogParts'
 import { BlockedDepsModal } from './BlockedDepsModal'
 import board from './BitacoraBoard.module.css'
 import { ConfirmStartModal } from './ConfirmStartModal'
 import { CreateTaskFromTemplateModal } from './CreateTaskFromTemplateModal'
 import { TaskCard, type BoardAccent } from './TaskCard'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
-import styles from './tareas.module.css'
 
 export function TasksKanbanPage() {
   const { obraId: obraIdParam } = useParams()
@@ -38,8 +44,14 @@ export function TasksKanbanPage() {
   const { refreshSnapshot, runSync } = useSync()
 
   const obraId = Number(obraIdParam)
+  const planId = searchParams.get('planId') || ''
   const [obraName, setObraName] = useState('')
+  const [obra, setObra] = useState<Obra | null>(null)
+  const [periodPercent, setPeriodPercent] = useState<number | null>(null)
+  const [periodCaption, setPeriodCaption] = useState('Cumplimiento global')
   const [obras, setObras] = useState<Obra[]>([])
+  const [plans, setPlans] = useState<ObraBitacora[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
   const [chapters, setChapters] = useState<TaskChapter[]>([])
   const [boardData, setBoard] = useState<TaskBoard | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,12 +60,16 @@ export function TasksKanbanPage() {
   const [chapterId, setChapterId] = useState(
     searchParams.get('chapterId') || searchParams.get('categoryId') || '',
   )
-  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '')
-  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '')
   const [query, setQuery] = useState('')
+  const [weekQuery, setWeekQuery] = useState('')
+  const [monthKey, setMonthKey] = useState('')
+  const [listPage, setListPage] = useState(1)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [planCreateOpen, setPlanCreateOpen] = useState(
+    () => searchParams.get('nuevo') === '1',
+  )
   const openedCreateFromQuery = useRef(false)
   const openedTaskFromQuery = useRef(false)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
@@ -82,6 +98,11 @@ export function TasksKanbanPage() {
   }, [searchParams])
 
   useEffect(() => {
+    if (searchParams.get('nuevo') !== '1') return
+    setPlanCreateOpen(true)
+  }, [searchParams])
+
+  useEffect(() => {
     if (openedTaskFromQuery.current) return
     const raw = searchParams.get('tarea')
     if (!raw) return
@@ -98,14 +119,18 @@ export function TasksKanbanPage() {
       setLoading(false)
       return
     }
+    if (!planId) {
+      setBoard(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
 
     const filters = {
       obraId,
       chapterId: chapterId ? Number(chapterId) : undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
+      planId: Number(planId),
     }
 
     const applyBoard = (data: TaskBoard) => {
@@ -119,25 +144,9 @@ export function TasksKanbanPage() {
       if (sample?.obraName) setObraName(sample.obraName)
     }
 
-    const tryLocal = async (prefix?: string) => {
-      const local = await buildLocalTaskBoard(filters)
-      if (!local) return false
-      applyBoard(local)
-      setError(
-        prefix ??
-          'Mostrando datos locales (sin red). Sincroniza cuando vuelva la conexión.',
-      )
-      return true
-    }
-
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const ok = await tryLocal()
-      if (!ok) {
-        setError(
-          'Sin conexión y sin datos locales de esta obra. Conecta una vez para descargar.',
-        )
-        setBoard(null)
-      }
+      setError('Sin conexión. Abre esta bitácora cuando vuelva la red.')
+      setBoard(null)
       setLoading(false)
       return
     }
@@ -147,19 +156,12 @@ export function TasksKanbanPage() {
       applyBoard(data)
       void cacheBoardTasks(data).catch(() => undefined)
     } catch (err) {
-      const ok = await tryLocal(
-        err instanceof Error
-          ? `${err.message} · mostrando datos locales`
-          : 'Error de red · mostrando datos locales',
-      )
-      if (!ok) {
-        setError(err instanceof Error ? err.message : 'No se pudo cargar el tablero')
-        setBoard(null)
-      }
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el tablero')
+      setBoard(null)
     } finally {
       setLoading(false)
     }
-  }, [obraId, chapterId, dateFrom, dateTo])
+  }, [obraId, chapterId, planId])
 
   useEffect(() => {
     void load()
@@ -176,15 +178,55 @@ export function TasksKanbanPage() {
         if (current) setObraName(current.name)
       })
       .catch(() => setObras([]))
+    void getObra(obraId)
+      .then((item) => {
+        setObra(item)
+        setObraName(item.name)
+      })
+      .catch(() => setObra(null))
+    void getObraFulfillment(obraId)
+      .then((data) => {
+        const period = data.period?.progressPercent
+        if (period != null && period !== '') {
+          setPeriodPercent(Number(period))
+          setPeriodCaption('Cumplimiento del periodo')
+          return
+        }
+        setPeriodPercent(Number(data.progressPercent))
+        setPeriodCaption('Cumplimiento global')
+      })
+      .catch(() => {
+        setPeriodPercent(null)
+        setPeriodCaption('Cumplimiento global')
+      })
+  }, [obraId])
+
+  useEffect(() => {
+    let cancelled = false
+    setPlansLoading(true)
+    void listObraBitacoras(obraId)
+      .then((data) => {
+        if (!cancelled) setPlans(data.bitacoras)
+      })
+      .catch(() => {
+        if (!cancelled) setPlans([])
+      })
+      .finally(() => {
+        if (!cancelled) setPlansLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [obraId])
 
   useEffect(() => {
     const next = new URLSearchParams()
+    if (planId) next.set('planId', planId)
     if (chapterId) next.set('chapterId', chapterId)
-    if (dateFrom) next.set('dateFrom', dateFrom)
-    if (dateTo) next.set('dateTo', dateTo)
+    if (searchParams.get('nuevo') === '1') next.set('nuevo', '1')
+    if (searchParams.toString() === next.toString()) return
     setSearchParams(next, { replace: true })
-  }, [chapterId, dateFrom, dateTo, setSearchParams])
+  }, [planId, chapterId, searchParams, setSearchParams])
 
   async function applyStatusChange(task: Task, toStatus: TaskStatus) {
     try {
@@ -274,91 +316,342 @@ export function TasksKanbanPage() {
     }
   }
 
-  return (
-    <div className={board.page}>
-      <button
-        type="button"
-        className={board.back}
-        onClick={() => navigate(`/dashboard/obras/${obraId}`)}
-      >
-        ← Volver a la obra
-      </button>
+  const selectedPlan = plans.find((plan) => String(plan.id) === planId) ?? null
+  const selectedLabel = selectedPlan
+    ? bitacoraLabel(selectedPlan, plans)
+    : 'Bitácora'
 
-      <header className={board.boardHead}>
-        <div>
-          <h1 className={board.title}>Tablero de Bitácora</h1>
-          <p className={board.subtitle}>
-            {obraName || `Obra #${obraId}`}. Arrastra una tarjeta o usa el botón para cambiar el estado.
-          </p>
+  const monthOptions = monthChoices(plans)
+  const visiblePlans = plans.filter((plan) => {
+    if (monthKey && !plan.startDate.startsWith(monthKey)) return false
+    const needle = weekQuery.trim().toLocaleLowerCase('es')
+    if (!needle) return true
+    const haystack = `${bitacoraLabel(plan, plans)} ${formatPlanDate(plan.startDate)} ${formatPlanDate(plan.endDate)}`.toLocaleLowerCase('es')
+    return haystack.includes(needle)
+  })
+  const pagePlans = visiblePlans.slice((listPage - 1) * LIST_PAGE_SIZE, listPage * LIST_PAGE_SIZE)
+  const latest = plans[0]
+  const obraStatus = obra && obra.isActive === 1 ? obra.status : 'inactive'
+  const statusLabel =
+    OBRA_STATUS_OPTIONS.find((item) => item.value === obraStatus)?.label ||
+    (obraStatus === 'inactive' ? 'Inactiva' : obraStatus)
+
+  function openPlan(id: number) {
+    const next = new URLSearchParams()
+    next.set('planId', String(id))
+    if (chapterId) next.set('chapterId', chapterId)
+    setSearchParams(next)
+  }
+
+  if (!planId) {
+    return (
+      <div className={`${look.catalog} ${board.log}`}>
+        <button
+          type="button"
+          className={look.back}
+          onClick={() => navigate(`/dashboard/obras/${obraId}`)}
+        >
+          ← Volver a la obra
+        </button>
+
+        <section className={board.logHero}>
+          {obra ? (
+            <img className={board.cover} src={resolveObraCover(obra)} alt="" />
+          ) : (
+            <span className={board.cover} />
+          )}
+          <div>
+            <div className={board.logIdentity}>
+              <h1 className={board.logName}>{obraName || `Obra #${obraId}`}</h1>
+              <span
+                className={`${board.statusPill} ${
+                  obraStatus === 'in_progress'
+                    ? ''
+                    : obraStatus === 'on_hold'
+                      ? board.statusHold
+                      : board.statusNeutral
+                }`}
+              >
+                <span className={board.statusDot} />
+                {statusLabel}
+              </span>
+            </div>
+            <p className={board.logTitle}>Bitácoras de la obra</p>
+            <p className={board.logLead}>
+              Cada fila es una semana. Ábrela para ver y mover sus actividades.
+            </p>
+          </div>
+          <span className={board.rangeChip}>{planSpan(plans)}</span>
+        </section>
+
+        <section className={board.logStats}>
+          <article className={board.logStat}>
+            <span className={board.logIcon} style={{ background: '#e8f1ff', color: '#1d4ed8' }}>
+              <BookGlyph />
+            </span>
+            <div>
+              <strong>{plansLoading ? '…' : plans.length}</strong>
+              <span>Bitácoras registradas</span>
+            </div>
+          </article>
+          <article className={board.logStat}>
+            <span className={board.logIcon} style={{ background: '#e8f7ee', color: '#15803d' }}>
+              <CheckGlyph />
+            </span>
+            <div>
+              <strong>{periodPercent == null || !Number.isFinite(periodPercent) ? '—' : `${formatPercent(periodPercent)}%`}</strong>
+              <span>{periodCaption}</span>
+            </div>
+          </article>
+          <article className={board.logStat}>
+            <span className={board.logIcon} style={{ background: '#fff4e5', color: '#c2410c' }}>
+              <CalendarGlyph />
+            </span>
+            <div>
+              <strong>{latest ? bitacoraLabel(latest, plans) : 'Sin semanas'}</strong>
+              <span>Semana más reciente</span>
+            </div>
+          </article>
+          <article className={board.logStat}>
+            <span className={board.logIcon} style={{ background: '#eef2ff', color: '#4338ca' }}>
+              <CalendarGlyph />
+            </span>
+            <div>
+              <strong>{latest ? `${formatPlanDate(latest.startDate)} – ${formatPlanDate(latest.endDate)}` : '—'}</strong>
+              <span>Periodo de esa semana</span>
+            </div>
+          </article>
+        </section>
+
+        <div className={look.filterBar}>
+          <label className={look.searchBox}>
+            <SearchGlyph />
+            <input
+              type="search"
+              value={weekQuery}
+              placeholder="Buscar semana..."
+              onChange={(event) => {
+                setWeekQuery(event.target.value)
+                setListPage(1)
+              }}
+            />
+          </label>
+          <label className={look.filterField}>
+            Mes
+            <select
+              value={monthKey}
+              onChange={(event) => {
+                setMonthKey(event.target.value)
+                setListPage(1)
+              }}
+            >
+              <option value="">Todos</option>
+              {monthOptions.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ObraField
+            obraId={obraId}
+            obraName={obraName}
+            obras={obras}
+            onChange={(id) => {
+              setMonthKey('')
+              setWeekQuery('')
+              setListPage(1)
+              navigate(`/dashboard/obras/${id}/tareas`)
+            }}
+          />
         </div>
-        <div className={board.filters}>
-          <TextSelect
-            className={board.filterSelect}
-            aria-label="Obra"
-            value={String(obraId)}
-            onChange={(event) => navigate(`/dashboard/obras/${event.target.value}/tareas`)}
+
+        {plansLoading ? (
+          <p className={board.empty}>Cargando bitácoras…</p>
+        ) : plans.length === 0 ? (
+          <p className={board.empty}>Esta obra todavía no tiene bitácoras semanales.</p>
+        ) : visiblePlans.length === 0 ? (
+          <p className={board.empty}>Ninguna semana coincide con la búsqueda.</p>
+        ) : (
+          <div className={look.tableCard}>
+            <table className={look.table}>
+              <thead>
+                <tr>
+                  <th>Semana</th>
+                  <th>Periodo</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagePlans.map((plan) => (
+                  <tr key={plan.id}>
+                    <td>{bitacoraLabel(plan, plans)}</td>
+                    <td>
+                      {formatPlanDate(plan.startDate)} – {formatPlanDate(plan.endDate)}
+                    </td>
+                    <td>{planStatusLabel(plan.status)}</td>
+                    <td>
+                      <div className={board.rowActions}>
+                        <button
+                          type="button"
+                          className={board.openBtn}
+                          onClick={() => navigate(`/dashboard/planes/${plan.id}`)}
+                        >
+                          Ver bitácora
+                        </button>
+                        <button type="button" className={board.openBtn} onClick={() => openPlan(plan.id)}>
+                          Ver tablero
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className={board.logFoot}>
+          <CatalogPager
+            page={listPage}
+            totalItems={visiblePlans.length}
+            itemsPerPage={LIST_PAGE_SIZE}
+            noun="bitácoras"
+            onChange={setListPage}
+          />
+          <button
+            type="button"
+            className={look.primaryBtn}
+            onClick={() => setPlanCreateOpen(true)}
           >
-            {obras.length === 0 ? (
-              <option value={obraId}>{obraName || `Obra #${obraId}`}</option>
-            ) : null}
-            {obras.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
+            + Nueva bitácora
+          </button>
+        </div>
+
+        <CreatePlanModal
+          open={planCreateOpen}
+          obraId={obraId}
+          obraName={obraName}
+          onClose={() => {
+            setPlanCreateOpen(false)
+            if (searchParams.get('nuevo') !== '1') return
+            const next = new URLSearchParams(searchParams)
+            next.delete('nuevo')
+            setSearchParams(next, { replace: true })
+          }}
+          onCreated={(planId) => navigate(`/dashboard/planes/${planId}`)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={`${look.catalog} ${board.page}`}>
+      <header className={look.hero}>
+        <button
+          type="button"
+          className={look.back}
+          onClick={() => {
+            const next = new URLSearchParams()
+            if (chapterId) next.set('chapterId', chapterId)
+            setSearchParams(next)
+          }}
+        >
+          ← Bitácoras de la obra
+        </button>
+        <div className={look.heroRow}>
+          <div>
+            <h1 className={look.catalogTitle}>{selectedLabel}</h1>
+            <p className={look.catalogLead}>
+              {obraName || `Obra #${obraId}`}
+              {selectedPlan
+                ? ` · ${formatPlanDate(selectedPlan.startDate)} – ${formatPlanDate(selectedPlan.endDate)}`
+                : ''}
+              . Arrastra una tarjeta o usa el botón para cambiar el estado.
+            </p>
+          </div>
+          <div className={look.heroTools}>
+            <button
+              type="button"
+              className={look.quietBtn}
+              onClick={() => {
+                const next = new URLSearchParams()
+                if (chapterId) next.set('chapterId', chapterId)
+                setSearchParams(next)
+              }}
+            >
+              Bitácoras
+            </button>
+            <button type="button" className={look.primaryBtn} onClick={() => setCreateOpen(true)}>
+              + Agregar actividad
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className={look.filterBar}>
+        <ObraField
+          obraId={obraId}
+          obraName={obraName}
+          obras={obras}
+          onChange={(id) => navigate(`/dashboard/obras/${id}/tareas`)}
+        />
+        <label className={look.filterField}>
+          Bitácora
+          <select
+            aria-label="Bitácora"
+            value={planId}
+            onChange={(event) => {
+              const next = new URLSearchParams()
+              next.set('planId', event.target.value)
+              if (chapterId) next.set('chapterId', chapterId)
+              setSearchParams(next)
+            }}
+          >
+            {plans.length === 0 ? <option value={planId}>{selectedLabel}</option> : null}
+            {plans.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {bitacoraLabel(plan, plans)}
               </option>
             ))}
-          </TextSelect>
-          <TextSelect
-            className={board.filterSelect}
+          </select>
+        </label>
+        <label className={look.filterField}>
+          Capítulo
+          <select
             aria-label="Capítulo"
             value={chapterId}
             onChange={(event) => setChapterId(event.target.value)}
           >
-            <option value="">Todos los capítulos</option>
+            <option value="">Todos</option>
             {chapters.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
             ))}
-          </TextSelect>
+          </select>
+        </label>
+        <label className={look.filterField}>
+          Actividad
           <input
-            className={board.search}
-            type="date"
-            aria-label="Desde"
-            value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
-          />
-          <input
-            className={board.search}
-            type="date"
-            aria-label="Hasta"
-            value={dateTo}
-            min={dateFrom || undefined}
-            onChange={(event) => setDateTo(event.target.value)}
-          />
-          <input
-            className={board.search}
             type="search"
             value={query}
-            placeholder="Buscar actividad..."
+            placeholder="Buscar..."
             onChange={(event) => setQuery(event.target.value)}
           />
-        </div>
-      </header>
-
-      <section className={board.banner}>
-        <div>
-          <h2 className={board.bannerTitle}>¿Necesitas agregar una actividad?</h2>
-          <p className={board.bannerText}>
-            Agrégala a la bitácora de esta obra o revisa sus planes.
-          </p>
-        </div>
-        <div className={board.bannerActions}>
-          <Button variant="ghost" onClick={() => navigate(`/dashboard/obras/${obraId}/planes`)}>
-            Planes
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>Agregar actividad</Button>
-        </div>
-      </section>
+        </label>
+        <button
+          type="button"
+          className={look.clearFilters}
+          onClick={() => {
+            setChapterId('')
+            setQuery('')
+          }}
+        >
+          Limpiar filtros
+        </button>
+      </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
@@ -367,6 +660,21 @@ export function TasksKanbanPage() {
       ) : !boardData ? (
         <p className={board.empty}>Sin datos del tablero.</p>
       ) : (
+        <>
+        <div className={board.summary}>
+          {BOARD_COLUMNS.map((column) => {
+            const accent = STATUS_ACCENT[column.status]
+            const total = filterBoardTasks(boardData.columns[column.key], query).length
+            return (
+              <div key={column.key} className={board.summaryCard}>
+                <span className={board.summaryValue} style={{ color: accent.ink }}>
+                  {total}
+                </span>
+                <span className={board.summaryLabel}>{column.label}</span>
+              </div>
+            )
+          })}
+        </div>
         <div className={board.board}>
           {BOARD_COLUMNS.map((column) => {
             const tasks = filterBoardTasks(boardData.columns[column.key], query)
@@ -456,6 +764,7 @@ export function TasksKanbanPage() {
             )
           })}
         </div>
+        </>
       )}
 
       <CreateTaskFromTemplateModal
@@ -539,6 +848,147 @@ function ColumnGlyph() {
   )
 }
 
+const MONTHS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+]
+
+function weekKey(startDate: string): string {
+  const [year, month, day] = startDate.split('-').map(Number)
+  if (!year || !month || !day) return startDate
+  return `${year}-${month}-${Math.ceil(day / 7)}`
+}
+
+function bitacoraLabel(plan: ObraBitacora, plans: ObraBitacora[]): string {
+  const [year, month, day] = plan.startDate.split('-').map(Number)
+  if (!year || !month || !day) return plan.name
+  const week = Math.ceil(day / 7)
+  const base = `Bitácora semana ${week} ${MONTHS[month - 1] || ''}`.trim()
+  const twins = plans.filter((item) => weekKey(item.startDate) === weekKey(plan.startDate))
+  if (twins.length > 1) return `${base} · ${formatPlanDate(plan.startDate)}`
+  return base
+}
+
+function ObraField({
+  obraId,
+  obraName,
+  obras,
+  onChange,
+}: {
+  obraId: number
+  obraName: string
+  obras: Obra[]
+  onChange: (obraId: number) => void
+}) {
+  return (
+    <label className={look.filterField}>
+      Obra
+      <select
+        aria-label="Obra"
+        value={String(obraId)}
+        onChange={(event) => onChange(Number(event.target.value))}
+      >
+        {obras.length === 0 ? (
+          <option value={obraId}>{obraName || `Obra #${obraId}`}</option>
+        ) : null}
+        {obras.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+const LIST_PAGE_SIZE = 8
+
+function monthChoices(plans: ObraBitacora[]): { key: string; label: string }[] {
+  const seen = new Map<string, string>()
+  for (const plan of plans) {
+    const [year, month] = plan.startDate.split('-')
+    if (!year || !month) continue
+    const key = `${year}-${month}`
+    if (!seen.has(key)) {
+      seen.set(key, `${MONTHS[Number(month) - 1] || month} ${year}`)
+    }
+  }
+  return [...seen.entries()].map(([key, label]) => ({ key, label }))
+}
+
+function planSpan(plans: ObraBitacora[]): string {
+  if (plans.length === 0) return 'Sin semanas'
+  const starts = plans.map((plan) => plan.startDate).sort()
+  const ends = plans.map((plan) => plan.endDate).sort()
+  return `${formatPlanDate(starts[0])} – ${formatPlanDate(ends[ends.length - 1])}`
+}
+
+function planStatusLabel(status: string): string {
+  if (status in WORK_PLAN_STATUS_LABELS) {
+    return WORK_PLAN_STATUS_LABELS[status as WorkPlanStatus]
+  }
+  return status
+}
+
+function BookGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 0-2 2V4Zm0 0a2 2 0 0 0-2 2v14" />
+    </svg>
+  )
+}
+
+function CheckGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1.1 10.2-2.3-2.3-1.2 1.2 3.5 3.5 6.2-6.2-1.2-1.2-5 5Z" />
+    </svg>
+  )
+}
+
+function CalendarGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M7 3h2v2h6V3h2v2h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2V3Zm12 8H5v8h14v-8Z" />
+    </svg>
+  )
+}
+
+function obraInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+function formatPercent(value: number | string | null | undefined): string {
+  const amount = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(amount)) return '—'
+  return new Intl.NumberFormat('es-CO', {
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+function SearchGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M10.5 4a6.5 6.5 0 0 1 5.17 10.45l3.44 3.44-1.42 1.42-3.44-3.44A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"
+      />
+    </svg>
+  )
+}
+
 function findTaskById(board: TaskBoard, id: number): Task | null {
   for (const column of BOARD_COLUMNS) {
     const found = board.columns[column.key].find((task) => task.id === id)
@@ -552,6 +1002,7 @@ export function TasksHubPage() {
   const [obras, setObras] = useState<Obra[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
   useDocumentTitle('Quasar · Bitácoras obras')
 
@@ -565,38 +1016,90 @@ export function TasksHubPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const visible = obras.filter((obra) => {
+    const needle = query.trim().toLocaleLowerCase('es')
+    if (!needle) return true
+    return `${obra.name} ${obra.city || ''} ${obra.neighborhood || ''}`
+      .toLocaleLowerCase('es')
+      .includes(needle)
+  })
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Bitácoras obras</h1>
-          <p className={styles.subtitle}>
-            Elige un proyecto para abrir su tablero Kanban.
-          </p>
+    <div className={look.catalog}>
+      <header className={look.hero}>
+        <div className={look.heroRow}>
+          <div>
+            <h1 className={look.catalogTitle}>Bitácoras obras</h1>
+            <p className={look.catalogLead}>
+              Elige un proyecto para ver sus bitácoras por semana.
+            </p>
+          </div>
+          <div className={look.heroTools}>
+            <label className={look.searchBox}>
+              <SearchGlyph />
+              <input
+                type="search"
+                value={query}
+                placeholder="Buscar obra o ciudad..."
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+          </div>
         </div>
       </header>
       {error ? <Alert tone="error">{error}</Alert> : null}
       {loading ? (
-        <p className={styles.empty}>Cargando proyectos…</p>
+        <p className={board.empty}>Cargando proyectos…</p>
       ) : obras.length === 0 ? (
-        <p className={styles.empty}>No hay obras activas.</p>
+        <p className={board.empty}>No hay obras activas.</p>
+      ) : visible.length === 0 ? (
+        <p className={board.empty}>Ninguna obra coincide con la búsqueda.</p>
       ) : (
-        <div className={styles.obraPick}>
-          {obras.map((obra) => (
-            <button
-              key={obra.id}
-              type="button"
-              className={styles.obraOption}
-              onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
-            >
-              <strong>{obra.name}</strong>
-              <span className={styles.assigneeRole}>
-                {obra.city || 'Sin ciudad'} · Abrir tablero →
-              </span>
-            </button>
-          ))}
+        <div className={board.pickGrid}>
+          {visible.map((obra) => {
+            const place = [obra.city, obra.neighborhood].filter(Boolean).join(' · ')
+            const progress = houseWidth(obra.progressPercent)
+            return (
+              <button
+                key={obra.id}
+                type="button"
+                className={board.pickCard}
+                onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
+              >
+                <span className={board.pickMark}>{obraInitials(obra.name)}</span>
+                <span className={board.pickBody}>
+                  <span className={board.pickName}>{obra.name}</span>
+                  <span className={board.pickMeta}>{place || 'Sin ciudad'}</span>
+                  {progress != null ? (
+                    <span className={board.meterBlock}>
+                      <span className={board.meterTop}>
+                        <span>Cumplimiento global</span>
+                        <strong>{formatPercent(obra.progressPercent)}%</strong>
+                      </span>
+                      <span className={board.meter}>
+                        <span
+                          className={board.meterFill}
+                          style={{ width: `${progress}%`, background: '#2563eb' }}
+                        />
+                      </span>
+                    </span>
+                  ) : null}
+                </span>
+                <span className={board.pickGo} aria-hidden="true">
+                  →
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
   )
+}
+
+function houseWidth(value: number | string | null | undefined): number | null {
+  if (value == null || value === '') return null
+  const amount = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(amount)) return null
+  return Math.min(100, Math.max(0, amount))
 }

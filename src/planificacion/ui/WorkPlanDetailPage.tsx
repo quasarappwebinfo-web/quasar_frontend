@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { getObra } from '@/obras/api/obrasApi'
+import { OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
+import type { Obra } from '@/obras/model/types'
 import {
   addWorkPlanTask,
   createWorkPlanVersion,
@@ -12,7 +15,6 @@ import {
   formatDateTime,
   formatPlanDate,
   isPlanEditable,
-  planStatusTone,
 } from '@/planificacion/lib/planUi'
 import type { WorkPlanDetail } from '@/planificacion/model/types'
 import {
@@ -25,7 +27,6 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
@@ -33,6 +34,8 @@ import {
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import look from '@/task-pool/ui/taskPool.module.css'
+import board from '@/tareas/ui/BitacoraBoard.module.css'
 import styles from './planificacion.module.css'
 
 export function WorkPlanDetailPage() {
@@ -54,6 +57,8 @@ export function WorkPlanDetailPage() {
   const [addTaskOpen, setAddTaskOpen] = useState(false)
   const [availableTasks, setAvailableTasks] = useState<Task[]>([])
   const [taskToAdd, setTaskToAdd] = useState('')
+  const [taskQuery, setTaskQuery] = useState('')
+  const [obra, setObra] = useState<Obra | null>(null)
 
   useDocumentTitle(
     detail ? `Quasar · ${detail.workPlan.name}` : 'Quasar · Plan',
@@ -81,6 +86,22 @@ export function WorkPlanDetailPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const obraId = detail?.workPlan.obraId
+    if (!obraId) return
+    let cancelled = false
+    void getObra(obraId)
+      .then((item) => {
+        if (!cancelled) setObra(item)
+      })
+      .catch(() => {
+        if (!cancelled) setObra(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [detail?.workPlan.obraId])
 
   const plan = detail?.workPlan
   const current = detail?.currentVersion
@@ -146,48 +167,132 @@ export function WorkPlanDetailPage() {
     setAddTaskOpen(false)
   }
 
+  const tasks = (current?.tasks || []).filter((task) => {
+    const needle = taskQuery.trim().toLocaleLowerCase('es')
+    if (!needle) return true
+    return task.taskNameSnapshot.toLocaleLowerCase('es').includes(needle)
+  })
+  const obraStatus = obra && obra.isActive === 1 ? obra.status : obra ? 'inactive' : ''
+  const obraStatusLabel =
+    OBRA_STATUS_OPTIONS.find((item) => item.value === obraStatus)?.label ||
+    (obraStatus === 'inactive' ? 'Inactiva' : '')
+  const weekLabel = plan ? weekTitle(plan.name, plan.startDate) : ''
+
   if (loading) {
-    return <p className={styles.empty}>Cargando plan…</p>
+    return <p className={board.empty}>Cargando plan…</p>
   }
 
   if (error || !plan) {
     return (
-      <div className={styles.page}>
+      <div className={look.catalog}>
         <Alert tone="error">{error || 'Plan no encontrado'}</Alert>
-        <Button variant="ghost" onClick={() => navigate(-1)}>
+        <button type="button" className={look.quietBtn} onClick={() => navigate(-1)}>
           Volver
-        </Button>
+        </button>
       </div>
     )
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleBlock}>
-          <button
-            type="button"
-            className={styles.back}
-            onClick={() => navigate(`/dashboard/obras/${plan.obraId}/planes`)}
-          >
-            ← Planes de la obra
-          </button>
-          <h1 className={styles.title}>{plan.name}</h1>
-          <div className={styles.metaRow}>
-            <Badge tone={planStatusTone(plan.status)}>
-              {WORK_PLAN_STATUS_LABELS[plan.status]}
-            </Badge>
-            <span className={styles.subtitle}>
-              {formatPlanDate(plan.startDate)} → {formatPlanDate(plan.endDate)}
-              {version ? ` · Versión ${version.versionNumber}` : ''}
-              {plan.obraName ? ` · ${plan.obraName}` : ''}
-            </span>
+    <div className={`${look.catalog} ${board.log}`}>
+      <button
+        type="button"
+        className={look.back}
+        onClick={() => navigate(`/dashboard/obras/${plan.obraId}/tareas`)}
+      >
+        ← Volver a las bitácoras
+      </button>
+
+      <section className={board.logHero}>
+        {obra ? (
+          <img className={board.cover} src={resolveObraCover(obra)} alt="" />
+        ) : (
+          <span className={board.cover} />
+        )}
+        <div>
+          <div className={board.logIdentity}>
+            <h1 className={board.logName}>{plan.obraName || obra?.name || `Obra #${plan.obraId}`}</h1>
+            {obraStatusLabel ? (
+              <span
+                className={`${board.statusPill} ${
+                  obraStatus === 'in_progress'
+                    ? ''
+                    : obraStatus === 'on_hold'
+                      ? board.statusHold
+                      : board.statusNeutral
+                }`}
+              >
+                <span className={board.statusDot} />
+                {obraStatusLabel}
+              </span>
+            ) : null}
           </div>
+          <p className={board.logTitle}>{weekLabel}</p>
+          <p className={board.logLead}>
+            {plan.name}
+            {version ? ` · Versión ${version.versionNumber}` : ''}
+            {` · ${WORK_PLAN_STATUS_LABELS[plan.status]}`}
+          </p>
         </div>
-        <div className={styles.actions}>
+        <span className={board.rangeChip}>
+          {formatPlanDate(plan.startDate)} – {formatPlanDate(plan.endDate)}
+        </span>
+      </section>
+
+      <section className={board.logStats}>
+        <article className={board.logStat}>
+          <span className={board.logIcon} style={{ background: '#e8f1ff', color: '#1d4ed8' }}>
+            <StatGlyph />
+          </span>
+          <div>
+            <strong>{current?.tasks.length || 0}</strong>
+            <span>Actividades</span>
+          </div>
+        </article>
+        <article className={board.logStat}>
+          <span className={board.logIcon} style={{ background: '#eef2ff', color: '#4338ca' }}>
+            <StatGlyph />
+          </span>
+          <div>
+            <strong>{version ? `v${version.versionNumber}` : '—'}</strong>
+            <span>Versión vigente</span>
+          </div>
+        </article>
+        <article className={board.logStat}>
+          <span className={board.logIcon} style={{ background: '#fff4e5', color: '#c2410c' }}>
+            <StatGlyph />
+          </span>
+          <div>
+            <strong>{WORK_PLAN_STATUS_LABELS[plan.status]}</strong>
+            <span>Estado del plan</span>
+          </div>
+        </article>
+        <article className={board.logStat}>
+          <span className={board.logIcon} style={{ background: '#e8f7ee', color: '#15803d' }}>
+            <StatGlyph />
+          </span>
+          <div>
+            <strong>{formatDateTime(plan.updatedAt || plan.createdAt)}</strong>
+            <span>Última actualización</span>
+          </div>
+        </article>
+      </section>
+
+      <div className={look.filterBar}>
+        <label className={look.searchBox}>
+          <SearchGlyph />
+          <input
+            type="search"
+            value={taskQuery}
+            placeholder="Buscar actividad..."
+            onChange={(event) => setTaskQuery(event.target.value)}
+          />
+        </label>
+        <div className={look.heroTools}>
           {editable ? (
-            <Button
-              variant="ghost"
+            <button
+              type="button"
+              className={look.quietBtn}
               onClick={() => {
                 setEditName(plan.name)
                 setEditStart(plan.startDate)
@@ -196,135 +301,121 @@ export function WorkPlanDetailPage() {
               }}
             >
               Editar cabecera
-            </Button>
+            </button>
           ) : null}
           {canCreateNewVersion(plan.status) ? (
-            <Button
+            <button
+              type="button"
+              className={look.quietBtn}
               disabled={busy}
               onClick={() =>
-                void runAction('Nueva versión creada', () =>
-                  createWorkPlanVersion(planId, {}),
-                )
+                void runAction('Nueva versión creada', () => createWorkPlanVersion(planId, {}))
               }
             >
               Nueva versión
-            </Button>
+            </button>
           ) : null}
-          <Button
-            variant="ghost"
+          <button
+            type="button"
+            className={look.quietBtn}
             onClick={() => navigate(`/dashboard/planes/${planId}/comparar`)}
           >
             Comparar
-          </Button>
-        </div>
-      </header>
-
-      <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2 className={styles.panelTitle}>
-              Actividades del snapshot ({current?.tasks.length || 0})
-            </h2>
-            {editable ? (
-              <Button variant="ghost" onClick={() => void openAddTask()}>
-                + Actividad
-              </Button>
-            ) : null}
-          </div>
-          {!current || current.tasks.length === 0 ? (
-            <p className={styles.muted}>Sin actividades en esta versión.</p>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Actividad</th>
-                    <th>Inicio</th>
-                    <th>Fin</th>
-                    <th>Cant.</th>
-                    <th>Duración</th>
-                    {editable ? <th /> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {current.tasks.map((task) => (
-                    <tr key={task.id}>
-                      <td>{task.taskNameSnapshot}</td>
-                      <td>{formatPlanDate(task.plannedStartDate)}</td>
-                      <td>{formatPlanDate(task.plannedEndDate)}</td>
-                      <td>
-                        {task.quantitySnapshot ?? '—'}
-                        {task.unitSnapshot ? ` ${task.unitSnapshot}` : ''}
-                      </td>
-                      <td>
-                        {task.approvedDurationDaysSnapshot ??
-                          task.estimatedDurationDaysSnapshot ??
-                          '—'}{' '}
-                        d
-                      </td>
-                      {editable ? (
-                        <td>
-                          <Button
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() =>
-                              void runAction('Actividad quitada', () =>
-                                removeWorkPlanSnapshot(task.id),
-                              )
-                            }
-                          >
-                            Quitar
-                          </Button>
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2 className={styles.panelTitle}>Historial de eventos</h2>
-          {detail.versions.length > 1 ? (
-            <div className={styles.chipList}>
-              {detail.versions.map((v) => (
-                <span
-                  key={v.id}
-                  className={`${styles.versionChip} ${
-                    v.id === version?.id ? styles.versionChipActive : ''
-                  }`}
-                >
-                  v{v.versionNumber}
-                  {v.isImmutable ? ' · inmutable' : ''}
-                </span>
-              ))}
-            </div>
+          </button>
+          <button
+            type="button"
+            className={look.quietBtn}
+            onClick={() => navigate(`/dashboard/obras/${plan.obraId}/tareas?planId=${plan.id}`)}
+          >
+            Ver tablero
+          </button>
+          {editable ? (
+            <button type="button" className={look.primaryBtn} onClick={() => void openAddTask()}>
+              + Actividad
+            </button>
           ) : null}
         </div>
-        {historyEvents.length === 0 ? (
-          <p className={styles.muted}>Sin eventos todavía.</p>
-        ) : (
-          <ul className={styles.timeline}>
-            {[...historyEvents]
-              .sort((a, b) =>
-                String(b.eventAt || '').localeCompare(String(a.eventAt || '')),
-              )
-              .map((event) => (
-                <li key={event.id} className={styles.timelineItem}>
-                  <p className={styles.timelineTitle}>
-                    {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                  </p>
-                  <p className={styles.timelineMeta}>
-                    {formatDateTime(event.eventAt)}
-                    {event.userName ? ` · ${event.userName}` : ''}
-                    {event.details ? ` · ${event.details}` : ''}
-                  </p>
-                </li>
+      </div>
+
+      {!current || current.tasks.length === 0 ? (
+        <p className={board.empty}>Sin actividades en esta versión.</p>
+      ) : tasks.length === 0 ? (
+        <p className={board.empty}>Ninguna actividad coincide con la búsqueda.</p>
+      ) : (
+        <div className={look.tableCard}>
+          <table className={look.table}>
+            <thead>
+              <tr>
+                <th>Actividad</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Cantidad</th>
+                <th>Duración</th>
+                {editable ? <th>Acciones</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map((task) => (
+                <tr key={task.id}>
+                  <td>{task.taskNameSnapshot}</td>
+                  <td>{formatPlanDate(task.plannedStartDate)}</td>
+                  <td>{formatPlanDate(task.plannedEndDate)}</td>
+                  <td>
+                    {task.quantitySnapshot ?? '—'}
+                    {task.unitSnapshot ? ` ${task.unitSnapshot}` : ''}
+                  </td>
+                  <td>{durationLabel(task)}</td>
+                  {editable ? (
+                    <td>
+                      <button
+                        type="button"
+                        className={styles.linkDanger}
+                        disabled={busy}
+                        onClick={() =>
+                          void runAction('Actividad quitada', () => removeWorkPlanSnapshot(task.id))
+                        }
+                      >
+                        Quitar
+                      </button>
+                    </td>
+                  ) : null}
+                </tr>
               ))}
-          </ul>
-        )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <section className={look.tableCard}>
+        <table className={look.table}>
+          <thead>
+            <tr>
+              <th>Historial</th>
+              <th>Cuándo</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {historyEvents.length === 0 ? (
+              <tr>
+                <td colSpan={3}>Sin eventos todavía.</td>
+              </tr>
+            ) : (
+              [...historyEvents]
+                .sort((a, b) => String(b.eventAt || '').localeCompare(String(a.eventAt || '')))
+                .map((event) => (
+                  <tr key={event.id}>
+                    <td>{EVENT_TYPE_LABELS[event.eventType] || event.eventType}</td>
+                    <td>
+                      {formatDateTime(event.eventAt)}
+                      {event.userName ? ` · ${event.userName}` : ''}
+                    </td>
+                    <td>{event.details || '—'}</td>
+                  </tr>
+                ))
+            )}
+          </tbody>
+        </table>
       </section>
 
       <Modal
@@ -409,5 +500,54 @@ export function WorkPlanDetailPage() {
         </form>
       </Modal>
     </div>
+  )
+}
+
+const WEEK_MONTHS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+]
+
+function durationLabel(task: {
+  approvedDurationDaysSnapshot?: string | number | null
+  estimatedDurationDaysSnapshot?: string | number | null
+}): string {
+  const days = task.approvedDurationDaysSnapshot ?? task.estimatedDurationDaysSnapshot
+  if (days == null || days === '') return '—'
+  return `${days} d`
+}
+
+function weekTitle(name: string, startDate: string): string {
+  const [year, month, day] = startDate.split('-').map(Number)
+  if (!year || !month || !day) return name
+  return `Bitácora semana ${Math.ceil(day / 7)} ${WEEK_MONTHS[month - 1] || ''}`.trim()
+}
+
+function SearchGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
+      <path
+        fill="currentColor"
+        d="M10.5 4a6.5 6.5 0 0 1 5.17 10.45l3.44 3.44-1.42 1.42-3.44-3.44A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"
+      />
+    </svg>
+  )
+}
+
+function StatGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M5 19V9h3v10H5Zm5.5 0V5h3v14h-3ZM16 19v-7h3v7h-3Z" />
+    </svg>
   )
 }

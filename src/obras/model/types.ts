@@ -40,6 +40,14 @@ export type ObraCreate = {
   estimatedEndDate?: string | null
   currentStageId?: number | null
   status?: ObraStatus | string
+  chapterOpenings?: ObraChapterOpening[]
+}
+
+export type ObraChapterOpening = {
+  chapterId: number
+  mode: 'completed' | 'partial'
+  progressPercent?: number
+  templateIds?: number[]
 }
 
 export type ObraUpdate = {

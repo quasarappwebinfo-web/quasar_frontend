@@ -4,16 +4,21 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextArea,
   TextInput,
-  TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from './CatalogParts'
 import styles from './taskPool.module.css'
 
 export type CatalogItem = {
@@ -65,6 +70,7 @@ export function CatalogSimplePanel({
   updateItem,
 }: CatalogSimplePanelProps) {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [activeOnly, setActiveOnly] = useState(false)
@@ -96,6 +102,7 @@ export function CatalogSimplePanel({
       setItems(data.items)
       setTotalItems(data.totalItems)
       setItemsPerPage(data.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(
         err instanceof Error ? err.message : `No se pudieron cargar ${plural}`,
@@ -103,7 +110,7 @@ export function CatalogSimplePanel({
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, activeOnly, listItems, plural])
+  }, [page, debouncedSearch, activeOnly, listItems, plural, refreshStats])
 
   useEffect(() => {
     void load()
@@ -177,39 +184,44 @@ export function CatalogSimplePanel({
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: `Buscar ${singular.toLowerCase()}...`,
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: `Nueva ${singular.toLowerCase()}`,
+    onAction: openCreate,
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field
-              label="Buscar"
-              help={`Filtra ${plural.toLowerCase()} por nombre.`}
-            >
-              <TextInput
-                placeholder={`Nombre de ${singular.toLowerCase()}`}
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field label="Estado" help="«Solo activos» oculta ítems desactivados.">
-            <TextSelect
-              value={activeOnly ? '1' : '0'}
-              onChange={(e) => {
-                setActiveOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="0">Todos</option>
-              <option value="1">Solo activos</option>
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nueva {singular.toLowerCase()}</Button>
+      <div className={styles.filterBar}>
+        <label className={styles.filterField}>
+          Estado
+          <select
+            value={activeOnly ? '1' : '0'}
+            onChange={(event) => {
+              setActiveOnly(event.target.value === '1')
+              setPage(1)
+            }}
+          >
+            <option value="0">Todos</option>
+            <option value="1">Solo activas</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className={styles.clearFilters}
+          onClick={() => {
+            setSearch('')
+            setActiveOnly(false)
+            setPage(1)
+          }}
+        >
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -219,41 +231,53 @@ export function CatalogSimplePanel({
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay {plural.toLowerCase()}.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((item) => (
-            <article key={item.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div>
-                  <h3 className={styles.cardTitle}>{item.name}</h3>
-                  {item.description ? (
-                    <p className={styles.cardSubtitle}>{item.description}</p>
-                  ) : null}
-                </div>
-                <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
-                  {item.isActive === 1 ? 'Activo' : 'Inactivo'}
-                </Badge>
-              </div>
-              <div className={styles.rowActions}>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                  Editar
-                </Button>
-                <Button
-                  variant={item.isActive === 1 ? 'danger' : 'ghost'}
-                  size="sm"
-                  onClick={() => void toggleActive(item)}
-                >
-                  {item.isActive === 1 ? 'Desactivar' : 'Activar'}
-                </Button>
-              </div>
-            </article>
-          ))}
+        <div className={styles.tableCard}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{singular}</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className={styles.nameCell}>
+                      <ActivityMark name={item.name} />
+                      <span>{item.name}</span>
+                    </div>
+                  </td>
+                  <td>{item.description || '—'}</td>
+                  <td>
+                    <StatusPill active={item.isActive === 1} />
+                  </td>
+                  <td>
+                    <RowMenu
+                      items={[
+                        { label: 'Editar', onClick: () => openEdit(item) },
+                        {
+                          label: item.isActive === 1 ? 'Desactivar' : 'Activar',
+                          danger: item.isActive === 1,
+                          onClick: () => void toggleActive(item),
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun={plural.toLowerCase()}
         onChange={setPage}
       />
 

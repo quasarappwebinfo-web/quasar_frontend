@@ -15,20 +15,27 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextArea,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from './CatalogParts'
 import styles from './taskPool.module.css'
 
 export function ActividadesPresupuestalesPanel() {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [chapterId, setChapterId] = useState('')
@@ -73,6 +80,7 @@ export function ActividadesPresupuestalesPanel() {
       setItems(data.budgetActivities)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(
         err instanceof Error
@@ -82,7 +90,7 @@ export function ActividadesPresupuestalesPanel() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, chapterId, activeOnly])
+  }, [page, debouncedSearch, chapterId, activeOnly, refreshStats])
 
   useEffect(() => {
     void load()
@@ -168,55 +176,62 @@ export function ActividadesPresupuestalesPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar subcapítulo...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nuevo subcapítulo',
+    onAction: openCreate,
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field label="Buscar" help="Filtra por nombre de subcapítulo.">
-              <TextInput
-                placeholder="Nombre del subcapítulo"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field
-            label="Capítulo"
-            help="Cada subcapítulo pertenece a un capítulo."
+      <div className={styles.filterBar}>
+        <label className={styles.filterField}>
+          Capítulo
+          <select
+            value={chapterId}
+            onChange={(event) => {
+              setChapterId(event.target.value)
+              setPage(1)
+            }}
           >
-            <TextSelect
-              value={chapterId}
-              onChange={(e) => {
-                setChapterId(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todos</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Estado">
-            <TextSelect
-              value={activeOnly ? '1' : '0'}
-              onChange={(e) => {
-                setActiveOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="0">Todos</option>
-              <option value="1">Solo activos</option>
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nuevo subcapítulo</Button>
+            <option value="">Todos</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          Estado
+          <select
+            value={activeOnly ? '1' : '0'}
+            onChange={(event) => {
+              setActiveOnly(event.target.value === '1')
+              setPage(1)
+            }}
+          >
+            <option value="0">Todos</option>
+            <option value="1">Solo activos</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className={styles.clearFilters}
+          onClick={() => {
+            setSearch('')
+            setChapterId('')
+            setActiveOnly(false)
+            setPage(1)
+          }}
+        >
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -226,57 +241,57 @@ export function ActividadesPresupuestalesPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay subcapítulos.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((item) => (
-            <article key={item.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div>
-                  <h3 className={styles.cardTitle}>{item.name}</h3>
-                  {item.description ? (
-                    <p className={styles.cardSubtitle}>{item.description}</p>
-                  ) : null}
-                </div>
-                <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
-                  {item.isActive === 1 ? 'Activo' : 'Inactivo'}
-                </Badge>
-              </div>
-              <div className={styles.cardMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Capítulo</span>
-                  <span className={styles.metaValue}>
-                    {item.chapterName ||
-                      (item.chapterId ? `ID ${item.chapterId}` : 'Sin capítulo')}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Zona</span>
-                  <span className={styles.metaValue}>
-                    {item.zoneName ||
-                      (item.zoneId ? `ID ${item.zoneId}` : 'Sin zona')}
-                  </span>
-                </div>
-              </div>
-              <div className={styles.rowActions}>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                  Editar
-                </Button>
-                <Button
-                  variant={item.isActive === 1 ? 'danger' : 'ghost'}
-                  size="sm"
-                  onClick={() => void toggleActive(item)}
-                >
-                  {item.isActive === 1 ? 'Desactivar' : 'Activar'}
-                </Button>
-              </div>
-            </article>
-          ))}
+        <div className={styles.tableCard}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Subcapítulo</th>
+                <th>Capítulo</th>
+                <th>Zona</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className={styles.nameCell}>
+                      <ActivityMark name={item.chapterName} />
+                      <span>{item.name}</span>
+                    </div>
+                  </td>
+                  <td>{item.chapterName || '—'}</td>
+                  <td>{item.zoneName || '—'}</td>
+                  <td>{item.description || '—'}</td>
+                  <td>
+                    <StatusPill active={item.isActive === 1} />
+                  </td>
+                  <td>
+                    <RowMenu
+                      items={[
+                        { label: 'Editar', onClick: () => openEdit(item) },
+                        {
+                          label: item.isActive === 1 ? 'Desactivar' : 'Activar',
+                          danger: item.isActive === 1,
+                          onClick: () => void toggleActive(item),
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="subcapítulos"
         onChange={setPage}
       />
 

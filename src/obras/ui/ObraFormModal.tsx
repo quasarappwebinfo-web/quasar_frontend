@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { isSuperUser, useAuth } from '@/auth'
 import {
   listActiveSaleTypes,
   listActiveStages,
@@ -15,7 +16,10 @@ import {
   resolveObraCover,
   validateObraCoverFile,
 } from '@/obras/lib/obraUi'
-import type { Obra, SaleTypeOption, StageOption } from '@/obras/model/types'
+import type { Obra, ObraChapterOpening, SaleTypeOption, StageOption } from '@/obras/model/types'
+import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
+import { listTaskTemplates } from '@/task-pool/api/plantillasApi'
+import type { TaskChapter, TaskTemplate } from '@/task-pool/model/types'
 import { ApiError } from '@/shared/api/apiJson'
 import {
   Alert,
@@ -36,9 +40,21 @@ type ObraFormModalProps = {
   onSaved: (obra: Obra) => void
 }
 
+type OpeningMode = 'program' | 'completed' | 'partial'
+
+type ChapterChoice = {
+  mode: OpeningMode
+  percent: string
+  templateIds: number[]
+}
+
+const PROGRAMMED: ChapterChoice = { mode: 'program', percent: '', templateIds: [] }
+
 export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalProps) {
   const toast = useToast()
+  const { user } = useAuth()
   const editing = Boolean(obra)
+  const canOpenChapters = !editing && isSuperUser(user)
   const [saleTypes, setSaleTypes] = useState<SaleTypeOption[]>([])
   const [stages, setStages] = useState<StageOption[]>([])
   const [name, setName] = useState('')
@@ -56,6 +72,10 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
   const [saving, setSaving] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [chapters, setChapters] = useState<TaskChapter[]>([])
+  const [templates, setTemplates] = useState<TaskTemplate[]>([])
+  const [openings, setOpenings] = useState<Record<number, ChapterChoice>>({})
+  const [catalogState, setCatalogState] = useState<'idle' | 'ready'>('idle')
 
   useEffect(() => {
     if (!open) return
@@ -95,7 +115,34 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
     setCoverFile(null)
     setRemoveCover(false)
     setFormError(null)
+    setOpenings({})
   }, [open, obra])
+
+  useEffect(() => {
+    if (!open || !canOpenChapters) return
+    let cancelled = false
+    setCatalogState('idle')
+    void Promise.all([listActiveTaskChapters(), listEveryTemplates()])
+      .then(([chapterRows, templateRows]) => {
+        if (cancelled) return
+        setChapters(chapterRows)
+        setTemplates(templateRows)
+        setOpenings(
+          Object.fromEntries(chapterRows.map((chapter) => [chapter.id, { ...PROGRAMMED }])),
+        )
+      })
+      .catch(() => {
+        if (cancelled) return
+        setChapters([])
+        setTemplates([])
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogState('ready')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, canOpenChapters])
 
   useEffect(() => {
     if (!coverFile) return
@@ -125,6 +172,11 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
       setFormError('Selecciona un tipo de venta.')
       return
     }
+    const chapterOpenings = canOpenChapters ? collectOpenings(chapters, openings) : null
+    if (chapterOpenings && typeof chapterOpenings === 'string') {
+      setFormError(chapterOpenings)
+      return
+    }
     setSaving(true)
     setFormError(null)
     try {
@@ -151,6 +203,9 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
           estimatedEndDate: estimatedEndDate || null,
           currentStageId: currentStageId ? Number(currentStageId) : null,
           status,
+          ...(Array.isArray(chapterOpenings) && chapterOpenings.length > 0
+            ? { chapterOpenings }
+            : {}),
         })
       }
 
@@ -365,9 +420,155 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
             </Field>
           )}
         </div>
+        {canOpenChapters ? (
+          <section className={styles.opening}>
+            <div>
+              <h3 className={styles.openingTitle}>Obra ya comenzada</h3>
+              <p className={styles.openingLead}>
+                Marca los capítulos que ya llegaron hechos. En uno a medias eliges
+                las actividades del pool. Los demás se programan solos.
+              </p>
+            </div>
+            {catalogState !== 'ready' ? (
+              <p className={styles.openingLead}>Cargando capítulos…</p>
+            ) : chapters.length === 0 ? (
+              <p className={styles.openingLead}>No hay capítulos activos en el pool.</p>
+            ) : (
+              chapters.map((chapter) => {
+                const choice = openings[chapter.id] ?? PROGRAMMED
+                const pool = templates.filter((item) => item.chapterId === chapter.id)
+                return (
+                  <article key={chapter.id} className={styles.openingChapter}>
+                    <div className={styles.openingHead}>
+                      <strong>{chapter.name}</strong>
+                      <TextSelect
+                        aria-label={`Avance de ${chapter.name}`}
+                        disabled={saving}
+                        value={choice.mode}
+                        onChange={(event) =>
+                          setOpenings((current) => ({
+                            ...current,
+                            [chapter.id]: {
+                              ...choice,
+                              mode: event.target.value as OpeningMode,
+                            },
+                          }))
+                        }
+                      >
+                        <option value="program">Programar</option>
+                        <option value="completed">Completado</option>
+                        <option value="partial">A medias</option>
+                      </TextSelect>
+                    </div>
+                    {choice.mode === 'completed' ? (
+                      <p className={styles.openingLead}>
+                        Queda en 100%. Sus actividades fijas se crean como hechas.
+                      </p>
+                    ) : null}
+                    {choice.mode === 'partial' ? (
+                      <>
+                        <Field label="Avance con el que llega">
+                          <TextInput
+                            type="number"
+                            min={1}
+                            max={99}
+                            disabled={saving}
+                            value={choice.percent}
+                            placeholder="70"
+                            onChange={(event) =>
+                              setOpenings((current) => ({
+                                ...current,
+                                [chapter.id]: { ...choice, percent: event.target.value },
+                              }))
+                            }
+                          />
+                        </Field>
+                        <div className={styles.openingActivities}>
+                          {pool.length === 0 ? (
+                            <p className={styles.openingLead}>
+                              Este capítulo no tiene actividades en el pool.
+                            </p>
+                          ) : (
+                            pool.map((template) => {
+                              const checked = choice.templateIds.includes(template.id)
+                              return (
+                                <label key={template.id} className={styles.openingCheck}>
+                                  <input
+                                    type="checkbox"
+                                    disabled={saving}
+                                    checked={checked}
+                                    onChange={() =>
+                                      setOpenings((current) => {
+                                        const previous = current[chapter.id] ?? PROGRAMMED
+                                        const templateIds = checked
+                                          ? previous.templateIds.filter((id) => id !== template.id)
+                                          : [...previous.templateIds, template.id]
+                                        return {
+                                          ...current,
+                                          [chapter.id]: { ...previous, templateIds },
+                                        }
+                                      })
+                                    }
+                                  />
+                                  <span>{template.name}</span>
+                                </label>
+                              )
+                            })
+                          )}
+                        </div>
+                      </>
+                    ) : null}
+                  </article>
+                )
+              })
+            )}
+          </section>
+        ) : null}
         {formError ? <Alert tone="error">{formError}</Alert> : null}
       </form>
     </Modal>
     </>
   )
+}
+
+async function listEveryTemplates(): Promise<TaskTemplate[]> {
+  const all: TaskTemplate[] = []
+  let page = 1
+  let total = 0
+  do {
+    const data = await listTaskTemplates({ page, activeOnly: true })
+    all.push(...data.templates)
+    total = data.pagination.totalItems
+    page += 1
+  } while (all.length < total && page <= 40)
+  return all
+}
+
+function collectOpenings(
+  chapters: TaskChapter[],
+  openings: Record<number, ChapterChoice>,
+): ObraChapterOpening[] | string {
+  const payload: ObraChapterOpening[] = []
+  for (const chapter of chapters) {
+    const choice = openings[chapter.id]
+    if (!choice || choice.mode === 'program') continue
+    if (choice.mode === 'completed') {
+      payload.push({ chapterId: chapter.id, mode: 'completed', templateIds: [] })
+      continue
+    }
+    const percent = Number(choice.percent)
+    if (!Number.isInteger(percent) || percent < 1 || percent > 99) {
+      return `${chapter.name}: indica un avance entre 1 y 99.`
+    }
+    if (choice.templateIds.length === 0) {
+      return `${chapter.name}: elige las actividades del pool que vas a usar.`
+    }
+    payload.push({
+      chapterId: chapter.id,
+      mode: 'partial',
+      progressPercent: percent,
+      templateIds: choice.templateIds,
+    })
+  }
+  return payload
 }

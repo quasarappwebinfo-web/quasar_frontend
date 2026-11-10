@@ -338,7 +338,7 @@ export function ObraDetailPage() {
               navigate(
                 fulfillment?.period?.planId
                   ? `/dashboard/planes/${fulfillment.period.planId}`
-                  : `/dashboard/obras/${obra.id}/planes`,
+                  : `/dashboard/obras/${obra.id}/tareas`,
               )
             }
           >
@@ -592,7 +592,7 @@ export function ObraDetailPage() {
               <button
                 type="button"
                 className={styles.panelLink}
-                onClick={() => navigate(`/dashboard/obras/${obra.id}/planes`)}
+                onClick={() => navigate(`/dashboard/obras/${obra.id}/tareas`)}
               >
                 Ver todas →
               </button>
@@ -608,7 +608,7 @@ export function ObraDetailPage() {
                   type="button"
                   className={styles.seeAll}
                   onClick={() =>
-                    navigate(`/dashboard/obras/${obra.id}/planes?nuevo=1`)
+                    navigate(`/dashboard/obras/${obra.id}/tareas?nuevo=1`)
                   }
                 >
                   Crear primer plan →

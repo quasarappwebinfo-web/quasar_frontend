@@ -23,11 +23,28 @@ export async function getObraFulfillment(
   )
 }
 
+export type ObraBitacora = {
+  id: number
+  name: string
+  startDate: string
+  endDate: string
+  status: string
+}
+
+export async function listObraBitacoras(
+  obraId: number,
+): Promise<{ bitacoras: ObraBitacora[] }> {
+  return apiJson(
+    `/api/v1/operacion/tareas/bitacoras${buildQuery({ obraId })}`,
+  )
+}
+
 export async function getTaskBoard(params: {
   obraId: number
   chapterId?: number
   dateFrom?: string
   dateTo?: string
+  planId?: number
 }): Promise<TaskBoard> {
   return apiJson(`/api/v1/operacion/tareas/tablero${buildQuery(params)}`)
 }

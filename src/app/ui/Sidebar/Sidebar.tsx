@@ -151,11 +151,12 @@ export function Sidebar({
                 className={cn(styles.navItem, active && styles.navItemActive)}
                 onClick={() => onMobileClose?.()}
               >
-                <span
-                  className={styles.navIcon}
-                  style={iconMask(NAV_ICON_URLS[item.id])}
-                  aria-hidden="true"
-                />
+                <span className={styles.navIconWrap} aria-hidden="true">
+                  <span
+                    className={styles.navIcon}
+                    style={iconMask(NAV_ICON_URLS[item.id])}
+                  />
+                </span>
                 <span className={styles.navLabel}>{item.label}</span>
               </NavLink>
             )
@@ -173,13 +174,13 @@ export function Sidebar({
           >
             <span className={styles.avatar} aria-hidden="true">
               {initials}
+              {unread > 0 ? (
+                <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>
+              ) : null}
             </span>
             <span className={styles.userMeta}>
               <span className={styles.userName}>{displayName}</span>
-              <span className={styles.userRole}>
-                {role}
-                {unread > 0 ? ` · ${unread} aviso${unread === 1 ? '' : 's'}` : ''}
-              </span>
+              <span className={styles.userRole}>{role}</span>
             </span>
             <span
               className={cn(styles.chevron, menuOpen && styles.chevronOpen)}

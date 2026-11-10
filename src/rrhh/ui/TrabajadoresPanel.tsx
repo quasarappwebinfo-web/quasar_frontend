@@ -21,20 +21,27 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextArea,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from '@/task-pool/ui/CatalogParts'
+import look from '@/task-pool/ui/taskPool.module.css'
 import styles from './rrhh.module.css'
 
 export function TrabajadoresPanel() {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [activeOnly, setActiveOnly] = useState(true)
@@ -96,12 +103,13 @@ export function TrabajadoresPanel() {
       setItems(data.workers)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar trabajadores')
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, activeOnly, filterPositionId])
+  }, [page, debouncedSearch, activeOnly, filterPositionId, refreshStats])
 
   useEffect(() => {
     void load()
@@ -252,6 +260,17 @@ export function TrabajadoresPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar trabajador o cédula...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nuevo trabajador',
+    onAction: openCreate,
+  })
+
   return (
     <section>
       <Alert tone="info">
@@ -259,50 +278,49 @@ export function TrabajadoresPanel() {
         sacar de obra.
       </Alert>
 
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field label="Buscar">
-              <TextInput
-                placeholder="Nombre o cédula"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field label="Estado">
-            <TextSelect
-              value={activeOnly ? '1' : '0'}
-              onChange={(e) => {
-                setActiveOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="1">Activos</option>
-              <option value="0">Todos</option>
-            </TextSelect>
-          </Field>
-          <Field label="Cargo">
-            <TextSelect
-              value={filterPositionId}
-              onChange={(e) => {
-                setFilterPositionId(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todos</option>
-              {positions.map((position) => (
-                <option key={position.id} value={position.id}>
-                  {position.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nuevo trabajador</Button>
+      <div className={look.filterBar}>
+        <label className={look.filterField}>
+          Estado
+          <select
+            value={activeOnly ? '1' : '0'}
+            onChange={(event) => {
+              setActiveOnly(event.target.value === '1')
+              setPage(1)
+            }}
+          >
+            <option value="1">Activos</option>
+            <option value="0">Todos</option>
+          </select>
+        </label>
+        <label className={look.filterField}>
+          Cargo
+          <select
+            value={filterPositionId}
+            onChange={(event) => {
+              setFilterPositionId(event.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Todos</option>
+            {positions.map((position) => (
+              <option key={position.id} value={position.id}>
+                {position.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={look.clearFilters}
+          onClick={() => {
+            setSearch('')
+            setActiveOnly(true)
+            setFilterPositionId('')
+            setPage(1)
+          }}
+        >
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -314,89 +332,68 @@ export function TrabajadoresPanel() {
           No hay trabajadores. Crea una persona en Personal y luego regístrala aquí.
         </p>
       ) : (
-        <div className={styles.cardGridPhone}>
-          {items.map((worker) => (
-            <article key={worker.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div>
-                  <h3 className={styles.cardTitle}>
-                    {worker.personName || `Persona #${worker.personId}`}
-                  </h3>
-                  <p className={styles.cardSubtitle}>
-                    {worker.documentNumber || 'Sin documento'}
-                  </p>
-                </div>
-                <Badge tone={worker.isActive === 1 ? 'success' : 'danger'}>
-                  {worker.isActive === 1 ? 'Activo' : 'Baja'}
-                </Badge>
-              </div>
-
-              <div className={styles.cardMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Cargo</span>
-                  <span className={styles.metaValue}>
-                    {worker.positionName || '—'}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Especialidad</span>
-                  <span className={styles.metaValue}>
-                    {worker.specialtyName || '—'}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Valor día</span>
-                  <span className={styles.metaValue}>
-                    {worker.dailyRate != null ? formatCop(worker.dailyRate) : '—'}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Nequi</span>
-                  <span className={styles.metaValue}>
-                    {worker.bankAccount || '—'}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Usuario vinculado</span>
-                  <span className={styles.metaValue}>
-                    {worker.linkedUsername || 'Sin usuario'}
-                  </span>
-                </div>
-                {worker.isActive === 2 && worker.deactivationReason ? (
-                  <div className={styles.metaRow}>
-                    <span className={styles.metaLabel}>Motivo baja</span>
-                    <span className={styles.metaValue}>
-                      {worker.deactivationReason}
+        <div className={look.tableCard}>
+          <table className={look.table}>
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>Cédula</th>
+                <th>Cargo</th>
+                <th>Especialidad</th>
+                <th>Valor día</th>
+                <th>Cuenta</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((worker) => (
+                <tr key={worker.id}>
+                  <td>
+                    <div className={look.nameCell}>
+                      <ActivityMark name={worker.personName} />
+                      <span>{worker.personName || `Persona #${worker.personId}`}</span>
+                    </div>
+                  </td>
+                  <td>{worker.documentNumber || '—'}</td>
+                  <td>{worker.positionName || '—'}</td>
+                  <td>{worker.specialtyName || '—'}</td>
+                  <td>{worker.dailyRate != null ? formatCop(worker.dailyRate) : '—'}</td>
+                  <td>{worker.bankAccount || '—'}</td>
+                  <td>
+                    <span className={worker.isActive === 1 ? look.pillOn : look.pillOff}>
+                      <span className={look.pillDot} />
+                      {worker.isActive === 1 ? 'Activo' : 'Baja'}
                     </span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className={styles.rowActions}>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(worker)}>
-                  Editar
-                </Button>
-                <Button
-                  variant={worker.isActive === 1 ? 'danger' : 'ghost'}
-                  size="sm"
-                  onClick={() => {
-                    setStatusWorker(worker)
-                    setReason('')
-                    setStatusError(null)
-                  }}
-                >
-                  {worker.isActive === 1 ? 'Baja RRHH' : 'Reactivar'}
-                </Button>
-              </div>
-            </article>
-          ))}
+                  </td>
+                  <td>
+                    <RowMenu
+                      items={[
+                        { label: 'Editar', onClick: () => openEdit(worker) },
+                        {
+                          label: worker.isActive === 1 ? 'Baja RRHH' : 'Reactivar',
+                          danger: worker.isActive === 1,
+                          onClick: () => {
+                            setStatusWorker(worker)
+                            setReason('')
+                            setStatusError(null)
+                          },
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="trabajadores"
         onChange={setPage}
       />
 

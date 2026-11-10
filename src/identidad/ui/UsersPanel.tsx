@@ -26,16 +26,23 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextArea,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from '@/task-pool/ui/CatalogParts'
+import look from '@/task-pool/ui/taskPool.module.css'
 import styles from './identidad.module.css'
 
 /** PersonIds que ya tienen usuario (activos e inactivos). */
@@ -59,6 +66,7 @@ async function loadTakenPersonIds(): Promise<Set<number>> {
 
 export function UsersPanel() {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const { user: actor } = useAuth()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
@@ -113,12 +121,13 @@ export function UsersPanel() {
       setItems(data.users)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar usuarios')
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, statusId])
+  }, [page, debouncedSearch, statusId, refreshStats])
 
   useEffect(() => {
     void load()
@@ -337,37 +346,45 @@ export function UsersPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar usuario, nombre o email...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nuevo usuario',
+    onAction: () => void openCreate(),
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field label="Buscar">
-              <TextInput
-                placeholder="Nombre, usuario o email"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field label="Estado">
-            <TextSelect
-              value={statusId}
-              onChange={(e) => {
-                setStatusId(e.target.value as '' | '1' | '2')
-                setPage(1)
-              }}
-            >
-              <option value="">Todos</option>
-              <option value="1">Activos</option>
-              <option value="2">Inactivos</option>
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={() => void openCreate()}>Nuevo usuario</Button>
+      <div className={look.filterBar}>
+        <label className={look.filterField}>
+          Estado
+          <select
+            value={statusId}
+            onChange={(event) => {
+              setStatusId(event.target.value as '' | '1' | '2')
+              setPage(1)
+            }}
+          >
+            <option value="">Todos</option>
+            <option value="1">Activos</option>
+            <option value="2">Inactivos</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className={look.clearFilters}
+          onClick={() => {
+            setSearch('')
+            setStatusId('')
+            setPage(1)
+          }}
+        >
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -377,93 +394,85 @@ export function UsersPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay usuarios con ese filtro.</p>
       ) : (
-        <div className={styles.cardGridPhone}>
-          {items.map((user) => {
-            const manageable = canManageUser(actor, user)
-            const canResetPassword = manageable && isSuperUser(actor)
-            return (
-              <article key={user.id} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <div>
-                    <h3 className={styles.cardTitle}>{user.username}</h3>
-                    <p className={styles.cardSubtitle}>
-                      {user.personName || `Persona #${user.personId}`}
-                    </p>
-                  </div>
-                  <Badge tone={user.isActive === 1 ? 'success' : 'danger'}>
-                    {user.isActive === 1 ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </div>
-
-                <div className={styles.cardMeta}>
-                  <div className={styles.metaRow}>
-                    <span className={styles.metaLabel}>Email</span>
-                    <span className={styles.metaValue}>{user.email || 'Sin email'}</span>
-                  </div>
-                  <div className={styles.metaRow}>
-                    <span className={styles.metaLabel}>Rol</span>
-                    <span className={styles.metaValue}>
-                      {user.roleName || `Rol #${user.roleId}`}
-                      {user.hasFullAccess ? ' · acceso total' : ''}
-                    </span>
-                  </div>
-                  {user.isActive === 2 && user.deactivationReason ? (
-                    <div className={styles.metaRow}>
-                      <span className={styles.metaLabel}>Motivo</span>
-                      <span className={styles.metaValue}>{user.deactivationReason}</span>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className={styles.rowActions}>
-                  {manageable ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void openEdit(user)}
-                      >
-                        Editar
-                      </Button>
-                      {canResetPassword ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setPasswordUser(user)
-                            setNewPassword('')
-                            setPasswordError(null)
-                          }}
-                        >
-                          Restablecer contraseña
-                        </Button>
-                      ) : null}
-                      <Button
-                        variant={user.isActive === 1 ? 'danger' : 'ghost'}
-                        size="sm"
-                        onClick={() => {
+        <div className={look.tableCard}>
+          <table className={look.table}>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Persona</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((user) => {
+                const manageable = canManageUser(actor, user)
+                const canResetPassword = manageable && isSuperUser(actor)
+                const actions = manageable
+                  ? [
+                      { label: 'Editar', onClick: () => void openEdit(user) },
+                      ...(canResetPassword
+                        ? [
+                            {
+                              label: 'Restablecer contraseña',
+                              onClick: () => {
+                                setPasswordUser(user)
+                                setNewPassword('')
+                                setPasswordError(null)
+                              },
+                            },
+                          ]
+                        : []),
+                      {
+                        label: user.isActive === 1 ? 'Desactivar' : 'Activar',
+                        danger: user.isActive === 1,
+                        onClick: () => {
                           setStatusUser(user)
                           setReason('')
                           setStatusError(null)
-                        }}
-                      >
-                        {user.isActive === 1 ? 'Desactivar' : 'Activar'}
-                      </Button>
-                    </>
-                  ) : (
-                    <span className={styles.mutedNote}>Protegido</span>
-                  )}
-                </div>
-              </article>
-            )
-          })}
+                        },
+                      },
+                    ]
+                  : []
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <div className={look.nameCell}>
+                        <ActivityMark name={user.username} />
+                        <span>{user.username}</span>
+                      </div>
+                    </td>
+                    <td>{user.personName || `Persona #${user.personId}`}</td>
+                    <td>{user.email || '—'}</td>
+                    <td>
+                      {user.roleName || `Rol #${user.roleId}`}
+                      {user.hasFullAccess ? ' · acceso total' : ''}
+                    </td>
+                    <td>
+                      <StatusPill active={user.isActive === 1} />
+                    </td>
+                    <td>
+                      {actions.length > 0 ? (
+                        <RowMenu items={actions} />
+                      ) : (
+                        <span className={styles.mutedNote}>Protegido</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="usuarios"
         onChange={setPage}
       />
 

@@ -16,7 +16,9 @@ import {
 import { useAuth } from '@/auth'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
-import { Alert, Button, PaginationBar } from '@/shared/ui'
+import { Alert } from '@/shared/ui'
+import { CatalogPager } from '@/task-pool/ui/CatalogParts'
+import look from '@/task-pool/ui/taskPool.module.css'
 import styles from './DashboardPage.module.css'
 
 export function DashboardPage() {
@@ -58,7 +60,7 @@ export function DashboardPage() {
         counts[assignment.obraId] = (counts[assignment.obraId] || 0) + 1
       }
       setPeopleByObra(counts)
-      setPeopleTotal(assignmentsData.assignments.length)
+      setPeopleTotal(assignmentsData.pagination.totalItems)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar el dashboard')
     } finally {
@@ -87,15 +89,18 @@ export function DashboardPage() {
     const active = obras.filter(isObraActiveWork)
     const delayed = active.filter(isObraDelayed)
     const onTime = active.length - delayed.length
-    const pct = (n: number) =>
-      active.length === 0 ? '—' : `${Math.round((n / active.length) * 100)}% de los proyectos`
+    const listedHere = obras.length < totalItems
     return {
       activeCount: totalItems,
       peopleTotal,
       onTime,
       delayed: delayed.length,
-      onTimeHint: pct(onTime),
-      delayedHint: pct(delayed.length),
+      onTimeHint: listedHere ? 'En esta página' : 'Dentro del plazo estimado',
+      delayedHint: listedHere
+        ? 'En esta página'
+        : delayed.length === 0
+          ? 'Ninguna pasó su fecha de fin'
+          : 'Pasó la fecha de fin',
     }
   }, [obras, totalItems, peopleTotal])
 
@@ -117,31 +122,33 @@ export function DashboardPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleBlock}>
-          <h1 className={styles.title}>Inicio</h1>
-          <p className={styles.subtitle}>
-            Vista general de todos los proyectos activos/construidos
-          </p>
-        </div>
-        <div className={styles.headerActions}>
-          <div className={styles.searchBox}>
-            <input
-              type="search"
-              placeholder="Buscar...."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-              aria-label="Buscar obras"
-            />
-            <SearchIcon className={styles.searchIcon} />
+    <div className={`${look.catalog} ${styles.page}`}>
+      <header className={look.hero}>
+        <div className={look.heroRow}>
+          <div>
+            <h1 className={look.catalogTitle}>Inicio</h1>
+            <p className={look.catalogLead}>
+              Obras activas, su cumplimiento y el personal asignado.
+            </p>
           </div>
-          <div className={styles.actionRow}>
+          <div className={look.heroTools}>
+            <label className={look.searchBox}>
+              <SearchGlyph />
+              <input
+                type="search"
+                placeholder="Buscar obra o ciudad..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                aria-label="Buscar obras"
+              />
+            </label>
             {hasPermission('obras') ? (
-              <Button onClick={() => setFormOpen(true)}>Nueva obra</Button>
+              <button type="button" className={look.primaryBtn} onClick={() => setFormOpen(true)}>
+                + Nueva obra
+              </button>
             ) : null}
           </div>
         </div>
@@ -158,9 +165,9 @@ export function DashboardPage() {
             </div>
             <span className={styles.noticeBadge}>{unreadNotices.length} sin ver</span>
             {unreadNotices.length > 1 ? (
-              <Button variant="ghost" size="sm" onClick={() => void markAllSeen()}>
+              <button type="button" className={look.quietBtn} onClick={() => void markAllSeen()}>
                 Marcar todas como vistas
-              </Button>
+              </button>
             ) : null}
           </div>
           <ul className={styles.noticeList}>
@@ -172,23 +179,20 @@ export function DashboardPage() {
                 </div>
                 <div className={styles.noticeActions}>
                   {notice.link ? (
-                    <Button
-                      size="sm"
+                    <button
+                      type="button"
+                      className={look.primaryBtn}
                       onClick={() => {
                         void markSeen(notice)
                         navigate(notice.link as string)
                       }}
                     >
                       Abrir actividad
-                    </Button>
+                    </button>
                   ) : null}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void markSeen(notice)}
-                  >
+                  <button type="button" className={look.quietBtn} onClick={() => void markSeen(notice)}>
                     Marcar como vista
-                  </Button>
+                  </button>
                 </div>
               </li>
             ))}
@@ -196,56 +200,46 @@ export function DashboardPage() {
         </section>
       ) : null}
 
-      <div className={styles.kpiGrid}>
-        <article className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>Proyectos activos</p>
-          <p className={styles.kpiValue}>{kpis.activeCount}</p>
-          <p className={styles.kpiHint}>Todos los proyectos activos a hoy</p>
-          <img
-            className={`${styles.kpiIcon} ${styles.kpiIconHouse}`}
-            src="/dashboard/kpi-proyectos.svg"
-            alt=""
-            width={50}
-            height={39}
-          />
+      <section className={look.stats} aria-label="Resumen">
+        <article className={look.stat}>
+          <span className={look.statIcon} style={{ background: '#e8f1ff', color: '#1d4ed8' }}>
+            <HouseGlyph />
+          </span>
+          <div>
+            <p className={look.statValue}>{kpis.activeCount}</p>
+            <p className={look.statLabel}>Obras activas</p>
+          </div>
         </article>
-        <article className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>Personal en sitio hoy</p>
-          <p className={styles.kpiValue}>{kpis.peopleTotal}</p>
-          <p className={styles.kpiHint}>Distribuidos en todos los proyectos</p>
-          <img
-            className={`${styles.kpiIcon} ${styles.kpiIconPeople}`}
-            src="/dashboard/kpi-personal.svg"
-            alt=""
-            width={50}
-            height={35}
-          />
+        <article className={look.stat}>
+          <span className={look.statIcon} style={{ background: '#fff6e8', color: '#c2410c' }}>
+            <PeopleGlyph />
+          </span>
+          <div>
+            <p className={look.statValue}>{kpis.peopleTotal}</p>
+            <p className={look.statLabel}>Personal asignado</p>
+          </div>
         </article>
-        <article className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>A tiempo</p>
-          <p className={styles.kpiValue}>{kpis.onTime}</p>
-          <p className={styles.kpiHint}>{kpis.onTimeHint}</p>
-          <img
-            className={`${styles.kpiIcon} ${styles.kpiIconStatus}`}
-            src="/dashboard/kpi-atiempo.svg"
-            alt=""
-            width={48}
-            height={48}
-          />
+        <article className={look.stat}>
+          <span className={look.statIcon} style={{ background: '#e8f7ee', color: '#15803d' }}>
+            <CheckGlyph />
+          </span>
+          <div>
+            <p className={look.statValue}>{kpis.onTime}</p>
+            <p className={look.statLabel}>A tiempo</p>
+            <p className={styles.statHint}>{kpis.onTimeHint}</p>
+          </div>
         </article>
-        <article className={styles.kpiCard}>
-          <p className={styles.kpiLabel}>Retrasadas</p>
-          <p className={styles.kpiValue}>{kpis.delayed}</p>
-          <p className={styles.kpiHint}>{kpis.delayedHint}</p>
-          <img
-            className={`${styles.kpiIcon} ${styles.kpiIconStatus}`}
-            src="/dashboard/kpi-retrasadas.svg"
-            alt=""
-            width={48}
-            height={48}
-          />
+        <article className={look.stat}>
+          <span className={look.statIcon} style={{ background: '#fdecec', color: '#b42318' }}>
+            <ClockGlyph />
+          </span>
+          <div>
+            <p className={look.statValue}>{kpis.delayed}</p>
+            <p className={look.statLabel}>Con retraso</p>
+            <p className={styles.statHint}>{kpis.delayedHint}</p>
+          </div>
         </article>
-      </div>
+      </section>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
@@ -253,7 +247,9 @@ export function DashboardPage() {
         <p className={styles.empty}>Cargando proyectos…</p>
       ) : obras.length === 0 ? (
         <p className={styles.empty}>
-          No hay obras todavía. Crea la primera.
+          {debouncedSearch.trim()
+            ? 'Ninguna obra coincide con la búsqueda.'
+            : 'No hay obras todavía. Crea la primera.'}
         </p>
       ) : (
         <div className={styles.projectGrid}>
@@ -268,10 +264,11 @@ export function DashboardPage() {
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="obras"
         onChange={setPage}
       />
 
@@ -285,12 +282,53 @@ export function DashboardPage() {
   )
 }
 
-function SearchIcon({ className }: { className?: string }) {
+function SearchGlyph() {
   return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="currentColor"
         d="M10.5 3a7.5 7.5 0 1 1 4.7 13.4l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 0 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"
+      />
+    </svg>
+  )
+}
+
+function HouseGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M12 4 3 11h2v8h5v-5h4v5h5v-8h2L12 4Z" />
+    </svg>
+  )
+}
+
+function PeopleGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 .5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3 18.5c0-2.4 2.4-4 5-4s5 1.6 5 4V20H3v-1.5Zm10 .2c.2-1.5 1.4-2.8 3.2-3.2.5-.1 1-.2 1.4-.2 2 0 3.4 1.2 3.4 3V20h-8v-1.3Z"
+      />
+    </svg>
+  )
+}
+
+function CheckGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1.1 10.2-2.3-2.3-1.2 1.2 3.5 3.5 6.2-6.2-1.2-1.2-5 5Z"
+      />
+    </svg>
+  )
+}
+
+function ClockGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm1 4h-2v5l4 2.4.9-1.6-2.9-1.7V8Z"
       />
     </svg>
   )

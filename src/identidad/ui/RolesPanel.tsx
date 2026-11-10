@@ -5,14 +5,21 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextInput,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from '@/task-pool/ui/CatalogParts'
+import look from '@/task-pool/ui/taskPool.module.css'
 import styles from './identidad.module.css'
 
 function isProtectedSystemRole(role: Role): boolean {
@@ -22,6 +29,7 @@ function isProtectedSystemRole(role: Role): boolean {
 
 export function RolesPanel() {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [page, setPage] = useState(1)
@@ -45,12 +53,13 @@ export function RolesPanel() {
       setItems(data.roles)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar roles')
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch])
+  }, [page, debouncedSearch, refreshStats])
 
   useEffect(() => {
     void load()
@@ -127,24 +136,19 @@ export function RolesPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar rol...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nuevo rol',
+    onAction: openCreate,
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.searchGrow}>
-          <Field label="Buscar">
-            <TextInput
-              placeholder="Nombre del rol"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-            />
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nuevo rol</Button>
-      </div>
-
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       {loading ? (
@@ -152,54 +156,69 @@ export function RolesPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay roles.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((role) => {
-            const system = Boolean(role.isSystem) || role.name === 'super_admin'
-            const protectedDeactivate = isProtectedSystemRole(role)
-            return (
-              <article key={role.id} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <div>
-                    <h3 className={styles.cardTitle}>{role.name}</h3>
-                    <p className={styles.cardSubtitle}>
-                      {system ? 'Rol de sistema' : 'Rol de acceso'}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {system ? <Badge tone="neutral">Sistema</Badge> : null}
-                    <Badge tone={role.isActive === 1 ? 'success' : 'danger'}>
-                      {role.isActive === 1 ? 'Activo' : 'Inactivo'}
-                    </Badge>
-                  </div>
-                </div>
-                <div className={styles.rowActions}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={system}
-                    onClick={() => openEdit(role)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant={role.isActive === 1 ? 'danger' : 'ghost'}
-                    size="sm"
-                    disabled={protectedDeactivate}
-                    onClick={() => void toggleActive(role)}
-                  >
-                    {role.isActive === 1 ? 'Desactivar' : 'Activar'}
-                  </Button>
-                </div>
-              </article>
-            )
-          })}
+        <div className={look.tableCard}>
+          <table className={look.table}>
+            <thead>
+              <tr>
+                <th>Rol</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((role) => {
+                const system = Boolean(role.isSystem) || role.name === 'super_admin'
+                const protectedDeactivate = isProtectedSystemRole(role)
+                return (
+                  <tr key={role.id}>
+                    <td>
+                      <div className={look.nameCell}>
+                        <ActivityMark name={role.name} />
+                        <span>
+                          {role.name}
+                          {system ? <span className={look.fixedTag}>Sistema</span> : null}
+                        </span>
+                      </div>
+                    </td>
+                    <td>{system ? 'Rol de sistema' : 'Rol de acceso'}</td>
+                    <td>
+                      <StatusPill active={role.isActive === 1} />
+                    </td>
+                    <td>
+                      <RowMenu
+                        items={[
+                          {
+                            label: 'Editar',
+                            onClick: () => {
+                              if (!system) openEdit(role)
+                            },
+                          },
+                          {
+                            label: role.isActive === 1 ? 'Desactivar' : 'Activar',
+                            danger: role.isActive === 1,
+                            onClick: () => {
+                              if (!protectedDeactivate) void toggleActive(role)
+                            },
+                          },
+                        ].filter((item) =>
+                          item.label === 'Editar' ? !system : !protectedDeactivate,
+                        )}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="roles"
         onChange={setPage}
       />
 
