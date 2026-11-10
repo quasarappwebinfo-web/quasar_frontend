@@ -21,8 +21,9 @@ type AsistenciaModalProps = {
   open: boolean
   obraId: number
   obraName: string
-  /** Trabajadores ya registrados hoy (no aparecen en el selector). */
+  /** Trabajadores ya registrados ese día (no aparecen en el selector). */
   excludeWorkerIds?: number[]
+  workDate?: string
   onClose: () => void
   onChanged?: () => void
 }
@@ -32,11 +33,11 @@ export function AsistenciaModal({
   obraId,
   obraName,
   excludeWorkerIds = [],
+  workDate = todayColombiaIso(),
   onClose,
   onChanged,
 }: AsistenciaModalProps) {
   const toast = useToast()
-  const workDate = todayColombiaIso()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [workerId, setWorkerId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -72,7 +73,7 @@ export function AsistenciaModal({
     try {
       await checkInObraAttendance({
         obraId,
-        workDate: todayColombiaIso(),
+        workDate,
         workerId: Number(workerId),
         signatureType: 'acknowledgment',
         signatureData: 'Registrado por administrador en obra',
@@ -109,7 +110,8 @@ export function AsistenciaModal({
         </div>
 
         <p className={styles.todayLabel}>
-          Hoy · <strong>{formatColombiaDate(workDate)}</strong>
+          {workDate === todayColombiaIso() ? 'Hoy' : 'Día'} ·{' '}
+          <strong>{formatColombiaDate(workDate)}</strong>
         </p>
 
         {error ? <Alert tone="error">{error}</Alert> : null}

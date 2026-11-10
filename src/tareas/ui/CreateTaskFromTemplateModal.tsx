@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { listTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuestalesApi'
 import { listTaskChapters } from '@/task-pool/api/capitulosApi'
+import { sortChapters } from '@/task-pool/lib/chapterOrder'
 import { listTaskTemplates } from '@/task-pool/api/plantillasApi'
 import { listTaskZones } from '@/task-pool/api/zonasApi'
 import type {
@@ -106,7 +107,7 @@ export function CreateTaskFromTemplateModal({
         })),
       ).catch(() => []),
     ]).then(([chapterRows, zoneRows, obraTasks]) => {
-      setChapters(chapterRows)
+      setChapters(sortChapters(chapterRows))
       setZones(zoneRows)
       setUsedTemplateIds(
         obraTasks

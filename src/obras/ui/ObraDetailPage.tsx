@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { isSuperUser, useAuth } from '@/auth'
 import {
@@ -12,7 +12,7 @@ import {
   uploadObraDocuments,
 } from '@/obras/api/documentosApi'
 import { getObra, updateObra } from '@/obras/api/obrasApi'
-import { coverForObra, resolveObraCover } from '@/obras/lib/obraUi'
+import { coverForObra, OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import type { Obra, ObraClient, ObraDocument } from '@/obras/model/types'
 import {
   DocumentPrepareError,
@@ -21,10 +21,12 @@ import {
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
 import { AsistenciaModal } from '@/obras/ui/AsistenciaModal'
 import { listObraAttendance } from '@/obras/api/asistenciaApi'
+import { compareChapterNames } from '@/task-pool/lib/chapterOrder'
 import {
   formatAttendanceTime,
   todayColombiaIso,
 } from '@/obras/lib/asistenciaUi'
+import asistenciaPersonas from '@/shared/assets/asistencia-personas.png'
 import type { ObraDailyAttendance } from '@/obras/model/asistenciaTypes'
 import {
   getObraFulfillment,
@@ -59,8 +61,6 @@ import {
 } from '@/shared/ui'
 import styles from './ProjectView.module.css'
 
-type AdminTab = 'clientes' | 'documentos'
-
 const RECENT_PHOTO_COUNT = 8
 
 const CLIENT_ROLES = [
@@ -80,15 +80,15 @@ export function ObraDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
-  const [adminOpen, setAdminOpen] = useState(false)
-  const [adminTab, setAdminTab] = useState<AdminTab>('clientes')
   const [asistenciaOpen, setAsistenciaOpen] = useState(false)
   const [asistenciaHoy, setAsistenciaHoy] = useState<ObraDailyAttendance[]>([])
   const [asistenciaLoading, setAsistenciaLoading] = useState(false)
   const [planesRecientes, setPlanesRecientes] = useState<WorkPlan[]>([])
   const [planesLoading, setPlanesLoading] = useState(false)
   const [recentPhotos, setRecentPhotos] = useState<GalleryPhoto[]>([])
+  const [photoTotal, setPhotoTotal] = useState(0)
   const [photosLoading, setPhotosLoading] = useState(false)
+  const [responsibleName, setResponsibleName] = useState<string | null>(null)
   const [fulfillment, setFulfillment] = useState<ObraFulfillment | null>(null)
 
   useDocumentTitle(obra ? `Quasar · ${obra.name}` : 'Quasar · Obra')
@@ -129,8 +129,10 @@ export function ObraDetailPage() {
     try {
       const data = await listObraPhotoGallery({ obraId: id, page: 1 })
       setRecentPhotos(data.photos.slice(0, RECENT_PHOTO_COUNT))
+      setPhotoTotal(data.pagination.totalItems)
     } catch {
       setRecentPhotos([])
+      setPhotoTotal(0)
     } finally {
       setPhotosLoading(false)
     }
@@ -151,6 +153,13 @@ export function ObraDetailPage() {
       ])
       setObra(obraData)
       setFulfillment(fulfillmentData)
+      void listObraClients(id, { currentOnly: true })
+        .then((data) => {
+          const primary =
+            data.clients.find((client) => client.isPrimary === 1) ?? data.clients[0]
+          setResponsibleName(primary?.personName ?? null)
+        })
+        .catch(() => setResponsibleName(null))
       void loadAsistenciaHoy()
       void loadPlanesRecientes()
       void loadRecentPhotos()
@@ -179,16 +188,21 @@ export function ObraDetailPage() {
   const pendingCount = activityStatus?.pending ?? 0
   const statusTotal = completedCount + inProgressCount + pendingCount
   const periodLabel = fulfillment?.period
-    ? `${formatShortDate(fulfillment.period.startDate || null) || '—'} → ${formatShortDate(fulfillment.period.endDate || null) || '—'}`
+    ? formatPeriodSpan(fulfillment.period.startDate, fulfillment.period.endDate)
     : 'Sin periodo'
 
-  const dateRangeLabel = useMemo(() => {
-    if (!obra) return '—'
-    const start = formatShortDate(obra.startDate)
-    const end = formatShortDate(obra.estimatedEndDate)
-    if (start && end) return `${start} - ${end}`
-    return start || end || 'Sin fechas'
-  }, [obra])
+  const activityFill =
+    statusTotal === 0
+      ? 0
+      : Math.round(((completedCount + inProgressCount) / statusTotal) * 100)
+  const presentCount = asistenciaHoy.length
+  const visibleThumbs = recentPhotos.slice(0, 3)
+  const hiddenPhotos = Math.max(0, photoTotal - visibleThumbs.length)
+  const latestStamp = recentPhotos[0]?.takenAt || recentPhotos[0]?.createdAt || null
+  const statusLabel =
+    obra && obra.isActive === 1 ? obraStatusLabel(obra.status) : 'Inactiva'
+  const statusTone =
+    !obra || obra.isActive !== 1 ? 'inactive' : obra.status || 'planning'
 
   async function toggleActive() {
     if (!obra) return
@@ -217,71 +231,195 @@ export function ObraDetailPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.titleBlock}>
-          <button
-            type="button"
-            className={styles.back}
-            onClick={() => navigate('/dashboard')}
-          >
-            ← Inicio
-          </button>
-          <h1 className={styles.title}>{obra.name}</h1>
-          <p className={styles.subtitle}>Vista General Del Proyecto</p>
+      <button
+        type="button"
+        className={styles.back}
+        onClick={() => navigate('/dashboard')}
+      >
+        ← Volver a obras
+      </button>
+
+      <header className={styles.hero}>
+        <div className={styles.heroMain}>
+          <img
+            className={styles.heroThumb}
+            src={resolveObraCover(obra)}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = coverForObra(obra.id)
+            }}
+          />
+          <div className={styles.heroCopy}>
+            <div className={styles.heroTitleRow}>
+              <h1 className={styles.title}>{obra.name}</h1>
+              <span className={cn(styles.statusPill, styles[`status_${statusTone}`])}>
+                {statusLabel}
+              </span>
+            </div>
+            <p className={styles.subtitle}>Vista General Del Proyecto</p>
+            <p className={styles.heroMeta}>
+              <span>Inicio: {formatMetaDate(obra.startDate) || '—'}</span>
+              <span>Fin estimado: {formatMetaDate(obra.estimatedEndDate) || '—'}</span>
+              <span>Responsable: {responsibleName || 'Sin asignar'}</span>
+            </p>
+          </div>
         </div>
         <div className={styles.headerActions}>
-          <div className={styles.dateBox}>
-            <CalendarIcon />
-            <span className={styles.dateText}>{dateRangeLabel}</span>
-          </div>
-          <div className={styles.actionRow}>
-            <Button variant="ghost" onClick={() => setEditOpen(true)}>
-              Editar
-            </Button>
+          {canDeactivateObra ? (
             <button
               type="button"
-              className={styles.iconButton}
-              aria-label="Cerrar sesión"
-              onClick={() => void logout()}
+              className={cn(styles.editBtn, obra.isActive === 1 && styles.dangerBtn)}
+              onClick={() => void toggleActive()}
             >
-              <PowerIcon />
+              {obra.isActive === 1 ? 'Dar de baja' : 'Reactivar'}
             </button>
-          </div>
+          ) : null}
+          <button type="button" className={styles.editBtn} onClick={() => setEditOpen(true)}>
+            <PencilIcon />
+            Editar
+          </button>
+          <button
+            type="button"
+            className={styles.iconButton}
+            aria-label="Cerrar sesión"
+            onClick={() => void logout()}
+          >
+            <PowerIcon />
+          </button>
         </div>
       </header>
 
-      <section className={styles.progressCard}>
-        <h2 className={styles.sectionTitle}>Progreso de la construcción</h2>
+      <section className={styles.kpiRow} aria-label="Indicadores de la obra">
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <div
+              className={cn(styles.ring, styles.ringBlue)}
+              style={{ ['--pct' as string]: globalProgress }}
+            >
+              <span
+                className={cn(
+                  styles.ringValue,
+                  globalLabel.includes(',') && styles.ringValueSmall,
+                )}
+              >
+                {globalLabel}%
+              </span>
+            </div>
+            <div>
+              <h2 className={styles.kpiTitle}>Avance Global de Obra</h2>
+              <p className={styles.kpiHint}>Ejecución ponderada del proyecto</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={styles.kpiLink}
+            onClick={() => document.getElementById('progreso')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <ChartIcon /> Ver detalle →
+          </button>
+        </article>
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <div
+              className={cn(styles.ring, styles.ringOrange)}
+              style={{ ['--pct' as string]: periodProgress }}
+            >
+              <span className={styles.ringValue}>{periodProgress}%</span>
+            </div>
+            <div>
+              <h2 className={styles.kpiTitle}>Cumplimiento Bitácora</h2>
+              <p className={styles.kpiHint}>Periodo: {periodLabel}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={styles.kpiLink}
+            onClick={() =>
+              navigate(
+                fulfillment?.period?.planId
+                  ? `/dashboard/planes/${fulfillment.period.planId}`
+                  : `/dashboard/obras/${obra.id}/planes`,
+              )
+            }
+          >
+            Ver detalle →
+          </button>
+        </article>
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <div
+              className={cn(styles.ring, styles.ringBlue)}
+              style={{ ['--pct' as string]: activityFill }}
+            >
+              <span className={styles.ringValue}>{statusTotal}</span>
+            </div>
+            <div>
+              <h2 className={styles.kpiTitle}>Actividades</h2>
+              <p className={styles.kpiHint}>Total registradas</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={styles.kpiLink}
+            onClick={() => navigate(`/dashboard/obras/${obra.id}/actividades`)}
+          >
+            Ver tablero →
+          </button>
+        </article>
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <div className={cn(styles.ring, styles.ringGreen)} style={{ ['--pct' as string]: 100 }}>
+              <span className={styles.ringValue}>{presentCount}</span>
+            </div>
+            <div>
+              <h2 className={styles.kpiTitle}>Personal Presente</h2>
+              <p className={styles.kpiHint}>Registros de hoy</p>
+            </div>
+          </div>
+          <button type="button" className={styles.kpiLink} onClick={() => setAsistenciaOpen(true)}>
+            Registrar llegada
+          </button>
+        </article>
+      </section>
+
+      <section className={styles.progressCard} id="progreso">
+        <div className={styles.panelHead}>
+          <h2 className={styles.panelTitle}>
+            <ChartIcon /> Progreso de la Construcción
+          </h2>
+        </div>
         {(fulfillment?.zones ?? []).length === 0 ? (
           <p className={styles.muted}>No hay zonas activas.</p>
         ) : (
           <div className={styles.zoneBoard}>
             {(fulfillment?.zones ?? []).map((zone) => {
-              const chapters = zone.chapters ?? []
+              const chapters = [...(zone.chapters ?? [])].sort((left, right) =>
+                compareChapterNames(left.chapterName, right.chapterName),
+              )
+              const started = chapters.filter((chapter) => asPercent(chapter.progressPercent) > 0).length
               return (
-                <div key={zone.zoneId} className={styles.zoneBlock}>
-                  <p className={styles.zoneLabel}>{zone.zoneName}</p>
-                  <div className={styles.stepper}>
-                    {chapters.map((chapter, index) => {
+                <div key={zone.zoneId} className={styles.zoneRow}>
+                  <div className={styles.zoneName}>
+                    <HouseIcon />
+                    <div>
+                      <strong>{zone.zoneName}</strong>
+                      <span>
+                        {started} de {chapters.length} etapas iniciadas
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.chapterTrack}>
+                    {chapters.map((chapter) => {
                       const progress = asPercent(chapter.progressPercent)
-                      const state =
-                        progress >= 100 ? 'done' : progress > 0 ? 'current' : 'next'
-                      const isLast = index === chapters.length - 1
+                      const tone =
+                        progress >= 100 ? styles.barDone : progress > 0 ? styles.barCurrent : ''
                       return (
-                        <div key={chapter.chapterId} className={styles.step}>
-                          {!isLast ? <span className={styles.stepLine} /> : null}
-                          <span
-                            className={cn(
-                              styles.stepDot,
-                              state === 'done' && styles.stepDotDone,
-                              state === 'current' && styles.stepDotCurrent,
-                              state === 'next' && styles.stepDotNext,
-                            )}
-                            aria-label={`${chapter.chapterName} ${progress}%`}
-                          >
-                            <span className={styles.stepPercent}>{progress}%</span>
+                        <div key={chapter.chapterId} className={styles.chapterCell}>
+                          <p>{chapter.chapterName}</p>
+                          <strong>{progress}%</strong>
+                          <span className={styles.barTrack}>
+                            <span className={cn(styles.barFill, tone)} style={{ width: `${progress}%` }} />
                           </span>
-                          <p className={styles.stepName}>{chapter.chapterName}</p>
                         </div>
                       )
                     })}
@@ -294,68 +432,68 @@ export function ObraDetailPage() {
       </section>
 
       <div className={styles.mainGrid}>
+        <div className={styles.leftColumn}>
         <section className={styles.siteCard}>
-          <div className={styles.siteHeader}>
-            <h2 className={styles.siteTitle}>Sitio de trabajo</h2>
-            <div className={styles.siteActions}>
-              <button
-                type="button"
-                className={styles.menuDots}
-                aria-label="Opciones"
-                onClick={() => {
-                  setAdminOpen(true)
-                  setAdminTab('documentos')
-                }}
-              >
-                ···
-              </button>
-            </div>
+          <div className={styles.panelHead}>
+            <h2 className={styles.panelTitle}>
+              <CameraIcon /> Sitio de Trabajo
+            </h2>
+            <button
+              type="button"
+              className={styles.panelLink}
+              onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
+            >
+              Ver galería →
+            </button>
           </div>
-          <div className={styles.siteMain}>
+          <div className={styles.siteFrame}>
             <img
               className={styles.siteMainImg}
               src={resolveObraCover(obra)}
               alt=""
-              onError={(e) => {
-                e.currentTarget.src = coverForObra(obra.id)
+              onError={(event) => {
+                event.currentTarget.src = coverForObra(obra.id)
               }}
             />
+            {latestStamp ? (
+              <p className={styles.siteStamp}>
+                <CameraIcon /> Última actualización: {formatMetaDate(latestStamp) || latestStamp}
+              </p>
+            ) : null}
           </div>
-          <div className={styles.thumbGrid}>
+          <div className={styles.thumbRow}>
             {photosLoading ? (
-              Array.from({ length: RECENT_PHOTO_COUNT }).map((_, index) => (
+              Array.from({ length: 3 }).map((_, index) => (
                 <div key={index} className={styles.thumb} />
               ))
-            ) : recentPhotos.length === 0 ? (
+            ) : visibleThumbs.length === 0 ? (
               <p className={styles.thumbEmpty}>Aún no hay fotos en esta obra.</p>
             ) : (
-              recentPhotos.map((photo) => (
-                <button
-                  key={`${photo.kind || 'task'}-${photo.id}`}
-                  type="button"
-                  className={styles.thumbBtn}
-                  title={photoCaption(photo)}
-                  onClick={() =>
-                    navigate(`/dashboard/obras/${obra.id}/galeria`)
-                  }
-                >
-                  <img
-                    className={styles.thumbImg}
-                    src={photo.fileUrl}
-                    alt={photoCaption(photo)}
-                  />
-                </button>
-              ))
+              <>
+                {visibleThumbs.map((photo) => (
+                  <button
+                    key={`${photo.kind || 'task'}-${photo.id}`}
+                    type="button"
+                    className={styles.thumbBtn}
+                    title={photoCaption(photo)}
+                    onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
+                  >
+                    <img className={styles.thumbImg} src={photo.fileUrl} alt={photoCaption(photo)} />
+                  </button>
+                ))}
+                {hiddenPhotos > 0 ? (
+                  <button
+                    type="button"
+                    className={styles.morePhotos}
+                    onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
+                  >
+                    +{hiddenPhotos}
+                  </button>
+                ) : null}
+              </>
             )}
           </div>
-          <div className={styles.photoActions}>
-            <button
-              type="button"
-              className={styles.galleryBtn}
-              onClick={() => navigate(`/dashboard/obras/${obra.id}/galeria`)}
-            >
-              Ver galería
-            </button>
+          <div className={styles.uploadSlot}>
             <ObraPhotoUpload
               obraId={obra.id}
               label="Subir fotos"
@@ -364,208 +502,99 @@ export function ObraDetailPage() {
             />
           </div>
         </section>
+        </div>
 
         <div className={styles.rightColumn}>
-          <section className={styles.metricsCard}>
-            <div className={styles.metricCell}>
-              <p className={styles.metricLabel}>% global obra ejecutada</p>
-              <div className={styles.metricRow}>
-                <div
-                  className={styles.ring}
-                  style={{ ['--pct' as string]: globalProgress }}
-                >
-                  <span
-                    className={cn(
-                      styles.ringValue,
-                      globalLabel.length > 3 && styles.ringValueCompact,
-                    )}
-                  >
-                    {globalLabel}
-                  </span>
-                </div>
-              </div>
-              <p className={styles.metricHint}>% de la obra</p>
-            </div>
-            <div className={styles.metricCell}>
-              <p className={styles.metricLabel}>% cumplimiento bitácora actual</p>
-              <div className={styles.metricRow}>
-                <div
-                  className={cn(styles.ring, styles.ringOrange)}
-                  style={{ ['--pct' as string]: periodProgress }}
-                >
-                  <span className={styles.ringValue}>{periodProgress}</span>
-                </div>
-              </div>
-              <p className={styles.metricHint}>{periodLabel}</p>
-            </div>
-            <div className={styles.metricCell}>
-              <p className={styles.metricLabel}>Estado actividades</p>
-              <div className={styles.metricRow}>
-                <div
-                  className={styles.ring}
-                  style={activityDonutStyle(
-                    completedCount,
-                    inProgressCount,
-                    pendingCount,
-                  )}
-                >
-                  <span className={styles.ringValue}>{statusTotal}</span>
-                </div>
-                <ul className={styles.legend}>
-                  <li className={styles.legendItem}>
-                    <span className={styles.legendLeft}>
-                      <span className={styles.legendDot} style={{ background: '#054c09' }} />
-                      Completadas
-                    </span>
-                    <span>{completedCount}</span>
-                  </li>
-                  <li className={styles.legendItem}>
-                    <span className={styles.legendLeft}>
-                      <span className={styles.legendDot} style={{ background: '#d95a0c' }} />
-                      En progreso
-                    </span>
-                    <span>{inProgressCount}</span>
-                  </li>
-                  <li className={styles.legendItem}>
-                    <span className={styles.legendLeft}>
-                      <span className={styles.legendDot} style={{ background: '#c8c8c8' }} />
-                      Pendientes
-                    </span>
-                    <span>{pendingCount}</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.tasksCard}>
-            <div className={styles.tasksHeader}>
-              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
-                Asistencia de hoy
-                {asistenciaHoy.length > 0
-                  ? ` (${asistenciaHoy.length})`
-                  : ''}
+          <section className={styles.panel}>
+            <div className={styles.panelHead}>
+              <h2 className={styles.panelTitle}>
+                <FileIcon /> Documentos
               </h2>
-              <button
-                type="button"
-                className={styles.newTaskBtn}
-                onClick={() => setAsistenciaOpen(true)}
-              >
-                Registrar llegada
-              </button>
+            </div>
+            <DocumentosTab obraId={obra.id} />
+          </section>
+          <section className={styles.panel}>
+            <div className={styles.panelHead}>
+              <h2 className={styles.panelTitle}>
+                <PeopleIcon /> Asistencia de hoy
+              </h2>
+              <div className={styles.attendanceActions}>
+                <button
+                  type="button"
+                  className={styles.panelLink}
+                  onClick={() => navigate(`/dashboard/obras/${obra.id}/asistencia`)}
+                >
+                  Ver tablero →
+                </button>
+                <button
+                  type="button"
+                  className={styles.arriveBtn}
+                  onClick={() => setAsistenciaOpen(true)}
+                >
+                  Registrar llegada
+                </button>
+              </div>
             </div>
             {asistenciaLoading ? (
-              <div className={styles.tasksEmpty}>
-                <p>Cargando…</p>
-              </div>
-            ) : asistenciaHoy.length === 0 ? (
-              <div className={styles.tasksEmpty}>
-                <p>Nadie ha llegado todavía hoy.</p>
-                <button
-                  type="button"
-                  className={styles.seeAll}
-                  onClick={() => setAsistenciaOpen(true)}
-                >
-                  Registrar primera llegada →
-                </button>
-              </div>
+              <p className={styles.muted}>Cargando…</p>
             ) : (
-              <>
-                <table className={styles.tasksTable}>
-                  <thead>
-                    <tr>
-                      <th>Trabajador</th>
-                      <th>Entrada</th>
-                      <th>Registró</th>
-                      <th>Acuse</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {asistenciaHoy.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>
-                            {item.workerName || `Trabajador #${item.workerId}`}
-                          </strong>
-                          {item.positionName || item.documentNumber ? (
-                            <div className={styles.asistenciaMeta}>
-                              {[item.documentNumber, item.positionName]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td>{formatAttendanceTime(item.signedAt)}</td>
-                        <td>
-                          {item.recordedByName || `#${item.recordedBy}`}
-                        </td>
-                        <td>
-                          {item.signatureData?.startsWith('data:image/') ? (
-                            <img
-                              src={item.signatureData}
-                              alt={`Firma de ${item.workerName || 'entrada'}`}
-                              className={styles.asistenciaFirma}
-                            />
-                          ) : (
-                            <span className={styles.asistenciaMeta}>
-                              {item.signatureType === 'acknowledgment' ||
-                              item.signatureData
-                                ? 'Admin'
-                                : '—'}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <button
-                  type="button"
-                  className={styles.seeAll}
-                  onClick={() => setAsistenciaOpen(true)}
-                >
-                  Ver / registrar asistencia →
-                </button>
-              </>
+              <div className={styles.attendanceBody}>
+                <div>
+                  <p className={styles.attendanceCount}>{presentCount}</p>
+                  <p className={styles.attendanceLabel}>Personal registrado</p>
+                  {asistenciaHoy.length > 0 ? (
+                    <ul className={styles.attendanceList}>
+                      {asistenciaHoy.slice(0, 4).map((item) => (
+                        <li key={item.id}>
+                          <strong>{item.workerName || `Trabajador #${item.workerId}`}</strong>
+                          <span>{formatAttendanceTime(item.signedAt)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={styles.attendanceWarn}>
+                      Aún no se han registrado asistencias hoy
+                    </p>
+                  )}
+                </div>
+                <img
+                  className={styles.attendanceArt}
+                  src={asistenciaPersonas}
+                  alt=""
+                />
+              </div>
             )}
           </section>
 
-          <section className={styles.tasksCard}>
-            <div className={styles.tasksHeader}>
-              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
-                Actividades de la obra
+          <section className={styles.panel}>
+            <div className={styles.panelHead}>
+              <h2 className={styles.panelTitle}>
+                <BoardIcon /> Actividades de la obra
               </h2>
-            </div>
-            <div className={styles.tasksEmpty}>
-              <p>
-                El avance por capítulo, el subcapítulo, la zona y quitar las
-                que no aplican están en su propia vista.
-              </p>
               <button
                 type="button"
-                className={styles.seeAll}
-                onClick={() =>
-                  navigate(`/dashboard/obras/${obra.id}/actividades`)
-                }
+                className={styles.panelLink}
+                onClick={() => navigate(`/dashboard/obras/${obra.id}/actividades`)}
               >
-                Ver actividades de la obra →
+                Ir al tablero →
               </button>
             </div>
+            <p className={styles.panelNote}>
+              El detalle por capítulo, subcapítulo y zona se encuentra en el tablero de actividades.
+            </p>
           </section>
 
-          <section className={styles.tasksCard}>
-            <div className={styles.tasksHeader}>
-              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
-                Planificación
+          <section className={styles.panel}>
+            <div className={styles.panelHead}>
+              <h2 className={styles.panelTitle}>
+                <BoardIcon /> Planificación
               </h2>
               <button
                 type="button"
-                className={styles.newTaskBtn}
-                onClick={() =>
-                  navigate(`/dashboard/obras/${obra.id}/planes?nuevo=1`)
-                }
+                className={styles.panelLink}
+                onClick={() => navigate(`/dashboard/obras/${obra.id}/planes`)}
               >
-                + Nuevo plan
+                Ver todas →
               </button>
             </div>
             {planesLoading ? (
@@ -586,103 +615,32 @@ export function ObraDetailPage() {
                 </button>
               </div>
             ) : (
-              <>
-                <table className={styles.tasksTable}>
-                  <thead>
-                    <tr>
-                      <th>Plan</th>
-                      <th>Periodo</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {planesRecientes.map((plan) => (
-                      <tr
-                        key={plan.id}
-                        className={styles.planRow}
-                        onClick={() => navigate(`/dashboard/planes/${plan.id}`)}
-                      >
-                        <td>
-                          <strong>{plan.name}</strong>
-                          {plan.currentVersionNumber ? (
-                            <div className={styles.asistenciaMeta}>
-                              v{plan.currentVersionNumber}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td>
-                          {formatPlanDate(plan.startDate)} →{' '}
-                          {formatPlanDate(plan.endDate)}
-                        </td>
-                        <td>
-                          <Badge tone={planStatusTone(plan.status)}>
-                            {WORK_PLAN_STATUS_LABELS[plan.status]}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <button
-                  type="button"
-                  className={styles.seeAll}
-                  onClick={() => navigate(`/dashboard/obras/${obra.id}/planes`)}
-                >
-                  Ver todos los planes →
-                </button>
-              </>
+              <ul className={styles.planList}>
+                {planesRecientes.map((plan) => (
+                  <li key={plan.id}>
+                    <button
+                      type="button"
+                      className={styles.planItem}
+                      onClick={() => navigate(`/dashboard/planes/${plan.id}`)}
+                    >
+                      <span className={styles.planName}>{plan.name}</span>
+                      <span className={styles.planVersion}>
+                        {plan.currentVersionNumber ? `v${plan.currentVersionNumber}` : '—'}
+                      </span>
+                      <span className={styles.planDates}>
+                        {formatPlanDate(plan.startDate)} – {formatPlanDate(plan.endDate)}
+                      </span>
+                      <Badge tone={planStatusTone(plan.status)}>
+                        {WORK_PLAN_STATUS_LABELS[plan.status]}
+                      </Badge>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
         </div>
       </div>
-
-      <div className={styles.adminBar}>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setAdminOpen((open) => !open)
-            setAdminTab('clientes')
-          }}
-        >
-          {adminOpen ? 'Ocultar administración' : 'Administrar obra'}
-        </Button>
-        {canDeactivateObra ? (
-          <Button
-            variant={obra.isActive === 1 ? 'danger' : 'ghost'}
-            onClick={() => void toggleActive()}
-          >
-            {obra.isActive === 1 ? 'Dar de baja' : 'Reactivar'}
-          </Button>
-        ) : null}
-        <Badge tone={obra.isActive === 1 ? 'success' : 'danger'}>
-          {obra.isActive === 1 ? 'Activa' : 'Inactiva'}
-        </Badge>
-      </div>
-
-      {adminOpen ? (
-        <div className={styles.adminPanel}>
-          <div className={styles.tabs} role="tablist">
-            {(
-              [
-                ['clientes', 'Clientes'],
-                ['documentos', 'Documentos'],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                className={cn(styles.tab, adminTab === key && styles.tabActive)}
-                onClick={() => setAdminTab(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {adminTab === 'clientes' ? <ClientesTab obraId={obra.id} /> : null}
-          {adminTab === 'documentos' ? <DocumentosTab obraId={obra.id} /> : null}
-        </div>
-      ) : null}
 
       <ObraFormModal
         open={editOpen}
@@ -716,8 +674,10 @@ function housePercent(value: number | string | null | undefined): number {
 }
 
 function formatHousePercent(value: number): string {
-  return value.toLocaleString('es-CO', {
-    minimumFractionDigits: 2,
+  const rounded = Math.round(value * 100) / 100
+  if (Number.isInteger(rounded)) return String(rounded)
+  return rounded.toLocaleString('es-CO', {
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })
 }
@@ -728,43 +688,34 @@ function asPercent(value: number | string | null | undefined): number {
   return Math.max(0, Math.min(100, Math.round(parsed)))
 }
 
-function activityDonutStyle(
-  completed: number,
-  inProgress: number,
-  pending: number,
-): { background: string } {
-  const total = completed + inProgress + pending
-  if (total === 0) {
-    return { background: 'conic-gradient(#ececec 0 100%)' }
-  }
-  const completedEnd = (completed / total) * 100
-  const progressEnd = completedEnd + (inProgress / total) * 100
-  return {
-    background: `conic-gradient(#054c09 0 ${completedEnd}%, #d95a0c ${completedEnd}% ${progressEnd}%, #c8c8c8 ${progressEnd}% 100%)`,
-  }
+function obraStatusLabel(status: string): string {
+  return OBRA_STATUS_OPTIONS.find((item) => item.value === status)?.label ?? status
 }
 
-function formatShortDate(value: string | null): string | null {
+function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null
-  const date = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return value
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatMetaDate(value: string | null | undefined): string | null {
+  const date = parseDate(value)
+  if (!date) return null
   return date.toLocaleDateString('es-CO', {
-    month: 'short',
     day: '2-digit',
+    month: 'short',
     year: 'numeric',
   })
 }
 
-function CalendarIcon() {
-  return (
-    <svg width="16" height="18" viewBox="0 0 18 20" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M6 0h2v2h2V0h2v2h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h3V0Zm10 8H2v10h14V8Z"
-        opacity="0.7"
-      />
-    </svg>
-  )
+function formatPeriodSpan(start: string | null | undefined, end: string | null | undefined): string {
+  const from = parseDate(start)
+  const to = parseDate(end)
+  if (!from && !to) return 'Sin periodo'
+  const short = (date: Date) =>
+    date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }).replace('.', '')
+  if (from && to) return `${short(from)} – ${short(to)}`
+  return short(from || to!)
 }
 
 function PowerIcon() {
@@ -778,7 +729,75 @@ function PowerIcon() {
   )
 }
 
-function ClientesTab({ obraId }: { obraId: number }) {
+function PencilIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25ZM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"
+      />
+    </svg>
+  )
+}
+
+function ChartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M4 19h16v2H2V3h2v16Zm4-6h2v4H8v-4Zm4-5h2v9h-2V8Zm4 3h2v6h-2v-6Z" />
+    </svg>
+  )
+}
+
+function FileIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M6 2h8l6 6v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V9h5.5L13 3.5ZM8 13h8v2H8v-2Zm0 4h8v2H8v-2Z"
+      />
+    </svg>
+  )
+}
+
+function HouseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M12 3 3 11h2v9h6v-6h2v6h6v-9h2L12 3Z" />
+    </svg>
+  )
+}
+
+function CameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9Zm3 13a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"
+      />
+    </svg>
+  )
+}
+
+function PeopleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M9 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm6 1a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 15 13ZM9 14c-3.3 0-6 1.8-6 4v2h12v-2c0-2.2-2.7-4-6-4Zm6 .5c-.4 0-.8 0-1.2.1 1.4.9 2.2 2 2.2 3.4V20h6v-1.5c0-2.1-2.5-4-7-4Z"
+      />
+    </svg>
+  )
+}
+
+function BoardIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M4 3h16a1 1 0 0 1 1 1v16l-4-2-4 2-4-2-4 2V4a1 1 0 0 1 1-1Zm3 5h10v2H7V8Zm0 4h7v2H7v-2Z" />
+    </svg>
+  )
+}
+
+export function ClientesTab({ obraId }: { obraId: number }) {
   const toast = useToast()
   const [items, setItems] = useState<ObraClient[]>([])
   const [loading, setLoading] = useState(true)

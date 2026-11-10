@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listActiveStages } from '@/obras/api/catalogosObrasApi'
 import { listObras } from '@/obras/api/obrasApi'
 import { isObraActiveWork, isObraDelayed } from '@/obras/lib/obraUi'
-import type { Obra, StageOption } from '@/obras/model/types'
+import type { Obra } from '@/obras/model/types'
 import { ObraCard } from '@/obras/ui/ObraCard'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
 import { listAssignments } from '@/rrhh/api/asignacionesApi'
@@ -31,7 +30,6 @@ export function DashboardPage() {
   const [obras, setObras] = useState<Obra[]>([])
   const [totalItems, setTotalItems] = useState(0)
   const [itemsPerPage, setItemsPerPage] = useState(15)
-  const [stages, setStages] = useState<StageOption[]>([])
   const [peopleByObra, setPeopleByObra] = useState<Record<number, number>>({})
   const [peopleTotal, setPeopleTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -43,19 +41,17 @@ export function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [obrasData, stagesData, assignmentsData] = await Promise.all([
+      const [obrasData, assignmentsData] = await Promise.all([
         listObras({
           page,
           search: debouncedSearch,
           activeOnly: true,
         }),
-        listActiveStages(),
         listAssignments({ page: 1, currentOnly: true }),
       ])
       setObras(obrasData.obras)
       setTotalItems(obrasData.pagination.totalItems)
       setItemsPerPage(obrasData.pagination.itemsPerPage)
-      setStages(stagesData)
 
       const counts: Record<number, number> = {}
       for (const assignment of assignmentsData.assignments) {
@@ -265,7 +261,6 @@ export function DashboardPage() {
             <ObraCard
               key={obra.id}
               obra={obra}
-              stages={stages}
               peopleOnSite={peopleByObra[obra.id] || 0}
               onOpen={(item) => navigate(`/dashboard/obras/${item.id}`)}
             />

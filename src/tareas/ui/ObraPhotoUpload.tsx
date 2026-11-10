@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { uploadObraPhotos } from '@/tareas/api/tareasApi'
 import { preparePhotoFile } from '@/shared/lib/preparePhoto'
 import {
@@ -21,8 +21,9 @@ type DraftPhoto = {
 
 type ObraPhotoUploadProps = {
   obraId: number
-  label?: string
+  label?: ReactNode
   size?: 'md' | 'sm'
+  className?: string
   onUploaded?: () => void
 }
 
@@ -30,6 +31,7 @@ export function ObraPhotoUpload({
   obraId,
   label = 'Elegir fotos',
   size = 'md',
+  className,
   onUploaded,
 }: ObraPhotoUploadProps) {
   const [drafts, setDrafts] = useState<DraftPhoto[]>([])
@@ -134,6 +136,7 @@ export function ObraPhotoUpload({
       <Button
         type="button"
         size={size}
+        className={className}
         disabled={preparing || uploading}
         onClick={() => fileRef.current?.click()}
       >

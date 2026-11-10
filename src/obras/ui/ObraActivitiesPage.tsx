@@ -5,6 +5,7 @@ import { getObra } from '@/obras/api/obrasApi'
 import { ObraActivityModal } from '@/obras/ui/ObraActivityModal'
 import { listActiveTaskBudgetActivities } from '@/task-pool/api/actividadesPresupuestalesApi'
 import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
+import { compareChapterNames, chapterSortRank, sortChapters } from '@/task-pool/lib/chapterOrder'
 import type { TaskBudgetActivity, TaskChapter } from '@/task-pool/model/types'
 import {
   deleteTask,
@@ -13,10 +14,10 @@ import {
   listTasks,
   type TaskRemoval,
 } from '@/tareas/api/tareasApi'
-import type { ObraFulfillment, Task, TaskStatus } from '@/tareas/model/types'
+import type { ObraFulfillment, Task } from '@/tareas/model/types'
 import { TaskDetailDrawer } from '@/tareas/ui/TaskDetailDrawer'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
-import { Alert, Button, Field, Modal, TextSelect, useToast } from '@/shared/ui'
+import { Alert, Button, Modal, TextSelect, useToast } from '@/shared/ui'
 import styles from './ObraActivities.module.css'
 
 type Column = {
@@ -24,14 +25,6 @@ type Column = {
   name: string
   progress: number
   tasks: Task[]
-}
-
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  scheduled: 'Sin iniciar',
-  in_progress: 'En progreso',
-  completed: 'Completada',
-  verified: 'Verificada',
-  rescheduled: 'Reprogramada',
 }
 
 export function ObraActivitiesPage() {
@@ -47,6 +40,8 @@ export function ObraActivitiesPage() {
   const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>([])
   const [chapterId, setChapterId] = useState('')
   const [budgetActivityId, setBudgetActivityId] = useState('')
+  const [query, setQuery] = useState('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [tasks, setTasks] = useState<Task[]>([])
   const [fulfillment, setFulfillment] = useState<ObraFulfillment | null>(null)
   const [removals, setRemovals] = useState<TaskRemoval[]>([])
@@ -124,18 +119,28 @@ export function ObraActivitiesPage() {
   }, [budgetActivities, tasks, chapterId])
 
   const visibleColumns = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase('es')
     return columns
       .filter((column) => !chapterId || column.key === chapterId)
       .map((column) => ({
         ...column,
-        tasks: budgetActivityId
-          ? column.tasks.filter(
-              (task) => String(task.budgetActivityId ?? '') === budgetActivityId,
-            )
-          : column.tasks,
+        tasks: column.tasks.filter((task) => {
+          if (budgetActivityId && String(task.budgetActivityId ?? '') !== budgetActivityId) {
+            return false
+          }
+          if (!needle) return true
+          const haystack = [task.name, task.budgetActivityName, task.zoneName]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase('es')
+          return haystack.includes(needle)
+        }),
       }))
-      .filter((column) => chapterId || !budgetActivityId || column.tasks.length > 0)
-  }, [columns, chapterId, budgetActivityId])
+      .filter(
+        (column) =>
+          Boolean(chapterId) || (!budgetActivityId && !needle) || column.tasks.length > 0,
+      )
+  }, [columns, chapterId, budgetActivityId, query])
 
   async function confirmRemove() {
     if (!pending) return
@@ -154,70 +159,77 @@ export function ObraActivitiesPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <button
+        type="button"
+        className={styles.back}
+        onClick={() => navigate(`/dashboard/obras/${id}`)}
+      >
+        ← Volver a la obra
+      </button>
+
+      <header className={styles.boardHead}>
         <div>
-          <button
-            type="button"
-            className={styles.back}
-            onClick={() => navigate(`/dashboard/obras/${id}`)}
-          >
-            ← {obraName || 'Obra'}
-          </button>
-          <h1 className={styles.title}>Actividades de la obra</h1>
+          <h1 className={styles.title}>Tablero de Actividades</h1>
           <p className={styles.subtitle}>
-            Cada columna es un capítulo. El porcentaje de la cabecera es el
-            avance de ese capítulo en esta obra.
+            {obraName
+              ? `${obraName}. Cada columna es un capítulo.`
+              : 'Cada columna es un capítulo.'}
           </p>
         </div>
-        <div className={styles.actions}>
-          <Button variant="ghost" onClick={() => setOrigin('pool')}>
-            Del listado
-          </Button>
-          <Button onClick={() => setOrigin('obra')}>Solo esta obra</Button>
-        </div>
-      </header>
-
-      <div className={styles.filters}>
-        <Field label="Capítulo">
+        <div className={styles.filters}>
           <TextSelect
+            className={styles.filterSelect}
+            aria-label="Capítulo"
             value={chapterId}
             onChange={(event) => {
               setChapterId(event.target.value)
               setBudgetActivityId('')
             }}
           >
-            <option value="">Todos</option>
-            {chapters
-              .slice()
-              .sort((a, b) => a.name.localeCompare(b.name, 'es'))
-              .map((chapter) => (
-                <option key={chapter.id} value={chapter.id}>
-                  {chapter.name}
-                </option>
-              ))}
+            <option value="">Todos los capítulos</option>
+            {sortChapters(chapters).map((chapter) => (
+              <option key={chapter.id} value={chapter.id}>
+                {chapter.name}
+              </option>
+            ))}
           </TextSelect>
-        </Field>
-        <Field
-          label="Subcapítulo"
-          help={
-            chapterId
-              ? 'Solo subcapítulos de ese capítulo.'
-              : 'Elige un capítulo para acotar la lista, o deja «Todos».'
-          }
-        >
           <TextSelect
+            className={styles.filterSelect}
+            aria-label="Subcapítulo"
             value={budgetActivityId}
             onChange={(event) => setBudgetActivityId(event.target.value)}
           >
-            <option value="">Todos</option>
+            <option value="">Todos los subcapítulos</option>
             {subchapterOptions.map((activity) => (
               <option key={activity.id} value={activity.id}>
                 {activity.name}
               </option>
             ))}
           </TextSelect>
-        </Field>
-      </div>
+          <input
+            className={styles.search}
+            type="search"
+            value={query}
+            placeholder="Buscar actividad..."
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      </header>
+
+      <section className={styles.banner}>
+        <div>
+          <h2 className={styles.bannerTitle}>¿Necesitas agregar una actividad?</h2>
+          <p className={styles.bannerText}>
+            Puedes tomarla del listado general o crear una solo para esta obra.
+          </p>
+        </div>
+        <div className={styles.bannerActions}>
+          <Button variant="ghost" onClick={() => setOrigin('pool')}>
+            Del listado
+          </Button>
+          <Button onClick={() => setOrigin('obra')}>Agregar actividad</Button>
+        </div>
+      </section>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
@@ -227,54 +239,93 @@ export function ObraActivitiesPage() {
         <p className={styles.empty}>No hay actividades con ese filtro.</p>
       ) : (
         <div className={styles.board}>
-          {visibleColumns.map((column) => (
-            <section key={column.key} className={styles.column}>
-              <header className={styles.columnHeader}>
-                <h2 className={styles.columnTitle}>{column.name}</h2>
-                <span className={styles.progressBadge}>{column.progress}%</span>
-              </header>
-              <div className={styles.cards}>
-                {column.tasks.length === 0 ? (
-                  <p className={styles.columnEmpty}>Sin actividades en este capítulo.</p>
-                ) : (
-                  column.tasks.map((task) => {
-                    const notice = completionNotice(task)
-                    const progress = asPercent(task.progressPercent)
-                    return (
-                      <article key={task.id} className={styles.card}>
-                        <button
-                          type="button"
-                          className={styles.cardOpen}
-                          onClick={() => setDetailId(task.id)}
-                        >
-                          <h3 className={styles.cardTitle}>{task.name}</h3>
-                        </button>
-                        <div className={styles.chips}>
-                          <span className={styles[notice.tone]}>{notice.label}</span>
-                          <span className={progressTone(progress)}>{progress}% de avance</span>
-                          <span className={styles.chip}>
-                            {task.budgetActivityName || 'Sin subcapítulo'}
-                          </span>
-                          <span className={styles.chipZone}>
-                            {task.zoneName || 'Sin zona'}
-                          </span>
-                        </div>
-                        {canRemove && task.status === 'scheduled' ? (
+          {visibleColumns.map((column) => {
+            const accent = accentFor(column.name)
+            const open = expanded[column.key] === true
+            const shown = open ? column.tasks : column.tasks.slice(0, 4)
+            const hidden = column.tasks.length - shown.length
+            return (
+              <section key={column.key} className={styles.column}>
+                <header className={styles.columnHeader}>
+                  <span className={styles.columnMark} style={{ color: accent.ink, background: accent.soft }}>
+                    <ChapterGlyph />
+                  </span>
+                  <h2 className={styles.columnTitle}>{column.name}</h2>
+                  <span className={styles.count} style={{ color: accent.ink, background: accent.soft }}>
+                    {column.tasks.length}
+                  </span>
+                </header>
+                <div className={styles.cards}>
+                  {column.tasks.length === 0 ? (
+                    <p className={styles.columnEmpty}>Sin actividades en este capítulo.</p>
+                  ) : (
+                    shown.map((task) => {
+                      const progress = asPercent(task.progressPercent)
+                      return (
+                        <article key={task.id} className={styles.card}>
                           <button
                             type="button"
-                            className={styles.remove}
-                            onClick={() => setPending(task)}
+                            className={styles.cardOpen}
+                            onClick={() => setDetailId(task.id)}
                           >
-                            Quitar de esta obra
+                            <span
+                              className={styles.cardIcon}
+                              style={{ color: accent.ink, background: accent.soft }}
+                            >
+                              <ChapterGlyph />
+                            </span>
+                            <span className={styles.cardBody}>
+                              <h3 className={styles.cardTitle}>{task.name}</h3>
+                              <p className={styles.cardMeta}>
+                                {task.budgetActivityName || 'Sin subcapítulo'}
+                                {' · '}
+                                {task.zoneName || 'Sin zona'}
+                              </p>
+                              <span className={styles.meterRow}>
+                                <strong style={{ color: progress > 0 ? accent.ink : '#94a3b8' }}>
+                                  {progress}%
+                                </strong>
+                                <span className={styles.meter}>
+                                  <span
+                                    className={styles.meterFill}
+                                    style={{
+                                      width: `${progress}%`,
+                                      background: progress > 0 ? accent.bar : '#e2e8f0',
+                                    }}
+                                  />
+                                </span>
+                              </span>
+                            </span>
                           </button>
-                        ) : null}
-                      </article>
-                    )
-                  })
-                )}
-              </div>
-            </section>
-          ))}
+                          {canRemove && task.status === 'scheduled' ? (
+                            <button
+                              type="button"
+                              className={styles.remove}
+                              onClick={() => setPending(task)}
+                            >
+                              Quitar de esta obra
+                            </button>
+                          ) : null}
+                        </article>
+                      )
+                    })
+                  )}
+                </div>
+                {column.tasks.length > 4 ? (
+                  <button
+                    type="button"
+                    className={styles.more}
+                    style={{ color: accent.ink }}
+                    onClick={() =>
+                      setExpanded((current) => ({ ...current, [column.key]: !open }))
+                    }
+                  >
+                    {open ? 'Ver menos' : `Ver más (${hidden})`}
+                  </button>
+                ) : null}
+              </section>
+            )
+          })}
         </div>
       )}
 
@@ -377,9 +428,7 @@ function buildColumns(
     grouped.set(task.chapterId, bucket)
   }
   const known = new Set(chapters.map((chapter) => chapter.id))
-  const columns: Column[] = [...chapters]
-    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
-    .map((chapter) => ({
+  const columns: Column[] = sortChapters(chapters).map((chapter) => ({
       key: String(chapter.id),
       name: chapter.name,
       progress: progressById.get(chapter.id) ?? 0,
@@ -387,8 +436,12 @@ function buildColumns(
         a.name.localeCompare(b.name, 'es'),
       ),
     }))
-  for (const [chapterId, chapterTasks] of grouped) {
-    if (known.has(chapterId)) continue
+  const extras = [...grouped.entries()]
+    .filter(([chapterId]) => !known.has(chapterId))
+    .sort((left, right) =>
+      compareChapterNames(left[1][0]?.chapterName || '', right[1][0]?.chapterName || ''),
+    )
+  for (const [chapterId, chapterTasks] of extras) {
     const sample = chapterTasks[0]
     columns.push({
       key: `extra-${chapterId}`,
@@ -405,26 +458,40 @@ function buildColumns(
       tasks: loose.sort((a, b) => a.name.localeCompare(b.name, 'es')),
     })
   }
-  return columns
+  return columns.sort((left, right) => {
+    if (left.key === 'none') return 1
+    if (right.key === 'none') return -1
+    return compareChapterNames(left.name, right.name)
+  })
 }
 
-function completionNotice(task: Task): {
-  label: string
-  tone: 'chipDone' | 'chipProgress' | 'chipIdle'
-} {
-  if (task.status === 'completed' || task.status === 'verified') {
-    return { label: STATUS_LABEL[task.status], tone: 'chipDone' }
-  }
-  if (task.status === 'in_progress' || task.status === 'rescheduled') {
-    return { label: STATUS_LABEL[task.status], tone: 'chipProgress' }
-  }
-  return { label: 'No completada', tone: 'chipIdle' }
+function accentFor(name: string): { ink: string; soft: string; bar: string } {
+  const palette = [
+    { ink: '#1d4ed8', soft: '#e8f1ff', bar: '#2563eb' },
+    { ink: '#c2410c', soft: '#fff1e8', bar: '#f97316' },
+    { ink: '#a16207', soft: '#fef9c3', bar: '#eab308' },
+    { ink: '#0369a1', soft: '#e0f2fe', bar: '#0284c7' },
+    { ink: '#475569', soft: '#f1f5f9', bar: '#64748b' },
+    { ink: '#15803d', soft: '#e8f7ee', bar: '#16a34a' },
+  ]
+  return (
+    palette[chapterSortRank(name)] ?? {
+      ink: '#334155',
+      soft: '#f1f5f9',
+      bar: '#64748b',
+    }
+  )
 }
 
-function progressTone(progress: number): string {
-  if (progress >= 100) return styles.chipDone
-  if (progress > 0) return styles.chipProgress
-  return styles.chipIdle
+function ChapterGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Zm2 1v4h5v-4H6Zm7 0v4h5v-4h-5ZM6 12.5v5h5v-5H6Zm7 0v5h5v-5h-5Z"
+      />
+    </svg>
+  )
 }
 
 function asPercent(value: number | string | null | undefined): number {
