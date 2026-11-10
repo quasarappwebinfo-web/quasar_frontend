@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { AppProviders } from '@/app/providers/AppProviders'
 import {
   ProtectedRoute,
@@ -32,11 +32,14 @@ import {
   TasksHubPage,
   TasksKanbanPage,
 } from '@/tareas'
-import {
-  WorkPlanComparePage,
-  WorkPlanDetailPage,
-  WorkPlansPage,
-} from '@/planificacion'
+import { WorkPlanComparePage, WorkPlanDetailPage } from '@/planificacion'
+
+function ObraPlanesRedirect() {
+  const { obraId } = useParams()
+  const [params] = useSearchParams()
+  const nuevo = params.get('nuevo') === '1' ? '?nuevo=1' : ''
+  return <Navigate to={`/dashboard/obras/${obraId}/tareas${nuevo}`} replace />
+}
 
 export function App() {
   return (
@@ -87,7 +90,7 @@ export function App() {
             <Route element={<RequirePermission permission="planificacion" />}>
               <Route
                 path="/dashboard/obras/:obraId/planes"
-                element={<WorkPlansPage />}
+                element={<ObraPlanesRedirect />}
               />
               <Route
                 path="/dashboard/planes/:planId"

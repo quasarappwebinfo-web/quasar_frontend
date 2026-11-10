@@ -18,21 +18,28 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextArea,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from './CatalogParts'
 import styles from './taskPool.module.css'
 
 export function PlantillasPanel() {
   const toast = useToast()
   const navigate = useNavigate()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [chapterId, setChapterId] = useState('')
@@ -117,12 +124,22 @@ export function PlantillasPanel() {
       setItems(data.templates)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron cargar Actividades Registradas')
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, chapterId, zoneId, budgetActivityId, activeOnly, fixedOnly])
+  }, [
+    page,
+    debouncedSearch,
+    chapterId,
+    zoneId,
+    budgetActivityId,
+    activeOnly,
+    fixedOnly,
+    refreshStats,
+  ])
 
   useEffect(() => {
     void load()
@@ -231,116 +248,111 @@ export function PlantillasPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar actividad, capítulo o subcapítulo...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nueva actividad',
+    onAction: openCreate,
+  })
+
+  function clearFilters() {
+    setSearch('')
+    setChapterId('')
+    setZoneId('')
+    setBudgetActivityId('')
+    setActiveOnly(false)
+    setFixedOnly(false)
+    setPage(1)
+  }
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field
-              label="Buscar"
-              help="Busca Actividades Registradas por nombre."
-            >
-              <TextInput
-                placeholder="Nombre"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field
-            label="Capítulo"
-            help="Filtra Actividades Registradas que pertenecen a un capítulo del listado."
+      <div className={styles.filterBar}>
+        <label className={styles.filterField}>
+          Capítulo
+          <select
+            value={chapterId}
+            onChange={(event) => {
+              setChapterId(event.target.value)
+              setBudgetActivityId('')
+              setPage(1)
+            }}
           >
-            <TextSelect
-              value={chapterId}
-              onChange={(e) => {
-                setChapterId(e.target.value)
-                setBudgetActivityId('')
-                setPage(1)
-              }}
-            >
-              <option value="">Todos</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Subcapítulo"
-            help={
-              chapterId
-                ? 'Solo actividades del capítulo filtrado.'
-                : 'Elige un capítulo para filtrar actividades, o deja «Todas».'
-            }
+            <option value="">Todos</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          Subcapítulo
+          <select
+            value={budgetActivityId}
+            onChange={(event) => {
+              setBudgetActivityId(event.target.value)
+              setPage(1)
+            }}
           >
-            <TextSelect
-              value={budgetActivityId}
-              onChange={(e) => {
-                setBudgetActivityId(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todas</option>
-              {filterBudgetActivities.map((activity) => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Zona" help="Filtra por zona de la obra.">
-            <TextSelect
-              value={zoneId}
-              onChange={(e) => {
-                setZoneId(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todas</option>
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Estado"
-            help="«Solo activos» deja fuera Actividades Registradas desactivadas (no recomendadas para uso nuevo)."
+            <option value="">Todos</option>
+            {filterBudgetActivities.map((activity) => (
+              <option key={activity.id} value={activity.id}>
+                {activity.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          Zona
+          <select
+            value={zoneId}
+            onChange={(event) => {
+              setZoneId(event.target.value)
+              setPage(1)
+            }}
           >
-            <TextSelect
-              value={activeOnly ? '1' : '0'}
-              onChange={(e) => {
-                setActiveOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="0">Todos</option>
-              <option value="1">Solo activos</option>
-            </TextSelect>
-          </Field>
-          <Field
-            label="Fijas"
-            help="Las fijas se copian solas al crear una obra."
+            <option value="">Todas</option>
+            {zones.map((zone) => (
+              <option key={zone.id} value={zone.id}>
+                {zone.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          Estado
+          <select
+            value={activeOnly ? '1' : '0'}
+            onChange={(event) => {
+              setActiveOnly(event.target.value === '1')
+              setPage(1)
+            }}
           >
-            <TextSelect
-              value={fixedOnly ? '1' : '0'}
-              onChange={(e) => {
-                setFixedOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="0">Todas</option>
-              <option value="1">Solo fijas</option>
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nueva Actividad Registrada</Button>
+            <option value="0">Todos</option>
+            <option value="1">Solo activas</option>
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          Fijas
+          <select
+            value={fixedOnly ? '1' : '0'}
+            onChange={(event) => {
+              setFixedOnly(event.target.value === '1')
+              setPage(1)
+            }}
+          >
+            <option value="0">Todas</option>
+            <option value="1">Solo fijas</option>
+          </select>
+        </label>
+        <button type="button" className={styles.clearFilters} onClick={clearFilters}>
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -348,81 +360,68 @@ export function PlantillasPanel() {
       {loading ? (
         <p className={styles.empty}>Cargando…</p>
       ) : items.length === 0 ? (
-        <p className={styles.empty}>No hay Actividades Registradas.</p>
+        <p className={styles.empty}>No hay actividades.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((item) => (
-            <article key={item.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div>
-                  <h3 className={styles.cardTitle}>{item.name}</h3>
-                  {item.description ? (
-                    <p className={styles.cardSubtitle}>{item.description}</p>
-                  ) : null}
-                </div>
-                <div className={styles.cardBadges}>
-                  {item.isFixed === 1 ? <Badge>Fija</Badge> : null}
-                  <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
-                    {item.isActive === 1 ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </div>
-              </div>
-              <div className={styles.cardMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Capítulo</span>
-                  <span className={styles.metaValue}>
-                    {item.chapterName || `ID ${item.chapterId}`}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Subcapítulo</span>
-                  <span className={styles.metaValue}>
-                    {item.budgetActivityName ||
-                      (item.budgetActivityId
-                        ? `ID ${item.budgetActivityId}`
-                        : '—')}
-                  </span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Zona</span>
-                  <span className={styles.metaValue}>
-                    {item.zoneName || (item.zoneId ? `ID ${item.zoneId}` : '—')}
-                  </span>
-                </div>
-                {item.description ? (
-                  <div className={styles.metaRow}>
-                    <span className={styles.metaLabel}>Descripción</span>
-                    <span className={styles.metaValue}>{item.description}</span>
-                  </div>
-                ) : null}
-              </div>
-              <div className={styles.rowActions}>
-                <Button
-                  size="sm"
-                  onClick={() => navigate(`/maestros/task-pool/plantillas/${item.id}`)}
-                >
-                  Ver versiones
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                  Editar
-                </Button>
-                <Button
-                  variant={item.isActive === 1 ? 'danger' : 'ghost'}
-                  size="sm"
-                  onClick={() => void toggleActive(item)}
-                >
-                  {item.isActive === 1 ? 'Desactivar' : 'Activar'}
-                </Button>
-              </div>
-            </article>
-          ))}
+        <div className={styles.tableCard}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Actividad</th>
+                <th>Capítulo</th>
+                <th>Subcapítulo</th>
+                <th>Zona</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className={styles.nameCell}>
+                      <ActivityMark name={item.chapterName} />
+                      <span>
+                        {item.name}
+                        {item.isFixed === 1 ? <span className={styles.fixedTag}>Fija</span> : null}
+                      </span>
+                    </div>
+                  </td>
+                  <td>{item.chapterName || '—'}</td>
+                  <td>{item.budgetActivityName || '—'}</td>
+                  <td>{item.zoneName || '—'}</td>
+                  <td>{item.description || '—'}</td>
+                  <td>
+                    <StatusPill active={item.isActive === 1} />
+                  </td>
+                  <td>
+                    <RowMenu
+                      items={[
+                        {
+                          label: 'Ver versiones',
+                          onClick: () => navigate(`/maestros/task-pool/plantillas/${item.id}`),
+                        },
+                        { label: 'Editar', onClick: () => openEdit(item) },
+                        {
+                          label: item.isActive === 1 ? 'Desactivar' : 'Activar',
+                          danger: item.isActive === 1,
+                          onClick: () => void toggleActive(item),
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="actividades"
         onChange={setPage}
       />
 

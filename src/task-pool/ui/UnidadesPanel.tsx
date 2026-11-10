@@ -9,19 +9,25 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextInput,
-  TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from './CatalogParts'
 import styles from './taskPool.module.css'
 
 export function UnidadesPanel() {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [activeOnly, setActiveOnly] = useState(false)
@@ -51,12 +57,13 @@ export function UnidadesPanel() {
       setItems(data.measurementUnits)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron cargar unidades')
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, activeOnly])
+  }, [page, debouncedSearch, activeOnly, refreshStats])
 
   useEffect(() => {
     void load()
@@ -126,42 +133,44 @@ export function UnidadesPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar unidad o símbolo...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nueva unidad',
+    onAction: openCreate,
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field
-              label="Buscar"
-              help="Filtra por nombre o símbolo (ej. m³, Metro cúbico)."
-            >
-              <TextInput
-                placeholder="Nombre o símbolo"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field
-            label="Estado"
-            help="«Solo activos» oculta unidades desactivadas. Los selects del listado solo muestran activas."
+      <div className={styles.filterBar}>
+        <label className={styles.filterField}>
+          Estado
+          <select
+            value={activeOnly ? '1' : '0'}
+            onChange={(event) => {
+              setActiveOnly(event.target.value === '1')
+              setPage(1)
+            }}
           >
-            <TextSelect
-              value={activeOnly ? '1' : '0'}
-              onChange={(e) => {
-                setActiveOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="0">Todos</option>
-              <option value="1">Solo activos</option>
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nueva unidad</Button>
+            <option value="0">Todos</option>
+            <option value="1">Solo activas</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className={styles.clearFilters}
+          onClick={() => {
+            setSearch('')
+            setActiveOnly(false)
+            setPage(1)
+          }}
+        >
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -171,49 +180,53 @@ export function UnidadesPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay unidades de medida.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((item) => (
-            <article key={item.id} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div>
-                  <h3 className={styles.cardTitle}>{item.symbol}</h3>
-                  <p className={styles.cardSubtitle}>{item.name}</p>
-                </div>
-                <Badge tone={item.isActive === 1 ? 'success' : 'danger'}>
-                  {item.isActive === 1 ? 'Activo' : 'Inactivo'}
-                </Badge>
-              </div>
-              <div className={styles.cardMeta}>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Símbolo</span>
-                  <span className={styles.metaValue}>{item.symbol}</span>
-                </div>
-                <div className={styles.metaRow}>
-                  <span className={styles.metaLabel}>Nombre</span>
-                  <span className={styles.metaValue}>{item.name}</span>
-                </div>
-              </div>
-              <div className={styles.rowActions}>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                  Editar
-                </Button>
-                <Button
-                  variant={item.isActive === 1 ? 'danger' : 'ghost'}
-                  size="sm"
-                  onClick={() => void toggleActive(item)}
-                >
-                  {item.isActive === 1 ? 'Desactivar' : 'Activar'}
-                </Button>
-              </div>
-            </article>
-          ))}
+        <div className={styles.tableCard}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Símbolo</th>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className={styles.nameCell}>
+                      <ActivityMark name={item.name} />
+                      <span>{item.symbol}</span>
+                    </div>
+                  </td>
+                  <td>{item.name}</td>
+                  <td>
+                    <StatusPill active={item.isActive === 1} />
+                  </td>
+                  <td>
+                    <RowMenu
+                      items={[
+                        { label: 'Editar', onClick: () => openEdit(item) },
+                        {
+                          label: item.isActive === 1 ? 'Desactivar' : 'Activar',
+                          danger: item.isActive === 1,
+                          onClick: () => void toggleActive(item),
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="unidades"
         onChange={setPage}
       />
 

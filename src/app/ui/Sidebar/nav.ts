@@ -48,10 +48,14 @@ export function getSidebarIdFromPath(pathname: string): SidebarItemId {
   if (pathname.startsWith('/maestros/task-pool')) return 'listado'
   if (pathname.startsWith('/persons')) return 'personal'
   if (pathname.startsWith('/rrhh')) return 'rrhh'
-  if (pathname.includes('/tareas') || pathname.startsWith('/tasks')) return 'actividades'
+  if (
+    pathname.includes('/tareas') ||
+    pathname.startsWith('/tasks') ||
+    pathname.startsWith('/dashboard/planes')
+  ) {
+    return 'actividades'
+  }
   if (pathname.includes('/galeria') || pathname.startsWith('/galleries')) return 'galerias'
-  if (pathname.includes('/planes') || pathname.startsWith('/dashboard/planes'))
-    return 'proyectos'
   if (pathname.startsWith('/dashboard/obras')) return 'proyectos'
   if (pathname.startsWith('/projects')) return 'proyectos'
   if (pathname.startsWith('/maestros')) return 'dashboard'

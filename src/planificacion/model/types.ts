@@ -7,6 +7,8 @@ export type WorkPlanStatus =
   | 'pending_signature'
   | 'signed'
   | 'rejected'
+  | 'in_execution'
+  | 'finished'
 
 export type SignerStatus = 'pending' | 'signed' | 'rejected'
 
@@ -194,10 +196,12 @@ export type WorkPlanCompare = {
 }
 
 export const WORK_PLAN_STATUS_LABELS: Record<WorkPlanStatus, string> = {
-  draft: 'Borrador',
-  pending_signature: 'Borrador',
-  signed: 'Borrador',
-  rejected: 'Borrador',
+  draft: 'En ejecución',
+  pending_signature: 'En ejecución',
+  signed: 'En ejecución',
+  rejected: 'En ejecución',
+  in_execution: 'En ejecución',
+  finished: 'Finalizado',
 }
 
 export const SIGNER_STATUS_LABELS: Record<SignerStatus, string> = {

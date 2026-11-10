@@ -10,19 +10,27 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  StatusPill,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from '@/task-pool/ui/CatalogParts'
+import look from '@/task-pool/ui/taskPool.module.css'
 import styles from './rrhh.module.css'
 
 export function EspecialidadesPanel() {
   const toast = useToast()
+  const refreshStats = useRefreshCatalogStats()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [activeOnly, setActiveOnly] = useState(false)
@@ -69,6 +77,7 @@ export function EspecialidadesPanel() {
       setItems(data.specialties)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'No se pudo cargar especialidades',
@@ -76,7 +85,7 @@ export function EspecialidadesPanel() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch, activeOnly, filterPositionId])
+  }, [page, debouncedSearch, activeOnly, filterPositionId, refreshStats])
 
   useEffect(() => {
     void load()
@@ -150,52 +159,62 @@ export function EspecialidadesPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar especialidad...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nueva especialidad',
+    onAction: openCreate,
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
-          <div className={styles.searchGrow}>
-            <Field label="Buscar">
-              <TextInput
-                placeholder="Nombre de especialidad"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-            </Field>
-          </div>
-          <Field label="Cargo">
-            <TextSelect
-              value={filterPositionId}
-              onChange={(e) => {
-                setFilterPositionId(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Todos</option>
-              {positions.map((position) => (
-                <option key={position.id} value={position.id}>
-                  {position.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field label="Estado">
-            <TextSelect
-              value={activeOnly ? '1' : '0'}
-              onChange={(e) => {
-                setActiveOnly(e.target.value === '1')
-                setPage(1)
-              }}
-            >
-              <option value="0">Todas</option>
-              <option value="1">Solo activas</option>
-            </TextSelect>
-          </Field>
-        </div>
-        <Button onClick={openCreate}>Nueva especialidad</Button>
+      <div className={look.filterBar}>
+        <label className={look.filterField}>
+          Cargo
+          <select
+            value={filterPositionId}
+            onChange={(event) => {
+              setFilterPositionId(event.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Todos</option>
+            {positions.map((position) => (
+              <option key={position.id} value={position.id}>
+                {position.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={look.filterField}>
+          Estado
+          <select
+            value={activeOnly ? '1' : '0'}
+            onChange={(event) => {
+              setActiveOnly(event.target.value === '1')
+              setPage(1)
+            }}
+          >
+            <option value="0">Todas</option>
+            <option value="1">Solo activas</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          className={look.clearFilters}
+          onClick={() => {
+            setSearch('')
+            setFilterPositionId('')
+            setActiveOnly(false)
+            setPage(1)
+          }}
+        >
+          Limpiar filtros
+        </button>
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
@@ -205,54 +224,58 @@ export function EspecialidadesPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay especialidades.</p>
       ) : (
-        <div className={styles.cardGrid}>
-          {items.map((specialty) => {
-            const linkedName = specialty.workerPositionId
-              ? positionNameById.get(specialty.workerPositionId)
-              : null
-            return (
-              <article key={specialty.id} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <div>
-                    <h3 className={styles.cardTitle}>{specialty.name}</h3>
-                    <p className={styles.cardSubtitle}>
-                      {linkedName
-                        ? `Cargo: ${linkedName}`
-                        : specialty.workerPositionId
-                          ? `Cargo #${specialty.workerPositionId}`
-                          : 'Sin cargo vinculado'}
-                    </p>
-                  </div>
-                  <Badge tone={specialty.isActive === 1 ? 'success' : 'danger'}>
-                    {specialty.isActive === 1 ? 'Activa' : 'Inactiva'}
-                  </Badge>
-                </div>
-                <div className={styles.rowActions}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEdit(specialty)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant={specialty.isActive === 1 ? 'danger' : 'ghost'}
-                    size="sm"
-                    onClick={() => void toggleActive(specialty)}
-                  >
-                    {specialty.isActive === 1 ? 'Desactivar' : 'Activar'}
-                  </Button>
-                </div>
-              </article>
-            )
-          })}
+        <div className={look.tableCard}>
+          <table className={look.table}>
+            <thead>
+              <tr>
+                <th>Especialidad</th>
+                <th>Cargo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((specialty) => {
+                const linkedName = specialty.workerPositionId
+                  ? positionNameById.get(specialty.workerPositionId)
+                  : null
+                return (
+                  <tr key={specialty.id}>
+                    <td>
+                      <div className={look.nameCell}>
+                        <ActivityMark name={specialty.name} />
+                        <span>{specialty.name}</span>
+                      </div>
+                    </td>
+                    <td>{linkedName || '—'}</td>
+                    <td>
+                      <StatusPill active={specialty.isActive === 1} />
+                    </td>
+                    <td>
+                      <RowMenu
+                        items={[
+                          { label: 'Editar', onClick: () => openEdit(specialty) },
+                          {
+                            label: specialty.isActive === 1 ? 'Desactivar' : 'Activar',
+                            danger: specialty.isActive === 1,
+                            onClick: () => void toggleActive(specialty),
+                          },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="especialidades"
         onChange={setPage}
       />
 

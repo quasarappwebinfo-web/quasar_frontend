@@ -17,15 +17,21 @@ import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
 import {
   Alert,
-  Badge,
   Button,
   Field,
   Modal,
-  PaginationBar,
   TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
+import {
+  ActivityMark,
+  CatalogPager,
+  RowMenu,
+  useCatalogChrome,
+  useRefreshCatalogStats,
+} from '@/task-pool/ui/CatalogParts'
+import look from '@/task-pool/ui/taskPool.module.css'
 import styles from './identidad.module.css'
 
 async function collectPersonIds(
@@ -81,6 +87,7 @@ export function PersonasPanel() {
   const [specialtyId, setSpecialtyId] = useState('')
   const [positions, setPositions] = useState<PositionOption[]>([])
   const [specialties, setSpecialties] = useState<SpecialtyOption[]>([])
+  const refreshStats = useRefreshCatalogStats()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -90,6 +97,7 @@ export function PersonasPanel() {
       setItems(data.persons)
       setTotalItems(data.pagination.totalItems)
       setItemsPerPage(data.pagination.itemsPerPage)
+      refreshStats()
 
       const apiSendsRoles = data.persons.some(
         (person) =>
@@ -125,7 +133,7 @@ export function PersonasPanel() {
     } finally {
       setLoading(false)
     }
-  }, [page, debouncedSearch])
+  }, [page, debouncedSearch, refreshStats])
 
   useEffect(() => {
     void load()
@@ -284,24 +292,19 @@ export function PersonasPanel() {
     }
   }
 
+  useCatalogChrome({
+    search,
+    placeholder: 'Buscar persona o cédula...',
+    onSearch: (value) => {
+      setSearch(value)
+      setPage(1)
+    },
+    actionLabel: 'Nueva persona',
+    onAction: () => void openCreate(),
+  })
+
   return (
     <section>
-      <div className={styles.toolbar}>
-        <div className={styles.searchGrow}>
-          <Field label="Buscar">
-            <TextInput
-              placeholder="Nombre o cédula"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-            />
-          </Field>
-        </div>
-        <Button onClick={() => void openCreate()}>Nueva persona</Button>
-      </div>
-
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       {loading ? (
@@ -309,40 +312,48 @@ export function PersonasPanel() {
       ) : items.length === 0 ? (
         <p className={styles.empty}>No hay personas. Crea la primera.</p>
       ) : (
-        <div className={styles.cardGridPhone}>
-          {items.map((person) => {
-            const isUser = person.isUser ?? userPersonIds?.has(person.id) ?? false
-            const isWorker =
-              person.isWorker ?? workerPersonIds?.has(person.id) ?? false
-            return (
-              <article key={person.id} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <div>
-                    <h3 className={styles.cardTitle}>{person.name}</h3>
-                    <p className={styles.cardSubtitle}>{person.documentNumber}</p>
-                  </div>
-                </div>
-                {isUser || isWorker ? (
-                  <div className={styles.roleTags}>
-                    {isUser ? <Badge tone="user">Usuario</Badge> : null}
-                    {isWorker ? <Badge tone="worker">Trabajador</Badge> : null}
-                  </div>
-                ) : null}
-                <div className={styles.rowActions}>
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(person)}>
-                    Editar
-                  </Button>
-                </div>
-              </article>
-            )
-          })}
+        <div className={look.tableCard}>
+          <table className={look.table}>
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Cédula</th>
+                <th>Usuario</th>
+                <th>Trabajador</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((person) => {
+                const isUser = person.isUser ?? userPersonIds?.has(person.id) ?? false
+                const isWorker = person.isWorker ?? workerPersonIds?.has(person.id) ?? false
+                return (
+                  <tr key={person.id}>
+                    <td>
+                      <div className={look.nameCell}>
+                        <ActivityMark name={person.name} />
+                        <span>{person.name}</span>
+                      </div>
+                    </td>
+                    <td>{person.documentNumber}</td>
+                    <td>{isUser ? 'Sí' : '—'}</td>
+                    <td>{isWorker ? 'Sí' : '—'}</td>
+                    <td>
+                      <RowMenu items={[{ label: 'Editar', onClick: () => openEdit(person) }]} />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      <PaginationBar
+      <CatalogPager
         page={page}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        noun="personas"
         onChange={setPage}
       />
 

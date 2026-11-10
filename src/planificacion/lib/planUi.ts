@@ -3,6 +3,7 @@ import type { WorkPlanStatus } from '@/planificacion/model/types'
 export function planStatusTone(
   status: WorkPlanStatus,
 ): 'neutral' | 'success' | 'danger' {
+  if (status === 'finished') return 'success'
   if (status === 'rejected') return 'danger'
   return 'neutral'
 }
