@@ -14,7 +14,6 @@ import {
   Modal,
   TextArea,
   TextInput,
-  TextSelect,
   useToast,
 } from '@/shared/ui'
 import {
@@ -45,7 +44,6 @@ export function CategoriasPanel() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [weightPercent, setWeightPercent] = useState('')
-  const [isGlobal, setIsGlobal] = useState('0')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -78,7 +76,6 @@ export function CategoriasPanel() {
     setName('')
     setDescription('')
     setWeightPercent('')
-    setIsGlobal('0')
     setFormError(null)
     setModalOpen(true)
   }
@@ -90,7 +87,6 @@ export function CategoriasPanel() {
     setWeightPercent(
       item.weightPercent != null ? String(item.weightPercent) : '',
     )
-    setIsGlobal(item.isGlobal === 1 ? '1' : '0')
     setFormError(null)
     setModalOpen(true)
   }
@@ -115,7 +111,6 @@ export function CategoriasPanel() {
           stageId: null,
           description: description.trim() || null,
           weightPercent: weight,
-          isGlobal: Number(isGlobal),
           isActive: editing.isActive,
         })
         toast.success('Capítulo actualizado')
@@ -124,7 +119,6 @@ export function CategoriasPanel() {
           name: name.trim(),
           description: description.trim() || null,
           weightPercent: weight,
-          isGlobal: Number(isGlobal),
         })
         toast.success('Capítulo creado')
       }
@@ -205,8 +199,7 @@ export function CategoriasPanel() {
             <thead>
               <tr>
                 <th>Capítulo</th>
-                <th>% de la obra</th>
-                <th>Alcance</th>
+                <th>% de cada zona</th>
                 <th>Descripción</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -222,7 +215,6 @@ export function CategoriasPanel() {
                     </div>
                   </td>
                   <td>{item.weightPercent != null ? `${item.weightPercent}%` : '—'}</td>
-                  <td>{item.isGlobal === 1 ? 'Todas las zonas' : 'Por zona'}</td>
                   <td>{item.description || '—'}</td>
                   <td>
                     <StatusPill active={item.isActive === 1} />
@@ -282,8 +274,8 @@ export function CategoriasPanel() {
             />
           </Field>
           <Field
-            label="% de la obra"
-            help="Opcional. Cuánto aporta este capítulo al avance de la obra."
+            label="% de cada zona"
+            help="Cuánto vale este capítulo dentro de cada zona. Estructura al 30 % es el 30 % de la Casa y el 30 % de la Zona social."
           >
             <TextInput
               type="number"
@@ -294,15 +286,6 @@ export function CategoriasPanel() {
               onChange={(e) => setWeightPercent(e.target.value)}
               placeholder="ej. 25"
             />
-          </Field>
-          <Field
-            label="Alcance"
-            help="Actividades preliminares se hacen una vez y el mismo avance sale en cada zona. Estructura e instalaciones se miden dentro de cada zona."
-          >
-            <TextSelect value={isGlobal} onChange={(e) => setIsGlobal(e.target.value)}>
-              <option value="0">Por zona</option>
-              <option value="1">En todas las zonas</option>
-            </TextSelect>
           </Field>
           <Field
             label="Descripción"

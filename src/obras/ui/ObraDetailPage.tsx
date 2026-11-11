@@ -274,18 +274,20 @@ export function ObraDetailPage() {
               {obra.isActive === 1 ? 'Dar de baja' : 'Reactivar'}
             </button>
           ) : null}
-          <button type="button" className={styles.editBtn} onClick={() => setEditOpen(true)}>
-            <PencilIcon />
-            Editar
-          </button>
-          <button
-            type="button"
-            className={styles.iconButton}
-            aria-label="Cerrar sesión"
-            onClick={() => void logout()}
-          >
-            <PowerIcon />
-          </button>
+          <div className={styles.actionRow}>
+            <button type="button" className={styles.editBtn} onClick={() => setEditOpen(true)}>
+              <PencilIcon />
+              Editar
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label="Cerrar sesión"
+              onClick={() => void logout()}
+            >
+              <PowerIcon />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -403,6 +405,11 @@ export function ObraDetailPage() {
                     <HouseIcon />
                     <div>
                       <strong>{zone.zoneName}</strong>
+                      <span>
+                        {zone.weightPercent == null
+                          ? 'Sin porcentaje de la obra'
+                          : `${asPercent(zone.weightPercent)}% de la obra`}
+                      </span>
                       <span>
                         {started} de {chapters.length} etapas iniciadas
                       </span>

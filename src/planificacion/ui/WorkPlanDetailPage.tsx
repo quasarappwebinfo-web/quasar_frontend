@@ -343,7 +343,7 @@ export function WorkPlanDetailPage() {
         <p className={board.empty}>Ninguna actividad coincide con la búsqueda.</p>
       ) : (
         <div className={look.tableCard}>
-          <table className={look.table}>
+          <table className={`${look.table} ${look.phoneTable}`}>
             <thead>
               <tr>
                 <th>Actividad</th>
@@ -358,15 +358,15 @@ export function WorkPlanDetailPage() {
               {tasks.map((task) => (
                 <tr key={task.id}>
                   <td>{task.taskNameSnapshot}</td>
-                  <td>{formatPlanDate(task.plannedStartDate)}</td>
-                  <td>{formatPlanDate(task.plannedEndDate)}</td>
-                  <td>
+                  <td data-label="Inicio">{formatPlanDate(task.plannedStartDate)}</td>
+                  <td data-label="Fin">{formatPlanDate(task.plannedEndDate)}</td>
+                  <td data-label="Cantidad">
                     {task.quantitySnapshot ?? '—'}
                     {task.unitSnapshot ? ` ${task.unitSnapshot}` : ''}
                   </td>
-                  <td>{durationLabel(task)}</td>
+                  <td data-label="Duración">{durationLabel(task)}</td>
                   {editable ? (
-                    <td>
+                    <td data-label="Acciones">
                       <button
                         type="button"
                         className={styles.linkDanger}
@@ -387,7 +387,7 @@ export function WorkPlanDetailPage() {
       )}
 
       <section className={look.tableCard}>
-        <table className={look.table}>
+        <table className={`${look.table} ${look.phoneTable}`}>
           <thead>
             <tr>
               <th>Historial</th>
@@ -406,11 +406,11 @@ export function WorkPlanDetailPage() {
                 .map((event) => (
                   <tr key={event.id}>
                     <td>{EVENT_TYPE_LABELS[event.eventType] || event.eventType}</td>
-                    <td>
+                    <td data-label="Cuándo">
                       {formatDateTime(event.eventAt)}
                       {event.userName ? ` · ${event.userName}` : ''}
                     </td>
-                    <td>{event.details || '—'}</td>
+                    <td data-label="Detalle">{event.details || '—'}</td>
                   </tr>
                 ))
             )}

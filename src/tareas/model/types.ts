@@ -312,6 +312,8 @@ export type ZoneChapterProgress = {
 export type ZoneFulfillment = {
   zoneId: number
   zoneName: string
+  weightPercent?: number | string | null
+  progressPercent?: number | string | null
   chapters?: ZoneChapterProgress[]
 }
 

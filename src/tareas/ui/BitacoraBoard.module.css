@@ -136,11 +136,6 @@
   .summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .logHero,
-  .logStats {
-    grid-template-columns: 1fr;
-  }
 }
 
 .log {
@@ -267,11 +262,16 @@
   height: 1.15rem;
 }
 
+.logStat > div {
+  min-width: 0;
+}
+
 .logStat strong {
   display: block;
   color: #1a1c1f;
   font-size: 1.15rem;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .logStat span {
@@ -585,4 +585,59 @@
   margin: 0;
   color: #7b8490;
   font-size: 0.88rem;
+}
+
+@media (max-width: 900px) {
+  .logHero {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .logName,
+  .logTitle,
+  .logLead {
+    overflow-wrap: anywhere;
+  }
+
+  .rangeChip {
+    grid-column: 1 / -1;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .logStats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .logFoot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .logFoot > button {
+    width: 100%;
+  }
+
+  .board {
+    grid-auto-columns: minmax(86%, 19rem);
+  }
+
+  .rowActions {
+    justify-content: flex-end;
+  }
+
+  .openBtn {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .logStats {
+    grid-template-columns: 1fr;
+  }
+
+  .logStat strong {
+    font-size: 1rem;
+  }
 }

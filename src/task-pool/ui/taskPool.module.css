@@ -1143,3 +1143,95 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+@media (max-width: 720px) {
+  .hero::before {
+    display: none;
+  }
+
+  .heroRow {
+    align-items: stretch;
+  }
+
+  .heroRow > * {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .catalogLead {
+    overflow-wrap: anywhere;
+  }
+
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterBar > .searchBox,
+  .filterBar > .filterField,
+  .filterBar > .heroTools {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .filterBar .heroTools > button {
+    flex: 1 1 calc(50% - 0.55rem);
+  }
+
+  .phoneTable {
+    min-width: 0;
+  }
+
+  .phoneTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .phoneTable,
+  .phoneTable tbody,
+  .phoneTable tr,
+  .phoneTable td {
+    display: block;
+    width: auto;
+  }
+
+  .phoneTable tr {
+    padding: 0.85rem 1rem 0.7rem;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  .phoneTable td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.22rem 0;
+    border: 0;
+    text-align: right;
+  }
+
+  .phoneTable td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.78rem;
+    text-align: left;
+    flex: 0 0 auto;
+  }
+
+  .phoneTable td:first-child {
+    display: block;
+    padding-bottom: 0.35rem;
+    text-align: left;
+    color: #1a1c1f;
+    font-size: 1rem;
+  }
+
+  .phoneTable td:first-child::before {
+    content: none;
+  }
+}
