@@ -44,16 +44,20 @@ export type TaskChapterUpdate = {
   isActive?: ActiveStatus
 }
 
-export type TaskZone = NamedCatalog
+export type TaskZone = NamedCatalog & {
+  weightPercent?: number | string | null
+}
 export type TaskZoneWrite = {
   name: string
   description?: string | null
   displayOrder?: number
+  weightPercent?: number | null
 }
 export type TaskZoneUpdate = {
   name?: string
   description?: string | null
   displayOrder?: number
+  weightPercent?: number | null
   isActive?: ActiveStatus
 }
 

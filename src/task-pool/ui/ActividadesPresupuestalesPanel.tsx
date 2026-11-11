@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
-import { listActiveTaskZones } from '@/task-pool/api/zonasApi'
 import {
   createTaskBudgetActivity,
   listTaskBudgetActivities,
@@ -9,7 +8,6 @@ import {
 import type {
   TaskBudgetActivity,
   TaskChapter,
-  TaskZone,
 } from '@/task-pool/model/types'
 import { ApiError } from '@/shared/api/apiJson'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
@@ -43,7 +41,6 @@ export function ActividadesPresupuestalesPanel() {
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<TaskBudgetActivity[]>([])
   const [categories, setCategories] = useState<TaskChapter[]>([])
-  const [zones, setZones] = useState<TaskZone[]>([])
   const [totalItems, setTotalItems] = useState(0)
   const [itemsPerPage, setItemsPerPage] = useState(15)
   const [loading, setLoading] = useState(true)
@@ -52,7 +49,6 @@ export function ActividadesPresupuestalesPanel() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TaskBudgetActivity | null>(null)
   const [formChapterId, setFormChapterId] = useState('')
-  const [formZoneId, setFormZoneId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
@@ -62,9 +58,6 @@ export function ActividadesPresupuestalesPanel() {
     void listActiveTaskChapters()
       .then(setCategories)
       .catch(() => setCategories([]))
-    void listActiveTaskZones()
-      .then(setZones)
-      .catch(() => setZones([]))
   }, [])
 
   const load = useCallback(async () => {
@@ -101,7 +94,6 @@ export function ActividadesPresupuestalesPanel() {
     setFormChapterId(
       chapterId || (categories[0] ? String(categories[0].id) : ''),
     )
-    setFormZoneId('')
     setName('')
     setDescription('')
     setFormError(null)
@@ -111,7 +103,6 @@ export function ActividadesPresupuestalesPanel() {
   function openEdit(item: TaskBudgetActivity) {
     setEditing(item)
     setFormChapterId(item.chapterId ? String(item.chapterId) : '')
-    setFormZoneId(item.zoneId ? String(item.zoneId) : '')
     setName(item.name)
     setDescription(item.description || '')
     setFormError(null)
@@ -121,7 +112,6 @@ export function ActividadesPresupuestalesPanel() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const catId = Number(formChapterId)
-    const zoneIdNum = formZoneId ? Number(formZoneId) : null
     if (!name.trim() || Number.isNaN(catId)) {
       setFormError('Capítulo y nombre son obligatorios.')
       return
@@ -132,7 +122,7 @@ export function ActividadesPresupuestalesPanel() {
       if (editing) {
         await updateTaskBudgetActivity(editing.id, {
           chapterId: catId,
-          zoneId: zoneIdNum,
+          zoneId: null,
           name: name.trim(),
           description: description.trim() || null,
           isActive: editing.isActive,
@@ -141,7 +131,7 @@ export function ActividadesPresupuestalesPanel() {
       } else {
         await createTaskBudgetActivity({
           chapterId: catId,
-          zoneId: zoneIdNum,
+          zoneId: null,
           name: name.trim(),
           description: description.trim() || null,
         })
@@ -247,7 +237,6 @@ export function ActividadesPresupuestalesPanel() {
               <tr>
                 <th>Subcapítulo</th>
                 <th>Capítulo</th>
-                <th>Zona</th>
                 <th>Descripción</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -263,7 +252,6 @@ export function ActividadesPresupuestalesPanel() {
                     </div>
                   </td>
                   <td>{item.chapterName || '—'}</td>
-                  <td>{item.zoneName || '—'}</td>
                   <td>{item.description || '—'}</td>
                   <td>
                     <StatusPill active={item.isActive === 1} />
@@ -337,22 +325,6 @@ export function ActividadesPresupuestalesPanel() {
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          <Field
-            label="Zona"
-            help="Zona a la que contribuye este subcapítulo (opcional)."
-          >
-            <TextSelect
-              value={formZoneId}
-              onChange={(e) => setFormZoneId(e.target.value)}
-            >
-              <option value="">Sin zona</option>
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
                 </option>
               ))}
             </TextSelect>

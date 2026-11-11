@@ -474,7 +474,7 @@ export function TasksKanbanPage() {
           <p className={board.empty}>Ninguna semana coincide con la búsqueda.</p>
         ) : (
           <div className={look.tableCard}>
-            <table className={look.table}>
+            <table className={`${look.table} ${look.phoneTable}`}>
               <thead>
                 <tr>
                   <th>Semana</th>
@@ -487,11 +487,11 @@ export function TasksKanbanPage() {
                 {pagePlans.map((plan) => (
                   <tr key={plan.id}>
                     <td>{bitacoraLabel(plan, plans)}</td>
-                    <td>
+                    <td data-label="Periodo">
                       {formatPlanDate(plan.startDate)} – {formatPlanDate(plan.endDate)}
                     </td>
-                    <td>{planStatusLabel(plan.status)}</td>
-                    <td>
+                    <td data-label="Estado">{planStatusLabel(plan.status)}</td>
+                    <td data-label="Acciones">
                       <div className={board.rowActions}>
                         <button
                           type="button"

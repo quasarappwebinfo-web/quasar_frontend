@@ -27,18 +27,21 @@ export type CatalogItem = {
   description: string | null
   displayOrder: number
   isActive: ActiveStatus
+  weightPercent?: number | string | null
 }
 
 type CatalogWrite = {
   name: string
   description?: string | null
   displayOrder?: number
+  weightPercent?: number | null
 }
 
 type CatalogUpdate = {
   name?: string
   description?: string | null
   displayOrder?: number
+  weightPercent?: number | null
   isActive?: ActiveStatus
 }
 
@@ -47,6 +50,8 @@ type CatalogSimplePanelProps = {
   plural: string
   nameExample: string
   nameHelp: string
+  weightLabel?: string
+  weightHelp?: string
   listItems: (params: {
     page: number
     search: string
@@ -65,6 +70,8 @@ export function CatalogSimplePanel({
   plural,
   nameExample,
   nameHelp,
+  weightLabel,
+  weightHelp,
   listItems,
   createItem,
   updateItem,
@@ -85,6 +92,7 @@ export function CatalogSimplePanel({
   const [editing, setEditing] = useState<CatalogItem | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [weightPercent, setWeightPercent] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -120,6 +128,7 @@ export function CatalogSimplePanel({
     setEditing(null)
     setName('')
     setDescription('')
+    setWeightPercent('')
     setFormError(null)
     setModalOpen(true)
   }
@@ -128,6 +137,9 @@ export function CatalogSimplePanel({
     setEditing(item)
     setName(item.name)
     setDescription(item.description || '')
+    setWeightPercent(
+      item.weightPercent != null ? String(item.weightPercent) : '',
+    )
     setFormError(null)
     setModalOpen(true)
   }
@@ -138,6 +150,15 @@ export function CatalogSimplePanel({
       setFormError('El nombre es obligatorio.')
       return
     }
+    const weight = weightPercent.trim() ? Number(weightPercent) : null
+    if (
+      weightLabel &&
+      weight != null &&
+      (Number.isNaN(weight) || weight < 0 || weight > 100)
+    ) {
+      setFormError('El % debe estar entre 0 y 100.')
+      return
+    }
     setSaving(true)
     setFormError(null)
     try {
@@ -145,6 +166,7 @@ export function CatalogSimplePanel({
         await updateItem(editing.id, {
           name: name.trim(),
           description: description.trim() || null,
+          ...(weightLabel ? { weightPercent: weight } : {}),
           isActive: editing.isActive,
         })
         toast.success(`${singular} actualizada`)
@@ -152,6 +174,7 @@ export function CatalogSimplePanel({
         await createItem({
           name: name.trim(),
           description: description.trim() || null,
+          ...(weightLabel ? { weightPercent: weight } : {}),
         })
         toast.success(`${singular} creada`)
       }
@@ -236,6 +259,7 @@ export function CatalogSimplePanel({
             <thead>
               <tr>
                 <th>{singular}</th>
+                {weightLabel ? <th>{weightLabel}</th> : null}
                 <th>Descripción</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -250,6 +274,11 @@ export function CatalogSimplePanel({
                       <span>{item.name}</span>
                     </div>
                   </td>
+                  {weightLabel ? (
+                    <td>
+                      {item.weightPercent != null ? `${item.weightPercent}%` : '—'}
+                    </td>
+                  ) : null}
                   <td>{item.description || '—'}</td>
                   <td>
                     <StatusPill active={item.isActive === 1} />
@@ -306,6 +335,19 @@ export function CatalogSimplePanel({
               required
             />
           </Field>
+          {weightLabel ? (
+            <Field label={weightLabel} help={weightHelp}>
+              <TextInput
+                type="number"
+                min={0}
+                max={100}
+                step={0.01}
+                value={weightPercent}
+                onChange={(event) => setWeightPercent(event.target.value)}
+                placeholder="ej. 70"
+              />
+            </Field>
+          ) : null}
           <Field label="Descripción" help="Texto opcional de aclaración.">
             <TextArea
               value={description}

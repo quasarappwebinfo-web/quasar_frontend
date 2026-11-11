@@ -234,7 +234,7 @@ export function ObraActivityModal({
             {chapters.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
-                {item.weightPercent != null ? ` · ${item.weightPercent}% de la obra` : ''}
+                {item.weightPercent != null ? ` · ${item.weightPercent}% de cada zona` : ''}
               </option>
             ))}
           </TextSelect>

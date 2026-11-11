@@ -512,6 +512,10 @@
   margin-left: auto;
 }
 
+.actionRow {
+  display: contents;
+}
+
 .galleryBtn {
   display: inline-flex;
   align-items: center;
@@ -1617,6 +1621,10 @@
   .heroMeta span + span {
     padding-left: 0;
     border-left: 0;
+  }
+
+  .heroMain {
+    align-items: flex-start;
   }
 
   .attendanceBody {

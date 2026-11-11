@@ -28,7 +28,9 @@ export function ZonasPanel() {
       singular="Zona"
       plural="Zonas"
       nameExample="Zona social"
-      nameHelp="Ubicación / ámbito de la obra (ej. Casa, Zona social, Exteriores)."
+      nameHelp="Ubicación de la obra. El avance de una actividad suma solo en su zona."
+      weightLabel="% de la obra"
+      weightHelp="Cuánto vale esta zona en la obra. Casa puede ser 70 y Zona social 30. Si se deja vacío, la zona no suma al avance."
       listItems={listItems}
       createItem={createTaskZone}
       updateItem={updateTaskZone}
