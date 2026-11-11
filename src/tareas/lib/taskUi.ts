@@ -17,6 +17,16 @@ export function categoryColor(name?: string | null, id?: number | null): string 
   return CATEGORY_COLORS[Math.abs(seed) % CATEGORY_COLORS.length]!
 }
 
+/** Zona que se muestra. Sin zona en una actividad general vale en todas. */
+export function zoneLabel(task: {
+  zoneName?: string | null
+  sourceTemplateId?: number | null
+}): string {
+  if (task.zoneName) return task.zoneName
+  if (task.sourceTemplateId) return 'Todas las zonas'
+  return 'Sin zona'
+}
+
 export function formatTaskDate(value?: string | null): string {
   if (!value) return 'Sin fecha'
   const date = new Date(`${value}T00:00:00`)

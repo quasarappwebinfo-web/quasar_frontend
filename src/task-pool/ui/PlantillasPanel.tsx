@@ -389,7 +389,7 @@ export function PlantillasPanel() {
                   </td>
                   <td>{item.chapterName || '—'}</td>
                   <td>{item.budgetActivityName || '—'}</td>
-                  <td>{item.zoneName || '—'}</td>
+                  <td>{item.zoneName || 'Todas las zonas'}</td>
                   <td>{item.description || '—'}</td>
                   <td>
                     <StatusPill active={item.isActive === 1} />
@@ -488,13 +488,13 @@ export function PlantillasPanel() {
           </Field>
           <Field
             label="Zona"
-            help="Opcional. Ámbito de la obra (ej. Casa, Zona social). La actividad se puede guardar sin zona."
+            help="Si se deja en todas las zonas, el avance de esta actividad suma en cada una."
           >
             <TextSelect
               value={formZoneId}
               onChange={(e) => setFormZoneId(e.target.value)}
             >
-              <option value="">Sin zona</option>
+              <option value="">Todas las zonas</option>
               {zones.map((zone) => (
                 <option key={zone.id} value={zone.id}>
                   {zone.name}

@@ -200,7 +200,7 @@ export function PlantillaDetailPage() {
             {template.budgetActivityName
               ? ` · ${template.budgetActivityName}`
               : ''}
-            {template.zoneName ? ` · ${template.zoneName}` : ''}
+            {template.zoneName ? ` · ${template.zoneName}` : ' · Todas las zonas'}
             {template.isFixed === 1 ? ' · Fija' : ''}
             {template.description ? ` · ${template.description}` : ''}
           </p>

@@ -15,7 +15,7 @@ import {
   listObraBitacoras,
   type ObraBitacora,
 } from '@/tareas/api/tareasApi'
-import { canTransition } from '@/tareas/lib/taskUi'
+import { canTransition, zoneLabel } from '@/tareas/lib/taskUi'
 import type {
   BlockingDependency,
   Task,
@@ -826,7 +826,7 @@ function filterBoardTasks(tasks: Task[], query: string): Task[] {
       task.name,
       task.chapterName,
       task.budgetActivityName,
-      task.zoneName,
+      zoneLabel(task),
       task.primaryAssignee?.workerName,
       task.primaryAssignee?.crewName,
     ]
