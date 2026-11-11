@@ -15,6 +15,7 @@ import {
   type TaskRemoval,
 } from '@/tareas/api/tareasApi'
 import type { ObraFulfillment, Task } from '@/tareas/model/types'
+import { zoneLabel } from '@/tareas/lib/taskUi'
 import { TaskDetailDrawer } from '@/tareas/ui/TaskDetailDrawer'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import { Alert, Button, Modal, TextSelect, useToast } from '@/shared/ui'
@@ -129,7 +130,7 @@ export function ObraActivitiesPage() {
             return false
           }
           if (!needle) return true
-          const haystack = [task.name, task.budgetActivityName, task.zoneName]
+          const haystack = [task.name, task.budgetActivityName, zoneLabel(task)]
             .filter(Boolean)
             .join(' ')
             .toLocaleLowerCase('es')
@@ -279,7 +280,7 @@ export function ObraActivitiesPage() {
                               <p className={styles.cardMeta}>
                                 {task.budgetActivityName || 'Sin subcapítulo'}
                                 {' · '}
-                                {task.zoneName || 'Sin zona'}
+                                {zoneLabel(task)}
                               </p>
                               <span className={styles.meterRow}>
                                 <strong style={{ color: progress > 0 ? accent.ink : '#94a3b8' }}>

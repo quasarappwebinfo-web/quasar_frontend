@@ -7,7 +7,7 @@ import {
   updateTask,
   uploadTaskDocument,
 } from '@/tareas/api/tareasApi'
-import { categoryColor, formatTaskDate } from '@/tareas/lib/taskUi'
+import { categoryColor, formatTaskDate, zoneLabel } from '@/tareas/lib/taskUi'
 import type { Task, TaskDetail } from '@/tareas/model/types'
 import { TASK_STATUS_BADGE } from '@/tareas/model/types'
 import { ApiError } from '@/shared/api/apiJson'
@@ -598,12 +598,10 @@ export function TaskDetailDrawer({
                     <p className={styles.metaValue}>{task.budgetActivityName}</p>
                   </div>
                 ) : null}
-                {task.zoneName ? (
-                  <div>
-                    <p className={styles.metaLabel}>Zona</p>
-                    <p className={styles.metaValue}>{task.zoneName}</p>
-                  </div>
-                ) : null}
+                <div>
+                  <p className={styles.metaLabel}>Zona</p>
+                  <p className={styles.metaValue}>{zoneLabel(task)}</p>
+                </div>
               </div>
 
               <section className={styles.drawerSection}>

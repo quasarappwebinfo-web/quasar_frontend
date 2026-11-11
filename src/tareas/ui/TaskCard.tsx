@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import type { Task, TaskStatus } from '@/tareas/model/types'
 import { ALLOWED_STATUS_TRANSITIONS } from '@/tareas/model/types'
-import { assigneeLabel, formatTaskDate, progressValue } from '@/tareas/lib/taskUi'
+import { assigneeLabel, formatTaskDate, progressValue, zoneLabel } from '@/tareas/lib/taskUi'
 import styles from './BitacoraBoard.module.css'
 
 export type BoardAccent = {
@@ -72,7 +72,7 @@ export function TaskCard({
           <p className={styles.cardMeta}>
             {task.budgetActivityName || task.chapterName || 'Sin subcapítulo'}
             {' · '}
-            {task.zoneName || 'Sin zona'}
+            {zoneLabel(task)}
           </p>
           <p className={styles.cardMeta}>
             {assignee.name}
