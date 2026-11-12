@@ -32,7 +32,7 @@ import { CatalogPager } from '@/task-pool/ui/CatalogParts'
 import { BlockedDepsModal } from './BlockedDepsModal'
 import board from './BitacoraBoard.module.css'
 import { ConfirmStartModal } from './ConfirmStartModal'
-import { CreateTaskFromTemplateModal } from './CreateTaskFromTemplateModal'
+import { AddBitacoraActivityModal } from './AddBitacoraActivityModal'
 import { TaskCard, type BoardAccent } from './TaskCard'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
 
@@ -767,11 +767,12 @@ export function TasksKanbanPage() {
         </>
       )}
 
-      <CreateTaskFromTemplateModal
+      <AddBitacoraActivityModal
         open={createOpen}
         obraId={obraId}
+        planId={Number(planId)}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => void load()}
+        onAdded={() => void load()}
       />
 
       <BlockedDepsModal

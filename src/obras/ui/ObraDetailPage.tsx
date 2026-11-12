@@ -426,7 +426,8 @@ export function ObraDetailPage() {
                       </span>
                     </div>
                   </div>
-                  <div className={styles.chapterTrack}>
+                  <div className={styles.chapterScroller}>
+                    <div className={styles.chapterTrack}>
                     {chapters.map((chapter) => {
                       const progress = asPercent(chapter.progressPercent)
                       const tone =
@@ -441,6 +442,7 @@ export function ObraDetailPage() {
                         </div>
                       )
                     })}
+                    </div>
                   </div>
                 </div>
               )

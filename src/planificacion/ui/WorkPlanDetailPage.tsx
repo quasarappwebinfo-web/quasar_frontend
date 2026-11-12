@@ -4,7 +4,6 @@ import { getObra } from '@/obras/api/obrasApi'
 import { OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import type { Obra } from '@/obras/model/types'
 import {
-  addWorkPlanTask,
   createWorkPlanVersion,
   getWorkPlan,
   removeWorkPlanSnapshot,
@@ -21,8 +20,7 @@ import {
   EVENT_TYPE_LABELS,
   WORK_PLAN_STATUS_LABELS,
 } from '@/planificacion/model/types'
-import { listTasks } from '@/tareas/api/tareasApi'
-import { TASK_STATUS_LABELS, type Task, type TaskStatus } from '@/tareas/model/types'
+import { AddBitacoraActivityModal } from '@/tareas/ui/AddBitacoraActivityModal'
 import { ApiError } from '@/shared/api/apiJson'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import {
@@ -31,7 +29,6 @@ import {
   Field,
   Modal,
   TextInput,
-  TextSelect,
   useToast,
 } from '@/shared/ui'
 import look from '@/task-pool/ui/taskPool.module.css'
@@ -55,9 +52,6 @@ export function WorkPlanDetailPage() {
   const [editEnd, setEditEnd] = useState('')
 
   const [addTaskOpen, setAddTaskOpen] = useState(false)
-  const [availableTasks, setAvailableTasks] = useState<Task[]>([])
-  const [loadingTasks, setLoadingTasks] = useState(false)
-  const [taskToAdd, setTaskToAdd] = useState('')
   const [taskQuery, setTaskQuery] = useState('')
   const [obra, setObra] = useState<Obra | null>(null)
 
@@ -128,22 +122,6 @@ export function WorkPlanDetailPage() {
     }
   }
 
-  async function openAddTask() {
-    if (!plan) return
-    setAddTaskOpen(true)
-    setTaskToAdd('')
-    setLoadingTasks(true)
-    try {
-      const tasks = await listObraActivities(plan.obraId)
-      const existing = new Set(current?.tasks.map((t) => t.taskId) || [])
-      setAvailableTasks(tasks.filter((task) => !existing.has(task.id)))
-    } catch {
-      setAvailableTasks([])
-    } finally {
-      setLoadingTasks(false)
-    }
-  }
-
   async function handleSaveHeader(event: FormEvent) {
     event.preventDefault()
     await runAction('Cabecera actualizada', () =>
@@ -154,15 +132,6 @@ export function WorkPlanDetailPage() {
       }),
     )
     setEditOpen(false)
-  }
-
-  async function handleAddTask(event: FormEvent) {
-    event.preventDefault()
-    if (!version || !taskToAdd) return
-    await runAction('Actividad agregada al snapshot', () =>
-      addWorkPlanTask(version.id, { taskId: Number(taskToAdd) }),
-    )
-    setAddTaskOpen(false)
   }
 
   const tasks = (current?.tasks || []).filter((task) => {
@@ -328,7 +297,7 @@ export function WorkPlanDetailPage() {
             Ver tablero
           </button>
           {editable ? (
-            <button type="button" className={look.primaryBtn} onClick={() => void openAddTask()}>
+            <button type="button" className={look.primaryBtn} onClick={() => setAddTaskOpen(true)}>
               + Actividad
             </button>
           ) : null}
@@ -460,51 +429,13 @@ export function WorkPlanDetailPage() {
         </form>
       </Modal>
 
-      <Modal
-        title="Agregar actividad de la obra"
+      <AddBitacoraActivityModal
         open={addTaskOpen}
+        obraId={plan.obraId}
+        planId={plan.id}
         onClose={() => setAddTaskOpen(false)}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setAddTaskOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" form="add-plan-task" disabled={busy || !taskToAdd}>
-              Agregar
-            </Button>
-          </>
-        }
-      >
-        <form id="add-plan-task" className={styles.formGrid} onSubmit={handleAddTask}>
-          <Field
-            label="Actividad"
-            help="Son las actividades de esta obra que todavía no están en la bitácora."
-          >
-            <TextSelect
-              value={taskToAdd}
-              onChange={(e) => setTaskToAdd(e.target.value)}
-              required
-            >
-              <option value="">Seleccionar…</option>
-              {availableTasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.name}
-                  {task.status in TASK_STATUS_LABELS
-                    ? ` · ${TASK_STATUS_LABELS[task.status as TaskStatus]}`
-                    : ''}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-          {loadingTasks ? (
-            <p className={styles.muted}>Cargando actividades de la obra…</p>
-          ) : availableTasks.length === 0 ? (
-            <p className={styles.muted}>
-              Esta obra no tiene más actividades fuera de la bitácora.
-            </p>
-          ) : null}
-        </form>
-      </Modal>
+        onAdded={() => void load()}
+      />
     </div>
   )
 }
@@ -537,19 +468,6 @@ function weekTitle(name: string, startDate: string): string {
   const [year, month, day] = startDate.split('-').map(Number)
   if (!year || !month || !day) return name
   return `Bitácora semana ${Math.ceil(day / 7)} ${WEEK_MONTHS[month - 1] || ''}`.trim()
-}
-
-async function listObraActivities(obraId: number): Promise<Task[]> {
-  const all: Task[] = []
-  let page = 1
-  let total = 0
-  do {
-    const data = await listTasks({ obraId, page, parentOnly: true })
-    all.push(...data.tasks)
-    total = data.pagination.totalItems
-    page += 1
-  } while (all.length < total && page <= 40)
-  return all.sort((left, right) => left.name.localeCompare(right.name, 'es'))
 }
 
 function SearchGlyph() {
