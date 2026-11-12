@@ -1369,11 +1369,24 @@
   font-size: 0.75rem;
 }
 
+.chapterScroller {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .chapterTrack {
   display: flex;
   align-items: flex-end;
   gap: 1.35rem;
   overflow-x: auto;
+  margin-bottom: -16px;
+  padding-bottom: 16px;
+  scrollbar-width: none;
+}
+
+.chapterTrack::-webkit-scrollbar {
+  display: none;
+  height: 0;
 }
 
 .chapterCell {
