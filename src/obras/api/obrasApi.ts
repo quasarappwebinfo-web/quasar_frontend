@@ -38,6 +38,96 @@ export async function listObras(params: {
   )
 }
 
+export type ObraChapterZoneMark = {
+  zoneId: number
+  zoneName: string
+  mode: 'open' | 'running' | 'completed'
+  progressPercent?: number | null
+}
+
+export type ObraChapterMark = {
+  chapterId: number
+  chapterName: string
+  zones: ObraChapterZoneMark[]
+}
+
+export async function listObraChapterMarks(
+  obraId: number,
+): Promise<ObraChapterMark[]> {
+  const data = await apiJson<{ chapters: ObraChapterMark[] }>(
+    `/api/v1/obras/${obraId}/capitulos`,
+  )
+  return data.chapters
+}
+
+export async function saveObraChapterMarks(
+  obraId: number,
+  chapters: Array<{
+    chapterId: number
+    zoneId: number
+    mode: 'open' | 'running' | 'completed'
+    progressPercent?: number
+  }>,
+): Promise<ObraChapterMark[]> {
+  const data = await apiJson<{ chapters: ObraChapterMark[] }>(
+    `/api/v1/obras/${obraId}/capitulos`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ chapters }),
+    },
+  )
+  return data.chapters
+}
+
+export function withoutCompletedChapters<T extends { id: number }>(
+  chapters: T[],
+  marks: ObraChapterMark[],
+): { chapters: T[]; hidesCompleted: boolean } {
+  const fullyClosed = new Set(
+    marks
+      .filter(
+        (mark) =>
+          mark.zones.length > 0 &&
+          mark.zones.every((zone) => zone.mode === 'completed'),
+      )
+      .map((mark) => mark.chapterId),
+  )
+  return {
+    chapters: chapters.filter((chapter) => !fullyClosed.has(chapter.id)),
+    hidesCompleted: marks.some((mark) =>
+      mark.zones.some((zone) => zone.mode === 'completed'),
+    ),
+  }
+}
+
+export function openZonesForChapter<T extends { id: number }>(
+  zones: T[],
+  marks: ObraChapterMark[],
+  chapterId: number,
+): T[] {
+  const mark = marks.find((item) => item.chapterId === chapterId)
+  if (!mark) return zones
+  const closed = new Set(
+    mark.zones
+      .filter((zone) => zone.mode === 'completed')
+      .map((zone) => zone.zoneId),
+  )
+  return zones.filter((zone) => !closed.has(zone.id))
+}
+
+export function templateZoneIsOpen(
+  template: { chapterId: number | null; zoneId: number | null },
+  marks: ObraChapterMark[],
+): boolean {
+  if (template.chapterId == null) return true
+  const mark = marks.find((item) => item.chapterId === template.chapterId)
+  if (!mark) return true
+  const closed = mark.zones.filter((zone) => zone.mode === 'completed')
+  if (closed.length === 0) return true
+  if (template.zoneId == null) return false
+  return !closed.some((zone) => zone.zoneId === template.zoneId)
+}
+
 export async function getObra(id: number): Promise<Obra> {
   return apiJson(`/api/v1/obras/${id}`)
 }

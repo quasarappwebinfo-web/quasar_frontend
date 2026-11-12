@@ -11,6 +11,13 @@ import type {
   TaskZone,
 } from '@/task-pool/model/types'
 import { createTask, createTaskFromTemplate, listTasks } from '@/tareas/api/tareasApi'
+import {
+  listObraChapterMarks,
+  openZonesForChapter,
+  templateZoneIsOpen,
+  withoutCompletedChapters,
+  type ObraChapterMark,
+} from '@/obras/api/obrasApi'
 import { ApiError } from '@/shared/api/apiJson'
 import {
   Alert,
@@ -58,6 +65,8 @@ export function ObraActivityModal({
 }: ObraActivityModalProps) {
   const toast = useToast()
   const [chapters, setChapters] = useState<TaskChapter[]>([])
+  const [marks, setMarks] = useState<ObraChapterMark[]>([])
+  const [hidesCompleted, setHidesCompleted] = useState(false)
   const [zones, setZones] = useState<TaskZone[]>([])
   const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>([])
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
@@ -99,8 +108,12 @@ export function ObraActivityModal({
           total: data.pagination.totalItems,
         })),
       ).catch(() => []),
-    ]).then(([chapterRows, zoneRows, obraTasks]) => {
-      setChapters(sortChapters(chapterRows))
+      listObraChapterMarks(obraId).catch(() => []),
+    ]).then(([chapterRows, zoneRows, obraTasks, marks]) => {
+      setMarks(marks)
+      const visible = withoutCompletedChapters(sortChapters(chapterRows), marks)
+      setChapters(visible.chapters)
+      setHidesCompleted(visible.hidesCompleted)
       setZones(zoneRows)
       setUsedTemplateIds(
         obraTasks
@@ -157,7 +170,12 @@ export function ObraActivityModal({
     )
       .then((rows) => {
         if (cancelled) return
-        setTemplates(rows.filter((item) => !usedTemplateIds.includes(item.id)))
+        setTemplates(
+          rows.filter(
+            (item) =>
+              !usedTemplateIds.includes(item.id) && templateZoneIsOpen(item, marks),
+          ),
+        )
       })
       .catch(() => {
         if (!cancelled) setTemplates([])
@@ -165,7 +183,7 @@ export function ObraActivityModal({
     return () => {
       cancelled = true
     }
-  }, [open, origin, budgetActivityId, usedTemplateIds])
+  }, [open, origin, budgetActivityId, usedTemplateIds, marks])
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -220,13 +238,21 @@ export function ObraActivityModal({
     >
       <form id="obra-activity" className={styles.formGrid} onSubmit={handleSubmit}>
         {error ? <Alert tone="error">{error}</Alert> : null}
-        <Field label="Capítulo">
+        <Field
+          label="Capítulo"
+          hint={
+            hidesCompleted
+              ? 'La zona donde el capítulo ya está completado no admite actividades nuevas.'
+              : undefined
+          }
+        >
           <TextSelect
             value={chapterId}
             onChange={(e) => {
               setChapterId(e.target.value)
               setBudgetActivityId('')
               setTemplateId('')
+              setZoneId('')
             }}
             required
           >
@@ -275,14 +301,22 @@ export function ObraActivityModal({
           </Field>
         ) : (
           <>
-            <Field label="Zona">
+            <Field
+              label="Zona"
+              hint={
+                chapterId &&
+                openZonesForChapter(zones, marks, Number(chapterId)).length < zones.length
+                  ? 'Las zonas completadas de este capítulo no se ofrecen.'
+                  : undefined
+              }
+            >
               <TextSelect
                 value={zoneId}
                 onChange={(e) => setZoneId(e.target.value)}
                 required
               >
                 <option value="">Seleccionar…</option>
-                {zones.map((item) => (
+                {openZonesForChapter(zones, marks, Number(chapterId || 0)).map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
