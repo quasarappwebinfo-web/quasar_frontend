@@ -421,26 +421,33 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
           )}
         </div>
         {canOpenChapters ? (
-          <section className={styles.opening}>
+          <section className={styles.markList}>
             <div>
-              <h3 className={styles.openingTitle}>Obra ya comenzada</h3>
-              <p className={styles.openingLead}>
+              <h3 className={styles.markChapterTitle}>Obra ya comenzada</h3>
+              <p className={styles.markNote}>
                 Marca los capítulos que ya llegaron hechos. En uno a medias eliges
                 las actividades del pool. Los demás se programan solos.
               </p>
             </div>
             {catalogState !== 'ready' ? (
-              <p className={styles.openingLead}>Cargando capítulos…</p>
+              <p className={styles.markNote}>Cargando capítulos…</p>
             ) : chapters.length === 0 ? (
-              <p className={styles.openingLead}>No hay capítulos activos en el pool.</p>
+              <p className={styles.markNote}>No hay capítulos activos en el pool.</p>
             ) : (
               chapters.map((chapter) => {
                 const choice = openings[chapter.id] ?? PROGRAMMED
                 const pool = templates.filter((item) => item.chapterId === chapter.id)
                 return (
-                  <article key={chapter.id} className={styles.openingChapter}>
-                    <div className={styles.openingHead}>
-                      <strong>{chapter.name}</strong>
+                  <article key={chapter.id} className={styles.markChapter}>
+                    <h3 className={styles.markChapterTitle}>{chapter.name}</h3>
+                    <Field
+                      label="Estado"
+                      hint={
+                        choice.mode === 'completed'
+                          ? 'Queda en 100 %. Sus actividades fijas se crean como hechas.'
+                          : undefined
+                      }
+                    >
                       <TextSelect
                         aria-label={`Avance de ${chapter.name}`}
                         disabled={saving}
@@ -459,12 +466,7 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
                         <option value="completed">Completado</option>
                         <option value="partial">A medias</option>
                       </TextSelect>
-                    </div>
-                    {choice.mode === 'completed' ? (
-                      <p className={styles.openingLead}>
-                        Queda en 100%. Sus actividades fijas se crean como hechas.
-                      </p>
-                    ) : null}
+                    </Field>
                     {choice.mode === 'partial' ? (
                       <>
                         <Field label="Avance con el que llega">
@@ -485,7 +487,7 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
                         </Field>
                         <div className={styles.openingActivities}>
                           {pool.length === 0 ? (
-                            <p className={styles.openingLead}>
+                            <p className={styles.markNote}>
                               Este capítulo no tiene actividades en el pool.
                             </p>
                           ) : (

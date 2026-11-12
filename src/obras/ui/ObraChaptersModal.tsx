@@ -167,72 +167,75 @@ export function ObraChaptersModal({
         </>
       }
     >
-      <div className={styles.opening}>
-        <p className={styles.openingLead}>
+      <div className={styles.markList}>
+        <p className={styles.markNote}>
           Cada zona se marca aparte. Completado deja esa zona en 100 % y ya no
           admite actividades nuevas ahí. Las otras zonas del mismo capítulo
           siguen abiertas.
         </p>
         {error ? <Alert tone="error">{error}</Alert> : null}
-        {loading ? <p className={styles.openingLead}>Cargando capítulos…</p> : null}
+        {loading ? <p className={styles.markNote}>Cargando capítulos…</p> : null}
         {!loading && rows.length === 0 && !error ? (
-          <p className={styles.openingLead}>No hay capítulos activos.</p>
+          <p className={styles.markNote}>No hay capítulos activos.</p>
         ) : null}
         {rows.map((row) => (
-          <article key={row.chapterId} className={styles.openingChapter}>
-            <strong>{row.name}</strong>
+          <section key={row.chapterId} className={styles.markChapter}>
+            <h3 className={styles.markChapterTitle}>{row.name}</h3>
             {row.zones.length === 0 ? (
-              <p className={styles.openingLead}>No hay zonas activas.</p>
-            ) : null}
-            {row.zones.map((zone) => (
-              <div key={zone.zoneId}>
-                <div className={styles.openingHead}>
-                  <span>{zone.zoneName}</span>
-                  <TextSelect
-                    aria-label={`Estado de ${row.name} en ${zone.zoneName}`}
-                    disabled={saving}
-                    value={zone.mode}
-                    onChange={(event) =>
-                      updateZone(row.chapterId, zone.zoneId, {
-                        mode: event.target.value as MarkMode,
-                        percent: event.target.value === 'running' ? zone.percent : '',
-                      })
-                    }
-                  >
-                    <option value="open">Abierto</option>
-                    <option value="running">En marcha</option>
-                    <option value="completed">Completado</option>
-                  </TextSelect>
-                </div>
-                {zone.mode === 'completed' ? (
-                  <p className={styles.openingLead}>
-                    Queda en 100 % en {zone.zoneName}. No se le pueden agregar
-                    actividades.
-                  </p>
-                ) : null}
-                {zone.mode === 'running' ? (
-                  <Field
-                    label="Avance con el que va"
-                    help="Opcional. Si lo dejas vacío, el avance sale solo de las actividades de esta zona."
-                  >
-                    <TextInput
-                      type="number"
-                      min={1}
-                      max={99}
-                      disabled={saving}
-                      value={zone.percent}
-                      placeholder="70"
-                      onChange={(event) =>
-                        updateZone(row.chapterId, zone.zoneId, {
-                          percent: event.target.value,
-                        })
+              <p className={styles.markNote}>No hay zonas activas.</p>
+            ) : (
+              <div className={styles.markZones}>
+                {row.zones.map((zone) => (
+                  <div key={zone.zoneId} className={styles.markZone}>
+                    <Field
+                      label={zone.zoneName}
+                      hint={
+                        zone.mode === 'completed'
+                          ? 'Queda en 100 %. No admite actividades nuevas.'
+                          : undefined
                       }
-                    />
-                  </Field>
-                ) : null}
+                    >
+                      <TextSelect
+                        aria-label={`Estado de ${row.name} en ${zone.zoneName}`}
+                        disabled={saving}
+                        value={zone.mode}
+                        onChange={(event) =>
+                          updateZone(row.chapterId, zone.zoneId, {
+                            mode: event.target.value as MarkMode,
+                            percent: event.target.value === 'running' ? zone.percent : '',
+                          })
+                        }
+                      >
+                        <option value="open">Abierto</option>
+                        <option value="running">En marcha</option>
+                        <option value="completed">Completado</option>
+                      </TextSelect>
+                    </Field>
+                    {zone.mode === 'running' ? (
+                      <Field
+                        label="Avance"
+                        hint="Opcional. Vacío usa solo las actividades de esta zona."
+                      >
+                        <TextInput
+                          type="number"
+                          min={1}
+                          max={99}
+                          disabled={saving}
+                          value={zone.percent}
+                          placeholder="70"
+                          onChange={(event) =>
+                            updateZone(row.chapterId, zone.zoneId, {
+                              percent: event.target.value,
+                            })
+                          }
+                        />
+                      </Field>
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            ))}
-          </article>
+            )}
+          </section>
         ))}
       </div>
     </Modal>
