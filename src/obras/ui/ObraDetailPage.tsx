@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { isSuperUser, useAuth } from '@/auth'
 import {
@@ -319,7 +319,51 @@ export function ObraDetailPage() {
               </span>
             </div>
             <div>
-              <h2 className={styles.kpiTitle}>Avance Global de Obra</h2>
+              <div className={styles.kpiTitleRow}>
+                <h2 className={styles.kpiTitle}>Avance Global de Obra</h2>
+                <KpiHelp label="Cómo se calcula el avance global" title="Avance global, paso a paso">
+                  <p>
+                    Imagina la obra como una torta. No se mira un solo pedazo: se
+                    mira toda, pero los pedazos grandes pesan más que los chicos.
+                  </p>
+                  <ol className={styles.explainSteps}>
+                    <li>
+                      <strong>Una actividad.</strong> Si ya la terminaron o la
+                      revisaron, vale 100. Si sigue abierta, vale 0. Si tiene
+                      subtareas, se cuentan las listas. Dos subtareas y una lista:
+                      esa actividad va en 50.
+                    </li>
+                    <li>
+                      <strong>Un capítulo dentro de una zona.</strong> Cada capítulo
+                      es un pedazo de esa zona. Si Estructura vale 30 de Casa y ya
+                      está completa, Casa sube 30. Los capítulos que siguen en cero
+                      no suman.
+                    </li>
+                    <li>
+                      <strong>Las zonas dentro de la obra.</strong> Casa es el pedazo
+                      grande: 70 de cada 100. Zona Social es el pedazo chico: 30 de
+                      cada 100.
+                    </li>
+                  </ol>
+                  <div className={styles.explainExample}>
+                    <p>
+                      <strong>Ejemplo.</strong> Casa va a la mitad, o sea 50. Zona
+                      Social todavía no empieza, o sea 0.
+                    </p>
+                    <ExamplePie />
+                    <p>
+                      Casa vale 70 pedazos de cada 100. Si Casa va a la mitad,
+                      aporta la mitad de 70, o sea 35. Zona Social aporta 0.
+                    </p>
+                    <p>35 + 0 = 35. El avance global queda en 35.</p>
+                  </div>
+                  <p>
+                    A veces un capítulo se marca «en marcha» y se dice «ya iba en
+                    40». Ese 40 no se pierde. Lo que falta son 60. Si de eso que
+                    falta se termina la mitad, se suman 30 y el capítulo queda en 70.
+                  </p>
+                </KpiHelp>
+              </div>
               <p className={styles.kpiHint}>Ejecución ponderada del proyecto</p>
             </div>
           </div>
@@ -340,7 +384,41 @@ export function ObraDetailPage() {
               <span className={styles.ringValue}>{periodProgress}%</span>
             </div>
             <div>
-              <h2 className={styles.kpiTitle}>Cumplimiento Bitácora</h2>
+              <div className={styles.kpiTitleRow}>
+                <h2 className={styles.kpiTitle}>Cumplimiento Bitácora</h2>
+                <KpiHelp
+                  label="Cómo se calcula el cumplimiento de la bitácora"
+                  title="Cumplimiento de la bitácora, paso a paso"
+                >
+                  <p>
+                    La bitácora es la lista de lo que toca hacer en este periodo.
+                    Este número no mira toda la casa. Solo mira las actividades de
+                    esa lista.
+                  </p>
+                  <ol className={styles.explainSteps}>
+                    <li>
+                      <strong>Todas valen igual.</strong> Da lo mismo si una es un
+                      muro grande y otra es pintar una puerta. Ninguna pesa más.
+                    </li>
+                    <li>
+                      <strong>Terminada cuenta completa.</strong> Si está terminada o
+                      revisada, vale 100. Si sigue abierta, vale 0.
+                    </li>
+                    <li>
+                      <strong>Si tiene subtareas, se parte.</strong> Dos partes y una
+                      lista: esa actividad vale 50, no 100.
+                    </li>
+                  </ol>
+                  <div className={styles.explainExample}>
+                    <p>
+                      <strong>Ejemplo.</strong> En la mesa hay 4 fichas. Solo 1 está
+                      pintada de verde, o sea terminada. Las otras 3 siguen en blanco.
+                    </p>
+                    <p>1 de 4 es lo mismo que 25 de cada 100.</p>
+                    <p>El cumplimiento de la bitácora queda en 25.</p>
+                  </div>
+                </KpiHelp>
+              </div>
               <p className={styles.kpiHint}>Periodo: {periodLabel}</p>
             </div>
           </div>
@@ -1268,5 +1346,93 @@ function DocumentosTab({ obraId }: { obraId: number }) {
         </form>
       </Modal>
     </section>
+  )
+}
+
+function ExamplePie() {
+  const slices = [
+    { from: 0, to: 126, color: '#014cbd' },
+    { from: 126, to: 252, color: '#c5d8f6' },
+    { from: 252, to: 360, color: '#d5dbe3' },
+  ]
+
+  return (
+    <figure className={styles.pieFigure}>
+      <svg viewBox="0 0 120 120" role="img" aria-label="Torta: Casa aporta 35, le faltan 35 y Zona Social aporta 0">
+        {slices.map((slice) => (
+          <path
+            key={slice.from}
+            d={pieSlice(60, 60, 54, slice.from, slice.to)}
+            fill={slice.color}
+            stroke="#f4f8ff"
+            strokeWidth="1.5"
+          />
+        ))}
+      </svg>
+      <ul className={styles.pieLegend}>
+        <li>
+          <span className={styles.pieSwatch} style={{ background: '#014cbd' }} />
+          Casa ya hecha: 35
+        </li>
+        <li>
+          <span className={styles.pieSwatch} style={{ background: '#c5d8f6' }} />
+          Casa que falta: 35
+        </li>
+        <li>
+          <span className={styles.pieSwatch} style={{ background: '#d5dbe3' }} />
+          Zona Social: 0 de 30
+        </li>
+      </ul>
+    </figure>
+  )
+}
+
+function pieSlice(cx: number, cy: number, radius: number, start: number, end: number) {
+  const point = (angle: number) => {
+    const radians = ((angle - 90) * Math.PI) / 180
+    return {
+      x: cx + radius * Math.cos(radians),
+      y: cy + radius * Math.sin(radians),
+    }
+  }
+  const from = point(start)
+  const to = point(end)
+  const large = end - start > 180 ? 1 : 0
+  return `M ${cx} ${cy} L ${from.x} ${from.y} A ${radius} ${radius} 0 ${large} 1 ${to.x} ${to.y} Z`
+}
+
+function KpiHelp({
+  label,
+  title,
+  children,
+}: {
+  label: string
+  title: string
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.helpBtn}
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        ?
+      </button>
+      <Modal
+        title={title}
+        description="Te lo contamos despacito, con un ejemplo."
+        open={open}
+        onClose={() => setOpen(false)}
+        wide
+        footer={<Button onClick={() => setOpen(false)}>Entendido</Button>}
+      >
+        <div className={styles.explain}>{children}</div>
+      </Modal>
+    </>
   )
 }
