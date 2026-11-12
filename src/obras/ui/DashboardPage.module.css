@@ -576,56 +576,55 @@
   color: #8a9098;
 }
 
-.opening {
+.markList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.markNote {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.65rem;
+  background: rgba(1, 76, 189, 0.06);
+  border: 1px solid rgba(1, 76, 189, 0.12);
+  color: #2a2e34;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.markChapter {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 0.95rem;
-  border: 1px solid #dbe7f5;
-  border-radius: 16px;
-  background: #f5f9ff;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(26, 28, 31, 0.08);
 }
 
-.openingTitle {
+.markChapterTitle {
   margin: 0;
   font-family: 'Questrial', var(--font-sans);
   font-size: 1.05rem;
   font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
-.openingLead {
-  margin: 0.2rem 0 0;
-  color: #6d7682;
-  font-size: 0.88rem;
-  line-height: 1.4;
+.markZones {
+  display: grid;
+  gap: 0.85rem;
 }
 
-.openingChapter {
+@media (min-width: 640px) {
+  .markZones {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.markZone {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.75rem 0.8rem;
-  border: 1px solid #e6edf5;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.openingHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-
-.openingHead strong {
-  font-family: 'Questrial', var(--font-sans);
-  font-weight: 400;
-  font-size: 1rem;
-}
-
-.openingHead select {
-  min-width: 9.5rem;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .openingActivities {
