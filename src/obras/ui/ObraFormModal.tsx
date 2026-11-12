@@ -426,7 +426,9 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
               <h3 className={styles.markChapterTitle}>Obra ya comenzada</h3>
               <p className={styles.markNote}>
                 Marca los capítulos que ya llegaron hechos. En uno a medias eliges
-                las actividades del pool. Los demás se programan solos.
+                las actividades que ya están listas: esas son el porcentaje que
+                escribes. Las fijas de ese capítulo que no marques se programan
+                solas y son el resto.
               </p>
             </div>
             {catalogState !== 'ready' ? (
@@ -445,7 +447,9 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
                       hint={
                         choice.mode === 'completed'
                           ? 'Queda en 100 %. Sus actividades fijas se crean como hechas.'
-                          : undefined
+                          : choice.mode === 'partial'
+                            ? 'Las que marques ya están listas y son este porcentaje.'
+                            : undefined
                       }
                     >
                       <TextSelect
@@ -469,7 +473,10 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
                     </Field>
                     {choice.mode === 'partial' ? (
                       <>
-                        <Field label="Avance con el que llega">
+                        <Field
+                          label="Avance con el que llega"
+                          hint="Por ejemplo 70. Las actividades que marques son ese porcentaje."
+                        >
                           <TextInput
                             type="number"
                             min={1}
@@ -488,7 +495,7 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
                         <div className={styles.openingActivities}>
                           {pool.length === 0 ? (
                             <p className={styles.markNote}>
-                              Este capítulo no tiene actividades en el pool.
+                              Este capítulo no tiene actividades en el listado.
                             </p>
                           ) : (
                             pool.map((template) => {
@@ -512,12 +519,20 @@ export function ObraFormModal({ open, obra, onClose, onSaved }: ObraFormModalPro
                                       })
                                     }
                                   />
-                                  <span>{template.name}</span>
+                                  <span>
+                                    {template.name}
+                                    {template.isFixed === 1 ? ' · Fija' : ''}
+                                  </span>
                                 </label>
                               )
                             })
                           )}
                         </div>
+                        {pool.length > 0 ? (
+                          <p className={styles.markNote}>
+                            {partialScheduleNote(choice.percent, pool, choice.templateIds)}
+                          </p>
+                        ) : null}
                       </>
                     ) : null}
                   </article>
@@ -546,6 +561,25 @@ async function listEveryTemplates(): Promise<TaskTemplate[]> {
   return all
 }
 
+function partialScheduleNote(
+  percent: string,
+  pool: TaskTemplate[],
+  templateIds: number[],
+): string {
+  const value = Number(percent)
+  const rest =
+    Number.isInteger(value) && value >= 1 && value <= 99
+      ? `el ${100 - value} %`
+      : 'el resto'
+  const pending = pool.filter(
+    (item) => item.isFixed === 1 && !templateIds.includes(item.id),
+  )
+  if (pending.length === 0) {
+    return 'No queda ninguna actividad fija por programar. Las que marques ya quedan listas.'
+  }
+  return `Se programan solas y son ${rest}: ${pending.map((item) => item.name).join(', ')}.`
+}
+
 function collectOpenings(
   chapters: TaskChapter[],
   openings: Record<number, ChapterChoice>,
@@ -563,7 +597,7 @@ function collectOpenings(
       return `${chapter.name}: indica un avance entre 1 y 99.`
     }
     if (choice.templateIds.length === 0) {
-      return `${chapter.name}: elige las actividades del pool que vas a usar.`
+      return `${chapter.name}: elige las actividades que ya están listas.`
     }
     payload.push({
       chapterId: chapter.id,
