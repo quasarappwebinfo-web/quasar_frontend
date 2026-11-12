@@ -1247,10 +1247,140 @@
   gap: 0.75rem;
 }
 
+.kpiTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .kpiTitle {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 400;
+}
+
+.helpBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  border: 1px solid rgba(26, 28, 31, 0.16);
+  border-radius: 999px;
+  background: #fff;
+  color: #7a8088;
+  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.helpBtn:hover,
+.helpBtn[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--color-brand-blue) 45%, #ddd);
+  color: var(--color-brand-blue);
+  background: color-mix(in srgb, var(--color-brand-blue) 6%, #fff);
+}
+
+.explain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.explain p {
+  margin: 0;
+  color: #2a2e34;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.explainSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: explain;
+}
+
+.explainSteps li {
+  position: relative;
+  padding-left: 2rem;
+  color: #2a2e34;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  counter-increment: explain;
+}
+
+.explainSteps li::before {
+  content: counter(explain);
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: var(--color-brand-blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.explainExample {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.7rem;
+  background: rgba(1, 76, 189, 0.06);
+  border: 1px solid rgba(1, 76, 189, 0.12);
+}
+
+.pieFigure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1rem;
+  margin: 0.35rem 0 0.2rem;
+}
+
+.pieFigure svg {
+  width: 8.75rem;
+  height: 8.75rem;
+  flex-shrink: 0;
+}
+
+.pieLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #2a2e34;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.pieLegend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pieSwatch {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 0.2rem;
+  flex-shrink: 0;
 }
 
 .kpiHint {
