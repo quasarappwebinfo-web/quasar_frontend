@@ -12,6 +12,7 @@ import {
   uploadObraDocuments,
 } from '@/obras/api/documentosApi'
 import { getObra, updateObra } from '@/obras/api/obrasApi'
+import { ObraChaptersModal } from '@/obras/ui/ObraChaptersModal'
 import { coverForObra, OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import type { Obra, ObraClient, ObraDocument } from '@/obras/model/types'
 import {
@@ -80,6 +81,7 @@ export function ObraDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [chaptersOpen, setChaptersOpen] = useState(false)
   const [asistenciaOpen, setAsistenciaOpen] = useState(false)
   const [asistenciaHoy, setAsistenciaHoy] = useState<ObraDailyAttendance[]>([])
   const [asistenciaLoading, setAsistenciaLoading] = useState(false)
@@ -275,6 +277,15 @@ export function ObraDetailPage() {
             </button>
           ) : null}
           <div className={styles.actionRow}>
+            {canDeactivateObra ? (
+              <button
+                type="button"
+                className={styles.editBtn}
+                onClick={() => setChaptersOpen(true)}
+              >
+                Capítulos
+              </button>
+            ) : null}
             <button type="button" className={styles.editBtn} onClick={() => setEditOpen(true)}>
               <PencilIcon />
               Editar
@@ -654,6 +665,17 @@ export function ObraDetailPage() {
         obra={obra}
         onClose={() => setEditOpen(false)}
         onSaved={(next) => setObra(next)}
+      />
+
+      <ObraChaptersModal
+        open={chaptersOpen}
+        obraId={obra.id}
+        onClose={() => setChaptersOpen(false)}
+        onSaved={() => {
+          void getObraFulfillment(obra.id)
+            .then((data) => setFulfillment(data))
+            .catch(() => undefined)
+        }}
       />
 
       <AsistenciaModal

@@ -16,6 +16,12 @@ import type {
 import { TASK_STATUS_LABELS } from '@/tareas/model/types'
 import type { TaskStatus } from '@/tareas/model/types'
 import { listTasks } from '@/tareas/api/tareasApi'
+import {
+  listObraChapterMarks,
+  templateZoneIsOpen,
+  withoutCompletedChapters,
+  type ObraChapterMark,
+} from '@/obras/api/obrasApi'
 import { formatTaskDate } from '@/tareas/lib/taskUi'
 import { ApiError } from '@/shared/api/apiJson'
 import {
@@ -85,6 +91,8 @@ export function CreatePlanModal({
   const [endDate, setEndDate] = useState(range.end)
   const [pending, setPending] = useState<UnfinishedPlanActivity[]>([])
   const [chapters, setChapters] = useState<TaskChapter[]>([])
+  const [marks, setMarks] = useState<ObraChapterMark[]>([])
+  const [hidesCompleted, setHidesCompleted] = useState(false)
   const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>([])
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [chapterId, setChapterId] = useState('')
@@ -132,10 +140,14 @@ export function CreatePlanModal({
           total: data.pagination.totalItems,
         })),
       ).catch(() => [] as TaskChapter[]),
+      listObraChapterMarks(obraId).catch(() => []),
     ])
-      .then(([pendingData, obraTasks, chapterRows]) => {
+      .then(([pendingData, obraTasks, chapterRows, marks]) => {
         setPending(pendingData.tasks)
-        setChapters(sortChapters(chapterRows))
+        setMarks(marks)
+        const visible = withoutCompletedChapters(sortChapters(chapterRows), marks)
+        setChapters(visible.chapters)
+        setHidesCompleted(visible.hidesCompleted)
         const used = new Set<number>()
         for (const task of obraTasks) {
           if (task.sourceTemplateId != null) used.add(task.sourceTemplateId)
@@ -206,7 +218,10 @@ export function CreatePlanModal({
     )
       .then((rows) => {
         if (!cancelled) {
-          const visible = rows.filter((item) => !usedTemplateIds.includes(item.id))
+          const visible = rows.filter(
+            (item) =>
+              !usedTemplateIds.includes(item.id) && templateZoneIsOpen(item, marks),
+          )
           setTemplates(visible)
           setPoolAlreadyPending(rows.length > 0 && visible.length === 0)
         }
@@ -220,7 +235,7 @@ export function CreatePlanModal({
     return () => {
       cancelled = true
     }
-  }, [budgetActivityId, chapterId, usedTemplateIds])
+  }, [budgetActivityId, chapterId, usedTemplateIds, marks])
 
   const selectedCount = selectedTasks.length + selectedTemplates.length
 
@@ -419,7 +434,14 @@ export function CreatePlanModal({
                 seleccionadas)
               </p>
               <div className={styles.twoCol}>
-                <Field label="Capítulo">
+                <Field
+                  label="Capítulo"
+                  hint={
+                    hidesCompleted
+                      ? 'La zona donde el capítulo ya está completado no admite actividades nuevas.'
+                      : undefined
+                  }
+                >
                   <TextSelect
                     value={chapterId}
                     onChange={(e) => setChapterId(e.target.value)}
