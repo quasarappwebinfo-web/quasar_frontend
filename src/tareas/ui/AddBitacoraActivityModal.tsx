@@ -58,7 +58,11 @@ export function AddBitacoraActivityModal({
           plan.currentVersion?.tasks.map((item) => item.taskId) ?? [],
         )
         setVersionId(plan.currentVersion?.version.id ?? null)
-        setTasks(obraTasks.filter((task) => !taken.has(task.id)))
+        setTasks(
+          obraTasks.filter(
+            (task) => !taken.has(task.id) && canScheduleAgain(task.status),
+          ),
+        )
       })
       .catch((err) => {
         if (cancelled) return
@@ -135,13 +139,14 @@ export function AddBitacoraActivityModal({
       <form id="add-bitacora-activity" className={styles.formGrid} onSubmit={handleSubmit}>
         {error ? <Alert tone="error">{error}</Alert> : null}
         <p className={styles.noteBox}>
-          Sale del listado de la obra, no del listado general. Elige capítulo,
-          subcapítulo y actividad. Las que ya están en esta bitácora no aparecen.
+          Sale del listado de la obra. Elige capítulo, subcapítulo y actividad.
+          Las que ya están en esta bitácora, o que ya se completaron, no aparecen.
         </p>
         {loading ? <p className={styles.hint}>Cargando actividades de la obra…</p> : null}
         {!loading && tasks.length === 0 && !error ? (
           <p className={styles.hint}>
-            Esta obra no tiene más actividades fuera de la bitácora.
+            No hay actividades pendientes para agregar. Las completadas no se
+            vuelven a programar.
           </p>
         ) : null}
         <Field label="Capítulo">
@@ -196,6 +201,10 @@ export function AddBitacoraActivityModal({
       </form>
     </Modal>
   )
+}
+
+function canScheduleAgain(status: Task['status']): boolean {
+  return status === 'scheduled' || status === 'in_progress' || status === 'rescheduled'
 }
 
 async function listEveryTask(obraId: number): Promise<Task[]> {

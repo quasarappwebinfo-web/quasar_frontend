@@ -143,7 +143,11 @@ export function CreatePlanModal({
       listObraChapterMarks(obraId).catch(() => []),
     ])
       .then(([pendingData, obraTasks, chapterRows, marks]) => {
-        setPending(pendingData.tasks)
+        setPending(
+          pendingData.tasks.filter(
+            (task) => task.status !== 'completed' && task.status !== 'verified',
+          ),
+        )
         setMarks(marks)
         const visible = withoutCompletedChapters(sortChapters(chapterRows), marks)
         setChapters(visible.chapters)
