@@ -241,20 +241,15 @@ export function CreatePlanModal({
     }
   }, [budgetActivityId, chapterId, usedTemplateIds, marks])
 
-  const fromAnotherWeek = pending.filter((task) => task.sourcePlanId != null)
-  const forThisWeek = pending.filter(
-    (task) =>
-      task.sourcePlanId == null &&
-      String(task.chapterId ?? '') === chapterId &&
-      String(task.budgetActivityId ?? '') === budgetActivityId,
-  )
-  const chapterWithoutSubchapter = pending.filter(
-    (task) =>
-      task.sourcePlanId == null &&
-      String(task.chapterId ?? '') === chapterId &&
-      task.budgetActivityId == null,
-  )
-  const chosenFromAnotherWeek = fromAnotherWeek.filter((task) =>
+  const leftUnfinished = pending.filter((task) => task.sourcePlanId != null)
+  const forThisWeek = pending.filter((task) => {
+    if (task.sourcePlanId != null) return false
+    if (!chapterId || !budgetActivityId) return false
+    if (String(task.chapterId ?? '') !== chapterId) return false
+    if (task.budgetActivityId == null) return true
+    return String(task.budgetActivityId) === budgetActivityId
+  })
+  const chosenLeftUnfinished = leftUnfinished.filter((task) =>
     selectedTasks.includes(task.id),
   ).length
   const chosenThisWeek = pending.filter(
@@ -419,15 +414,15 @@ export function CreatePlanModal({
           ) : (
             <>
               <p className={styles.groupLabel}>
-                De otra bitácora ({chosenFromAnotherWeek} seleccionadas)
+                Quedaron sin completar ({chosenLeftUnfinished} seleccionadas)
               </p>
-              {fromAnotherWeek.length === 0 ? (
+              {leftUnfinished.length === 0 ? (
                 <p className={styles.muted}>
-                  Ninguna actividad viene pendiente de otra bitácora.
+                  Ninguna actividad quedó sin completar en otra bitácora.
                 </p>
               ) : (
                 <div className={styles.taskPick}>
-                  {fromAnotherWeek.map((task) => (
+                  {leftUnfinished.map((task) => (
                     <label key={task.id} className={styles.taskOption}>
                       <input
                         type="checkbox"
@@ -442,7 +437,7 @@ export function CreatePlanModal({
                           {statusLabel(task.status)}
                           {task.sourcePlanName
                             ? ` · venía de ${task.sourcePlanName}`
-                            : ' · todavía no está en una bitácora'}
+                            : ''}
                           {task.plannedEndDate
                             ? ` · hasta ${formatTaskDate(task.plannedEndDate)}`
                             : ''}
@@ -492,27 +487,6 @@ export function CreatePlanModal({
                   </TextSelect>
                 </Field>
               </div>
-              {chapterWithoutSubchapter.length > 0 ? (
-                <div className={styles.taskPick}>
-                  {chapterWithoutSubchapter.map((task) => (
-                    <label key={`obra-${task.id}`} className={styles.taskOption}>
-                      <input
-                        type="checkbox"
-                        checked={selectedTasks.includes(task.id)}
-                        onChange={() =>
-                          toggleId(selectedTasks, task.id, setSelectedTasks)
-                        }
-                      />
-                      <span className={styles.taskOptionBody}>
-                        <span className={styles.taskOptionName}>{task.name}</span>
-                        <span className={styles.taskOptionMeta}>
-                          Ya está en la obra · todavía no está en una bitácora
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              ) : null}
               {selectedTemplates.length > 0 ? (
                 <p className={styles.muted}>
                   Elegidas:{' '}
@@ -525,14 +499,14 @@ export function CreatePlanModal({
                 <p className={styles.muted}>Cargando actividades del pool…</p>
               ) : !chapterId ? (
                 <p className={styles.muted}>
-                  Elige un capítulo y un subcapítulo. Ahí salen las actividades
-                  de la obra que todavía no están en una bitácora.
+                  Elige un capítulo y después el subcapítulo. Ahí salen las
+                  actividades de la obra que todavía no están en una bitácora.
                 </p>
               ) : !budgetActivityId ? (
                 <p className={styles.muted}>
                   {budgetActivities.length === 0
                     ? 'Este capítulo no tiene subcapítulos.'
-                    : 'Elige el subcapítulo para ver las del pool.'}
+                    : 'Elige el subcapítulo. Ahí salen las de la obra que todavía no están en una bitácora.'}
                 </p>
               ) : forThisWeek.length === 0 && templates.length === 0 ? (
                 <p className={styles.muted}>
