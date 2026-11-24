@@ -125,6 +125,8 @@ export type UnfinishedPlanActivity = {
   plannedEndDate?: string | null
   templateId?: number | null
   templateCode?: string | null
+  chapterId?: number | null
+  budgetActivityId?: number | null
   chapterName?: string | null
   sourcePlanId?: number | null
   sourcePlanName?: string | null

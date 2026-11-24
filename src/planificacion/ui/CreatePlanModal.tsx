@@ -241,6 +241,25 @@ export function CreatePlanModal({
     }
   }, [budgetActivityId, chapterId, usedTemplateIds, marks])
 
+  const fromAnotherWeek = pending.filter((task) => task.sourcePlanId != null)
+  const forThisWeek = pending.filter(
+    (task) =>
+      task.sourcePlanId == null &&
+      String(task.chapterId ?? '') === chapterId &&
+      String(task.budgetActivityId ?? '') === budgetActivityId,
+  )
+  const chapterWithoutSubchapter = pending.filter(
+    (task) =>
+      task.sourcePlanId == null &&
+      String(task.chapterId ?? '') === chapterId &&
+      task.budgetActivityId == null,
+  )
+  const chosenFromAnotherWeek = fromAnotherWeek.filter((task) =>
+    selectedTasks.includes(task.id),
+  ).length
+  const chosenThisWeek = pending.filter(
+    (task) => task.sourcePlanId == null && selectedTasks.includes(task.id),
+  ).length
   const selectedCount = selectedTasks.length + selectedTemplates.length
 
   function toggleTemplate(item: TaskTemplate) {
@@ -392,23 +411,23 @@ export function CreatePlanModal({
         >
           <div className={styles.noteBox}>
             <strong>Paso 2 · Actividades.</strong> Periodo {startDate} → {endDate}.
-            Registrar una actividad no pide versión, cantidad ni rendimiento.
-            Las que quedaron sin completar se pueden traer a estas fechas.
+            Marca las actividades de la obra que entran en estas fechas.
+            Las que ya se completaron no aparecen.
           </div>
           {loadingTasks ? (
             <p className={styles.muted}>Cargando actividades…</p>
           ) : (
             <>
               <p className={styles.groupLabel}>
-                Quedaron sin completar ({selectedTasks.length} seleccionadas)
+                De otra bitácora ({chosenFromAnotherWeek} seleccionadas)
               </p>
-              {pending.length === 0 ? (
+              {fromAnotherWeek.length === 0 ? (
                 <p className={styles.muted}>
-                  En periodos anteriores no hay actividades pendientes.
+                  Ninguna actividad viene pendiente de otra bitácora.
                 </p>
               ) : (
                 <div className={styles.taskPick}>
-                  {pending.map((task) => (
+                  {fromAnotherWeek.map((task) => (
                     <label key={task.id} className={styles.taskOption}>
                       <input
                         type="checkbox"
@@ -423,7 +442,7 @@ export function CreatePlanModal({
                           {statusLabel(task.status)}
                           {task.sourcePlanName
                             ? ` · venía de ${task.sourcePlanName}`
-                            : ''}
+                            : ' · todavía no está en una bitácora'}
                           {task.plannedEndDate
                             ? ` · hasta ${formatTaskDate(task.plannedEndDate)}`
                             : ''}
@@ -434,7 +453,7 @@ export function CreatePlanModal({
                 </div>
               )}
               <p className={styles.groupLabel}>
-                Registrar en este periodo ({selectedTemplates.length}{' '}
+                Registrar en este periodo ({chosenThisWeek + selectedTemplates.length}{' '}
                 seleccionadas)
               </p>
               <div className={styles.twoCol}>
@@ -473,6 +492,27 @@ export function CreatePlanModal({
                   </TextSelect>
                 </Field>
               </div>
+              {chapterWithoutSubchapter.length > 0 ? (
+                <div className={styles.taskPick}>
+                  {chapterWithoutSubchapter.map((task) => (
+                    <label key={`obra-${task.id}`} className={styles.taskOption}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.includes(task.id)}
+                        onChange={() =>
+                          toggleId(selectedTasks, task.id, setSelectedTasks)
+                        }
+                      />
+                      <span className={styles.taskOptionBody}>
+                        <span className={styles.taskOptionName}>{task.name}</span>
+                        <span className={styles.taskOptionMeta}>
+                          Ya está en la obra · todavía no está en una bitácora
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
               {selectedTemplates.length > 0 ? (
                 <p className={styles.muted}>
                   Elegidas:{' '}
@@ -485,8 +525,8 @@ export function CreatePlanModal({
                 <p className={styles.muted}>Cargando actividades del pool…</p>
               ) : !chapterId ? (
                 <p className={styles.muted}>
-                  Elige un capítulo. Después verás sus subcapítulos
-                  y, al elegir uno, las actividades del pool.
+                  Elige un capítulo y un subcapítulo. Ahí salen las actividades
+                  de la obra que todavía no están en una bitácora.
                 </p>
               ) : !budgetActivityId ? (
                 <p className={styles.muted}>
@@ -494,16 +534,33 @@ export function CreatePlanModal({
                     ? 'Este capítulo no tiene subcapítulos.'
                     : 'Elige el subcapítulo para ver las del pool.'}
                 </p>
-              ) : templates.length === 0 ? (
+              ) : forThisWeek.length === 0 && templates.length === 0 ? (
                 <p className={styles.muted}>
                   {poolAlreadyPending
-                    ? 'Esas actividades ya se usaron en esta obra: están planeadas, en progreso o terminadas. No se vuelven a ofrecer.'
+                    ? 'Esas actividades ya están en otra bitácora, o ya se completaron.'
                     : 'Este subcapítulo no tiene actividades en el pool.'}
                 </p>
               ) : (
                 <div className={styles.taskPick}>
+                  {forThisWeek.map((task) => (
+                    <label key={`obra-${task.id}`} className={styles.taskOption}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.includes(task.id)}
+                        onChange={() =>
+                          toggleId(selectedTasks, task.id, setSelectedTasks)
+                        }
+                      />
+                      <span className={styles.taskOptionBody}>
+                        <span className={styles.taskOptionName}>{task.name}</span>
+                        <span className={styles.taskOptionMeta}>
+                          Ya está en la obra · todavía no está en una bitácora
+                        </span>
+                      </span>
+                    </label>
+                  ))}
                   {templates.map((item) => (
-                    <label key={item.id} className={styles.taskOption}>
+                    <label key={`pool-${item.id}`} className={styles.taskOption}>
                       <input
                         type="checkbox"
                         checked={selectedTemplates.includes(item.id)}
