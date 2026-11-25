@@ -12,10 +12,28 @@ import {
   Button,
   Field,
   Modal,
+  TextInput,
   TextSelect,
   useToast,
 } from '@/shared/ui'
 import styles from './AsistenciaModal.module.css'
+
+async function listActiveWorkers(): Promise<Worker[]> {
+  const all: Worker[] = []
+  let page = 1
+  let total = 0
+  do {
+    const data = await listWorkers({ page, activeOnly: true })
+    all.push(...data.workers)
+    total = data.pagination.totalItems
+    if (data.workers.length === 0) break
+    page += 1
+  } while (all.length < total && page <= 80)
+  all.sort((a, b) =>
+    (a.personName || '').localeCompare(b.personName || '', 'es'),
+  )
+  return all
+}
 
 type AsistenciaModalProps = {
   open: boolean
@@ -39,17 +57,22 @@ export function AsistenciaModal({
 }: AsistenciaModalProps) {
   const toast = useToast()
   const [workers, setWorkers] = useState<Worker[]>([])
+  const [query, setQuery] = useState('')
   const [workerId, setWorkerId] = useState('')
+  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setWorkerId('')
+    setQuery('')
     setError(null)
-    void listWorkers({ page: 1, activeOnly: true })
-      .then((data) => setWorkers(data.workers))
+    setLoading(true)
+    void listActiveWorkers()
+      .then(setWorkers)
       .catch(() => setWorkers([]))
+      .finally(() => setLoading(false))
   }, [open])
 
   const presentIds = useMemo(
@@ -57,10 +80,16 @@ export function AsistenciaModal({
     [excludeWorkerIds],
   )
 
-  const availableWorkers = useMemo(
-    () => workers.filter((w) => !presentIds.has(w.id)),
-    [workers, presentIds],
-  )
+  const availableWorkers = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    return workers.filter((worker) => {
+      if (presentIds.has(worker.id)) return false
+      if (!term) return true
+      const name = (worker.personName || '').toLowerCase()
+      const document = (worker.documentNumber || '').toLowerCase()
+      return name.includes(term) || document.includes(term)
+    })
+  }, [workers, presentIds, query])
 
   async function handleCheckIn(event: FormEvent) {
     event.preventDefault()
@@ -117,14 +146,24 @@ export function AsistenciaModal({
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <form className={styles.form} onSubmit={handleCheckIn}>
+          <Field label="Buscar">
+            <TextInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nombre o documento"
+              disabled={loading || saving}
+            />
+          </Field>
           <Field label="Trabajador">
             <TextSelect
               value={workerId}
               onChange={(e) => setWorkerId(e.target.value)}
-              disabled={saving}
+              disabled={saving || loading}
               required
             >
-              <option value="">Seleccionar…</option>
+              <option value="">
+                {loading ? 'Cargando trabajadores…' : 'Seleccionar…'}
+              </option>
               {availableWorkers.map((worker) => (
                 <option key={worker.id} value={worker.id}>
                   {worker.personName || `Trabajador #${worker.id}`}
@@ -133,11 +172,20 @@ export function AsistenciaModal({
               ))}
             </TextSelect>
           </Field>
-          {availableWorkers.length === 0 ? (
+          {loading ? (
+            <p className={styles.muted}>Cargando el personal activo…</p>
+          ) : availableWorkers.length === 0 ? (
             <p className={styles.muted}>
-              Todos los trabajadores activos ya están registrados hoy.
+              {query.trim()
+                ? 'Nadie coincide con esa búsqueda.'
+                : 'Todos los trabajadores activos ya están registrados hoy.'}
             </p>
-          ) : null}
+          ) : (
+            <p className={styles.muted}>
+              {availableWorkers.length}{' '}
+              {availableWorkers.length === 1 ? 'trabajador' : 'trabajadores'}
+            </p>
+          )}
           <Button
             type="submit"
             disabled={saving || !workerId || availableWorkers.length === 0}
