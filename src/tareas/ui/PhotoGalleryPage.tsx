@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { isSuperUser, useAuth } from '@/auth'
 import { getObra, listObras } from '@/obras/api/obrasApi'
 import { OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
@@ -7,10 +8,15 @@ import type { Obra } from '@/obras/model/types'
 import { listActiveTaskChapters } from '@/task-pool/api/capitulosApi'
 import { chapterSortRank, sortChapters } from '@/task-pool/lib/chapterOrder'
 import type { TaskChapter } from '@/task-pool/model/types'
-import { listObraPhotoGallery, type GalleryPhoto } from '@/tareas/api/tareasApi'
+import {
+  deleteGalleryPhoto,
+  listObraPhotoGallery,
+  type GalleryPhoto,
+} from '@/tareas/api/tareasApi'
 import { ObraPhotoUpload } from '@/tareas/ui/ObraPhotoUpload'
+import { ApiError } from '@/shared/api/apiJson'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
-import { Alert } from '@/shared/ui'
+import { Alert, useToast } from '@/shared/ui'
 import styles from './PhotoGalleryPage.module.css'
 import pickStyles from './tareas.module.css'
 
@@ -36,6 +42,9 @@ function photoLabel(photo: GalleryPhoto): string {
 export function PhotoGalleryPage() {
   const { obraId: obraIdParam } = useParams()
   const navigate = useNavigate()
+  const toast = useToast()
+  const { user } = useAuth()
+  const canDeletePhotos = isSuperUser(user)
   const obraId = Number(obraIdParam)
   const [obra, setObra] = useState<Obra | null>(null)
   const [chapters, setChapters] = useState<TaskChapter[]>([])
@@ -52,6 +61,9 @@ export function PhotoGalleryPage() {
   const [error, setError] = useState<string | null>(null)
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const obraName = obra?.name || ''
 
   useDocumentTitle(
@@ -138,7 +150,11 @@ export function PhotoGalleryPage() {
   useEffect(() => {
     if (openIndex == null) return
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpenIndex(null)
+      if (event.key === 'Escape') {
+        setDeleteOpen(false)
+        setOpenIndex(null)
+      }
+      if (deleteOpen) return
       if (event.key === 'ArrowRight') {
         setOpenIndex((current) =>
           current == null || current >= orderedPhotos.length - 1
@@ -154,7 +170,38 @@ export function PhotoGalleryPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openIndex, orderedPhotos.length])
+  }, [openIndex, orderedPhotos.length, deleteOpen])
+
+  useEffect(() => {
+    setDeleteOpen(false)
+    setDeleteReason('')
+  }, [openIndex])
+
+  async function removePhoto(event: FormEvent) {
+    event.preventDefault()
+    if (!openPhoto) return
+    const kind = openPhoto.kind === 'obra' ? 'obra' : 'task'
+    const reason = deleteReason.trim()
+    if (reason.length < 5) {
+      setError('Escribe por qué se elimina la foto.')
+      return
+    }
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteGalleryPhoto({ kind, photoId: openPhoto.id, reason })
+      toast.success('Foto eliminada')
+      setOpenIndex(null)
+      setDeleteOpen(false)
+      setDeleteReason('')
+      if (photos.length === 1 && page > 1) setPage((current) => current - 1)
+      else await load()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo eliminar la foto')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(totalItems / Math.max(itemsPerPage, 1)))
   const rangeLabel = obra
@@ -440,6 +487,54 @@ export function PhotoGalleryPage() {
               </p>
               {openPhoto.description && openPhoto.kind !== 'obra' ? (
                 <p className={styles.metaLine}>{openPhoto.description}</p>
+              ) : null}
+              {canDeletePhotos ? (
+                <form className={styles.deleteBox} onSubmit={removePhoto}>
+                  {deleteOpen ? (
+                    <>
+                      <label className={styles.deleteLabel} htmlFor="gallery-delete-reason">
+                        Por qué se elimina
+                      </label>
+                      <textarea
+                        id="gallery-delete-reason"
+                        value={deleteReason}
+                        onChange={(event) => setDeleteReason(event.target.value)}
+                        placeholder="Escribe el motivo. Queda a tu nombre."
+                        maxLength={500}
+                        required
+                        disabled={deleting}
+                      />
+                      <div className={styles.deleteActions}>
+                        <button
+                          type="button"
+                          className={styles.deleteCancel}
+                          onClick={() => {
+                            setDeleteOpen(false)
+                            setDeleteReason('')
+                          }}
+                          disabled={deleting}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className={styles.deleteBtn}
+                          disabled={deleting || deleteReason.trim().length < 5}
+                        >
+                          {deleting ? 'Eliminando…' : 'Eliminar definitivamente'}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => setDeleteOpen(true)}
+                    >
+                      Eliminar foto
+                    </button>
+                  )}
+                </form>
               ) : null}
             </div>
           </div>

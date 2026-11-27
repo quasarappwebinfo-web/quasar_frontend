@@ -197,6 +197,19 @@
   font-size: 0.8rem;
 }
 
+.removeBtn {
+  border: 0;
+  background: transparent;
+  color: #b42318;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.removeBtn:hover {
+  text-decoration: underline;
+}
+
 .side {
   display: flex;
   flex-direction: column;

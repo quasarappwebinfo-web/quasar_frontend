@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { downloadPlanInforme } from '@/obras/api/informeApi'
 import { getObra, listObras } from '@/obras/api/obrasApi'
 import { OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import type { Obra } from '@/obras/model/types'
@@ -52,6 +53,7 @@ export function TasksKanbanPage() {
   const [obras, setObras] = useState<Obra[]>([])
   const [plans, setPlans] = useState<ObraBitacora[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
+  const [summaryPlanId, setSummaryPlanId] = useState<number | null>(null)
   const [chapters, setChapters] = useState<TaskChapter[]>([])
   const [boardData, setBoard] = useState<TaskBoard | null>(null)
   const [loading, setLoading] = useState(true)
@@ -336,6 +338,17 @@ export function TasksKanbanPage() {
     OBRA_STATUS_OPTIONS.find((item) => item.value === obraStatus)?.label ||
     (obraStatus === 'inactive' ? 'Inactiva' : obraStatus)
 
+  async function downloadSummary(planId: number) {
+    setSummaryPlanId(planId)
+    try {
+      await downloadPlanInforme(planId)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo descargar el resumen')
+    } finally {
+      setSummaryPlanId(null)
+    }
+  }
+
   function openPlan(id: number) {
     const next = new URLSearchParams()
     next.set('planId', String(id))
@@ -502,6 +515,14 @@ export function TasksKanbanPage() {
                         </button>
                         <button type="button" className={board.openBtn} onClick={() => openPlan(plan.id)}>
                           Ver tablero
+                        </button>
+                        <button
+                          type="button"
+                          className={board.openBtn}
+                          disabled={summaryPlanId === plan.id}
+                          onClick={() => void downloadSummary(plan.id)}
+                        >
+                          {summaryPlanId === plan.id ? 'Descargando…' : 'Resumen'}
                         </button>
                       </div>
                     </td>

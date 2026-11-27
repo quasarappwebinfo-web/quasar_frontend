@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { listAttendancePresence } from '@/obras/api/asistenciaApi'
 import { listObras } from '@/obras/api/obrasApi'
+import { todayColombiaIso } from '@/obras/lib/asistenciaUi'
 import { isObraActiveWork, isObraDelayed } from '@/obras/lib/obraUi'
 import type { Obra } from '@/obras/model/types'
 import { ObraCard } from '@/obras/ui/ObraCard'
 import { ObraFormModal } from '@/obras/ui/ObraFormModal'
-import { listAssignments } from '@/rrhh/api/asignacionesApi'
 import {
   listMyNotifications,
   markAllNotificationsRead,
@@ -43,24 +44,24 @@ export function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [obrasData, assignmentsData] = await Promise.all([
+      const [obrasData, presence] = await Promise.all([
         listObras({
           page,
           search: debouncedSearch,
           activeOnly: true,
         }),
-        listAssignments({ page: 1, currentOnly: true }),
+        listAttendancePresence(todayColombiaIso()),
       ])
       setObras(obrasData.obras)
       setTotalItems(obrasData.pagination.totalItems)
       setItemsPerPage(obrasData.pagination.itemsPerPage)
 
       const counts: Record<number, number> = {}
-      for (const assignment of assignmentsData.assignments) {
-        counts[assignment.obraId] = (counts[assignment.obraId] || 0) + 1
+      for (const item of presence.counts) {
+        counts[item.obraId] = item.count
       }
       setPeopleByObra(counts)
-      setPeopleTotal(assignmentsData.pagination.totalItems)
+      setPeopleTotal(presence.total)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar el dashboard')
     } finally {
@@ -128,7 +129,7 @@ export function DashboardPage() {
           <div>
             <h1 className={look.catalogTitle}>Inicio</h1>
             <p className={look.catalogLead}>
-              Obras activas, su cumplimiento y el personal asignado.
+              Obras activas, su cumplimiento y el personal trabajando hoy.
             </p>
           </div>
           <div className={look.heroTools}>
@@ -216,7 +217,7 @@ export function DashboardPage() {
           </span>
           <div>
             <p className={look.statValue}>{kpis.peopleTotal}</p>
-            <p className={look.statLabel}>Personal asignado</p>
+            <p className={look.statLabel}>Personal trabajando hoy</p>
           </div>
         </article>
         <article className={look.stat}>
