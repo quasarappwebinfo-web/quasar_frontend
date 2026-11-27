@@ -19,6 +19,35 @@ import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import { Alert, Button, Field, Modal, TextArea, useToast } from '@/shared/ui'
 import styles from './ObraAttendance.module.css'
 
+function pluralWord(word: string): string {
+  const lower = word.toLocaleLowerCase('es')
+  if (lower.endsWith('z')) return `${lower.slice(0, -1)}ces`
+  if (/[aeiouáéíóú]$/i.test(lower)) return `${lower}s`
+  return `${lower}es`
+}
+
+function cargoLabel(name: string, count: number): string {
+  const parts = name.trim().split(/\s+/)
+  if (count === 1) return parts.map((part) => part.toLocaleLowerCase('es')).join(' ')
+  parts[0] = pluralWord(parts[0])
+  for (let index = 1; index < parts.length; index += 1) {
+    parts[index] = parts[index].toLocaleLowerCase('es')
+  }
+  return parts.join(' ')
+}
+
+function cargoSummary(rows: ObraDailyAttendance[]): string {
+  const counts = new Map<string, number>()
+  for (const row of rows) {
+    const name = row.positionName?.trim() || 'Sin cargo'
+    counts.set(name, (counts.get(name) || 0) + 1)
+  }
+  return [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'es'))
+    .map(([name, count]) => `${count} ${cargoLabel(name, count)}`)
+    .join(' · ')
+}
+
 type WeekPoint = {
   date: string
   label: string
@@ -279,6 +308,9 @@ export function ObraAttendancePage() {
                 </div>
               ))}
             </div>
+            {rows.length > 0 ? (
+              <p className={styles.cargoMix}>{cargoSummary(rows)}</p>
+            ) : null}
           </section>
         </aside>
       </div>

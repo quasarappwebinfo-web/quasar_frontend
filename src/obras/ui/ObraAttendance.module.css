@@ -277,3 +277,10 @@
 .barLabelOn {
   color: #2458c5;
 }
+
+.cargoMix {
+  margin: 0.9rem 0 0;
+  color: #1a1c1f;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
