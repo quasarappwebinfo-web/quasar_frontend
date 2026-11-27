@@ -11,6 +11,7 @@ import {
   updateObraDocument,
   uploadObraDocuments,
 } from '@/obras/api/documentosApi'
+import { downloadObraInforme, downloadPlanInforme } from '@/obras/api/informeApi'
 import { getObra, updateObra } from '@/obras/api/obrasApi'
 import { ObraChaptersModal } from '@/obras/ui/ObraChaptersModal'
 import { coverForObra, OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
@@ -83,6 +84,12 @@ export function ObraDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [chaptersOpen, setChaptersOpen] = useState(false)
   const [asistenciaOpen, setAsistenciaOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportFrom, setReportFrom] = useState('')
+  const [reportTo, setReportTo] = useState('')
+  const [reportError, setReportError] = useState<string | null>(null)
+  const [downloadingReport, setDownloadingReport] = useState(false)
+  const [summaryPlanId, setSummaryPlanId] = useState<number | null>(null)
   const [asistenciaHoy, setAsistenciaHoy] = useState<ObraDailyAttendance[]>([])
   const [asistenciaLoading, setAsistenciaLoading] = useState(false)
   const [planesRecientes, setPlanesRecientes] = useState<WorkPlan[]>([])
@@ -206,6 +213,53 @@ export function ObraDetailPage() {
   const statusTone =
     !obra || obra.isActive !== 1 ? 'inactive' : obra.status || 'planning'
 
+  function openReport() {
+    const today = todayColombiaIso()
+    const periodStart = fulfillment?.period?.startDate?.slice(0, 10)
+    const periodEnd = fulfillment?.period?.endDate?.slice(0, 10)
+    setReportFrom(periodStart || shiftIsoDate(today, -6))
+    setReportTo(periodEnd || today)
+    setReportError(null)
+    setReportOpen(true)
+  }
+
+  async function downloadReport() {
+    if (!reportFrom || !reportTo) {
+      setReportError('Elige desde y hasta.')
+      return
+    }
+    if (reportFrom > reportTo) {
+      setReportError('La fecha final tiene que ser posterior a la inicial.')
+      return
+    }
+    if (!obra) return
+    setDownloadingReport(true)
+    setReportError(null)
+    try {
+      await downloadObraInforme({
+        obraId: obra.id,
+        dateFrom: reportFrom,
+        dateTo: reportTo,
+      })
+      setReportOpen(false)
+    } catch (err) {
+      setReportError(err instanceof Error ? err.message : 'No se pudo descargar el informe')
+    } finally {
+      setDownloadingReport(false)
+    }
+  }
+
+  async function downloadPlanSummary(planId: number) {
+    setSummaryPlanId(planId)
+    try {
+      await downloadPlanInforme(planId)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo descargar el resumen')
+    } finally {
+      setSummaryPlanId(null)
+    }
+  }
+
   async function toggleActive() {
     if (!obra) return
     try {
@@ -286,6 +340,9 @@ export function ObraDetailPage() {
                 Capítulos
               </button>
             ) : null}
+            <button type="button" className={styles.editBtn} onClick={openReport}>
+              Informe
+            </button>
             <button type="button" className={styles.editBtn} onClick={() => setEditOpen(true)}>
               <PencilIcon />
               Editar
@@ -715,7 +772,7 @@ export function ObraDetailPage() {
             ) : (
               <ul className={styles.planList}>
                 {planesRecientes.map((plan) => (
-                  <li key={plan.id}>
+                  <li key={plan.id} className={styles.planRow}>
                     <button
                       type="button"
                       className={styles.planItem}
@@ -731,6 +788,14 @@ export function ObraDetailPage() {
                       <Badge tone={planStatusTone(plan.status)}>
                         {WORK_PLAN_STATUS_LABELS[plan.status]}
                       </Badge>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.planDownload}
+                      disabled={summaryPlanId === plan.id}
+                      onClick={() => void downloadPlanSummary(plan.id)}
+                    >
+                      {summaryPlanId === plan.id ? '…' : 'Resumen'}
                     </button>
                   </li>
                 ))}
@@ -758,6 +823,60 @@ export function ObraDetailPage() {
         }}
       />
 
+      <Modal
+        title="Descargar informe"
+        open={reportOpen}
+        onClose={() => {
+          if (!downloadingReport) setReportOpen(false)
+        }}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              disabled={downloadingReport}
+              onClick={() => setReportOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={downloadingReport} onClick={() => void downloadReport()}>
+              {downloadingReport ? 'Descargando…' : 'Descargar'}
+            </Button>
+          </>
+        }
+      >
+        <p className={styles.reportNote}>
+          Elige el rango del informe de {obra.name}. Incluye el personal en sitio, las
+          actividades de las bitácoras de esas fechas y las fotos.
+        </p>
+        <div className={styles.reportForm}>
+          <label className={styles.reportField}>
+            <span>Desde</span>
+            <input
+              type="date"
+              value={reportFrom}
+              max={reportTo || undefined}
+              onChange={(event) => {
+                setReportFrom(event.target.value)
+                setReportError(null)
+              }}
+            />
+          </label>
+          <label className={styles.reportField}>
+            <span>Hasta</span>
+            <input
+              type="date"
+              value={reportTo}
+              min={reportFrom || undefined}
+              onChange={(event) => {
+                setReportTo(event.target.value)
+                setReportError(null)
+              }}
+            />
+          </label>
+        </div>
+        {reportError ? <p className={styles.reportError}>{reportError}</p> : null}
+      </Modal>
+
       <AsistenciaModal
         open={asistenciaOpen}
         obraId={obra.id}
@@ -768,6 +887,15 @@ export function ObraDetailPage() {
       />
     </div>
   )
+}
+
+function shiftIsoDate(iso: string, days: number): string {
+  const date = new Date(`${iso}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function photoCaption(photo: GalleryPhoto): string {

@@ -7,6 +7,7 @@ export type ObraDailyAttendance = {
   workerName?: string | null
   documentNumber?: string | null
   positionName?: string | null
+  specialtyName?: string | null
   signedAt: string
   signatureType: string
   signatureData?: string | null

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { isSuperUser, useAuth } from '@/auth'
 import {
   downloadAttendanceReport,
   listObraAttendance,
+  removeObraAttendance,
 } from '@/obras/api/asistenciaApi'
 import {
   formatAttendanceTime,
@@ -12,8 +14,9 @@ import {
 import type { ObraDailyAttendance } from '@/obras/model/asistenciaTypes'
 import { getObra } from '@/obras/api/obrasApi'
 import { AsistenciaModal } from '@/obras/ui/AsistenciaModal'
+import { ApiError } from '@/shared/api/apiJson'
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
-import { Alert, Button, Modal, useToast } from '@/shared/ui'
+import { Alert, Button, Field, Modal, TextArea, useToast } from '@/shared/ui'
 import styles from './ObraAttendance.module.css'
 
 type WeekPoint = {
@@ -27,6 +30,8 @@ export function ObraAttendancePage() {
   const id = Number(obraId)
   const navigate = useNavigate()
   const toast = useToast()
+  const { user } = useAuth()
+  const canRemoveArrival = isSuperUser(user)
   const [obraName, setObraName] = useState('')
   const [day, setDay] = useState(todayColombiaIso)
   const [rows, setRows] = useState<ObraDailyAttendance[]>([])
@@ -39,6 +44,10 @@ export function ObraAttendancePage() {
   const [reportTo, setReportTo] = useState('')
   const [reportError, setReportError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState<ObraDailyAttendance | null>(null)
+  const [removeReason, setRemoveReason] = useState('')
+  const [removing, setRemoving] = useState(false)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   useDocumentTitle(
     obraName ? `Quasar · ${obraName} · Asistencia` : 'Quasar · Asistencia',
@@ -93,6 +102,36 @@ export function ObraAttendancePage() {
     setReportTo(day)
     setReportError(null)
     setReportOpen(true)
+  }
+
+  function askRemove(row: ObraDailyAttendance) {
+    setRemoveTarget(row)
+    setRemoveReason('')
+    setRemoveError(null)
+  }
+
+  async function confirmRemove() {
+    if (!removeTarget) return
+    const reason = removeReason.trim()
+    if (reason.length < 5) {
+      setRemoveError('Escribe por qué se quita esta llegada.')
+      return
+    }
+    setRemoving(true)
+    setRemoveError(null)
+    try {
+      await removeObraAttendance({ attendanceId: removeTarget.id, reason })
+      toast.success('Llegada quitada')
+      setRemoveTarget(null)
+      setRemoveReason('')
+      await load()
+    } catch (err) {
+      const text = err instanceof ApiError ? err.message : 'No se pudo quitar la llegada'
+      setRemoveError(text)
+      toast.error(text)
+    } finally {
+      setRemoving(false)
+    }
   }
 
   async function downloadReport() {
@@ -178,7 +217,9 @@ export function ObraAttendancePage() {
                     <th>Hora</th>
                     <th>Nombre</th>
                     <th>Cargo</th>
+                    <th>Especialidad</th>
                     <th>Registrado por</th>
+                    {canRemoveArrival ? <th /> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -192,7 +233,19 @@ export function ObraAttendancePage() {
                         ) : null}
                       </td>
                       <td>{row.positionName || '—'}</td>
+                      <td>{row.specialtyName || '—'}</td>
                       <td>{row.recordedByName || '—'}</td>
+                      {canRemoveArrival ? (
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.removeBtn}
+                            onClick={() => askRemove(row)}
+                          >
+                            Quitar
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -278,6 +331,47 @@ export function ObraAttendancePage() {
           </label>
         </div>
         {reportError ? <p className={styles.rangeError}>{reportError}</p> : null}
+      </Modal>
+
+      <Modal
+        title="Quitar llegada"
+        description={
+          removeTarget
+            ? `${removeTarget.workerName || 'Esta persona'} deja de contar en ${formatColombiaDate(day)}.`
+            : undefined
+        }
+        open={removeTarget != null}
+        onClose={() => {
+          if (!removing) setRemoveTarget(null)
+        }}
+        footer={
+          <>
+            <Button variant="ghost" disabled={removing} onClick={() => setRemoveTarget(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={removing || removeReason.trim().length < 5}
+              onClick={() => void confirmRemove()}
+            >
+              {removing ? 'Quitando…' : 'Quitar llegada'}
+            </Button>
+          </>
+        }
+      >
+        <Field label="Por qué se quita">
+          <TextArea
+            value={removeReason}
+            onChange={(event) => {
+              setRemoveReason(event.target.value)
+              setRemoveError(null)
+            }}
+            placeholder="El motivo queda a tu nombre."
+            maxLength={500}
+            rows={3}
+            disabled={removing}
+          />
+        </Field>
+        {removeError ? <p className={styles.rangeError}>{removeError}</p> : null}
       </Modal>
 
       <AsistenciaModal

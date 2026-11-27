@@ -6,6 +6,16 @@ import type {
 } from '@/obras/model/asistenciaTypes'
 import type { Pagination } from '@/identidad/model/types'
 
+export async function listAttendancePresence(date?: string): Promise<{
+  workDate: string
+  total: number
+  counts: { obraId: number; count: number }[]
+}> {
+  return apiJson(
+    `/api/v1/rrhh/asistencia/en-sitio${buildQuery({ date })}`,
+  )
+}
+
 export async function listObraAttendance(params: {
   obraId: number
   date: string
@@ -58,6 +68,16 @@ export async function downloadAttendanceReport(params: {
   link.download = `llegadas-${params.dateFrom}-${params.dateTo}.xlsx`
   link.click()
   URL.revokeObjectURL(url)
+}
+
+export async function removeObraAttendance(params: {
+  attendanceId: number
+  reason: string
+}): Promise<void> {
+  await apiJson(`/api/v1/rrhh/asistencia/${params.attendanceId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ reason: params.reason }),
+  })
 }
 
 export async function checkInObraAttendance(

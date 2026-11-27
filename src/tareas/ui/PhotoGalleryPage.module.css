@@ -575,6 +575,69 @@
   color: #d5dbe3;
 }
 
+.deleteBox {
+  width: min(100%, 42rem);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.deleteLabel {
+  font-size: 0.82rem;
+  color: #f3f4f6;
+  text-align: left;
+}
+
+.deleteBox textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+.deleteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.deleteBtn,
+.deleteCancel {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.deleteBtn {
+  align-self: center;
+  background: #b42318;
+  color: #fff;
+}
+
+.deleteActions .deleteBtn {
+  align-self: auto;
+}
+
+.deleteCancel {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.deleteBtn:disabled,
+.deleteCancel:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .navBtn,
 .closeBtn {
   border: 0;

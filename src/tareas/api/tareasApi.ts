@@ -217,6 +217,20 @@ export async function listObraPhotoGallery(params: {
   return apiJson(`/api/v1/operacion/tareas/galeria${buildQuery(params)}`)
 }
 
+export async function deleteGalleryPhoto(params: {
+  kind: 'task' | 'obra'
+  photoId: number
+  reason: string
+}): Promise<void> {
+  await apiJson(
+    `/api/v1/operacion/tareas/galeria/${params.kind}/${params.photoId}`,
+    {
+      method: 'DELETE',
+      body: JSON.stringify({ reason: params.reason }),
+    },
+  )
+}
+
 export async function uploadObraPhotos(params: {
   obraId: number
   items: { file: File; description: string }[]

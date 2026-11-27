@@ -133,9 +133,9 @@ export function AsistenciaModal({
         <div className={styles.note}>
           El administrador marca quién llegó. Queda registrado quién hizo la
           entrada (tú), con fecha y hora de Colombia. No hace falta firma del
-          trabajador. Una vez marcada, la llegada no se puede anular. Esos
-          días entran en Reportes: valor día × días trabajados, y en qué obra
-          estuvo cada día.
+          trabajador. Si alguien quedó marcado por error, solo el super
+          administrador puede quitar esa llegada. Esos días entran en
+          Reportes: valor día × días trabajados, y en qué obra estuvo cada día.
         </div>
 
         <p className={styles.todayLabel}>

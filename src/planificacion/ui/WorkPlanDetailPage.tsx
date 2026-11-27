@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { downloadPlanInforme } from '@/obras/api/informeApi'
 import { getObra } from '@/obras/api/obrasApi'
 import { OBRA_STATUS_OPTIONS, resolveObraCover } from '@/obras/lib/obraUi'
 import type { Obra } from '@/obras/model/types'
@@ -45,6 +46,7 @@ export function WorkPlanDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [summaryBusy, setSummaryBusy] = useState(false)
 
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState('')
@@ -201,9 +203,28 @@ export function WorkPlanDetailPage() {
             {` · ${WORK_PLAN_STATUS_LABELS[plan.status]}`}
           </p>
         </div>
-        <span className={board.rangeChip}>
-          {formatPlanDate(plan.startDate)} – {formatPlanDate(plan.endDate)}
-        </span>
+        <div className={board.summaryCol}>
+          <span className={board.rangeChip}>
+            {formatPlanDate(plan.startDate)} – {formatPlanDate(plan.endDate)}
+          </span>
+          <button
+            type="button"
+            className={board.openBtn}
+            disabled={summaryBusy}
+            onClick={() => {
+              setSummaryBusy(true)
+              void downloadPlanInforme(plan.id)
+                .catch((err: unknown) => {
+                  toast.error(
+                    err instanceof Error ? err.message : 'No se pudo descargar el resumen',
+                  )
+                })
+                .finally(() => setSummaryBusy(false))
+            }}
+          >
+            {summaryBusy ? 'Descargando…' : 'Descargar resumen'}
+          </button>
+        </div>
       </section>
 
       <section className={board.logStats}>
