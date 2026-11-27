@@ -39,6 +39,7 @@ export function ObraActivitiesPage() {
   const [obraName, setObraName] = useState('')
   const [chapters, setChapters] = useState<TaskChapter[]>([])
   const [budgetActivities, setBudgetActivities] = useState<TaskBudgetActivity[]>([])
+  const [zoneId, setZoneId] = useState('')
   const [chapterId, setChapterId] = useState('')
   const [budgetActivityId, setBudgetActivityId] = useState('')
   const [query, setQuery] = useState('')
@@ -97,6 +98,21 @@ export function ObraActivitiesPage() {
     [chapters, tasks, fulfillment],
   )
 
+  const zoneOptions = useMemo(() => {
+    const byId = new Map<number, string>()
+    for (const zone of fulfillment?.zones ?? []) {
+      byId.set(zone.zoneId, zone.zoneName)
+    }
+    for (const task of tasks) {
+      if (task.zoneId != null && !byId.has(task.zoneId)) {
+        byId.set(task.zoneId, task.zoneName || `Zona ${task.zoneId}`)
+      }
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((left, right) => left.name.localeCompare(right.name, 'es'))
+  }, [fulfillment, tasks])
+
   const subchapterOptions = useMemo(() => {
     const fromCatalog = budgetActivities.filter(
       (activity) => !chapterId || String(activity.chapterId) === chapterId,
@@ -126,6 +142,7 @@ export function ObraActivitiesPage() {
       .map((column) => ({
         ...column,
         tasks: column.tasks.filter((task) => {
+          if (zoneId && !taskMatchesZone(task, zoneId)) return false
           if (budgetActivityId && String(task.budgetActivityId ?? '') !== budgetActivityId) {
             return false
           }
@@ -139,9 +156,11 @@ export function ObraActivitiesPage() {
       }))
       .filter(
         (column) =>
-          Boolean(chapterId) || (!budgetActivityId && !needle) || column.tasks.length > 0,
+          Boolean(chapterId) ||
+          (!zoneId && !budgetActivityId && !needle) ||
+          column.tasks.length > 0,
       )
-  }, [columns, chapterId, budgetActivityId, query])
+  }, [columns, zoneId, chapterId, budgetActivityId, query])
 
   async function confirmRemove() {
     if (!pending) return
@@ -178,6 +197,19 @@ export function ObraActivitiesPage() {
           </p>
         </div>
         <div className={styles.filters}>
+          <TextSelect
+            className={styles.filterSelect}
+            aria-label="Zona"
+            value={zoneId}
+            onChange={(event) => setZoneId(event.target.value)}
+          >
+            <option value="">Todas las zonas</option>
+            {zoneOptions.map((zone) => (
+              <option key={zone.id} value={zone.id}>
+                {zone.name}
+              </option>
+            ))}
+          </TextSelect>
           <TextSelect
             className={styles.filterSelect}
             aria-label="Capítulo"
@@ -493,6 +525,11 @@ function ChapterGlyph() {
       />
     </svg>
   )
+}
+
+function taskMatchesZone(task: Task, selectedZoneId: string): boolean {
+  if (task.zoneId != null) return String(task.zoneId) === selectedZoneId
+  return task.sourceTemplateId != null
 }
 
 function asPercent(value: number | string | null | undefined): number {
