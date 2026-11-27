@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { listPersons } from '@/identidad/api/personasApi'
 import { listUsers } from '@/identidad/api/usersApi'
 import type { AppUser, Person } from '@/identidad/model/types'
-import {
-  listActivePositions,
-  listActiveSpecialties,
-} from '@/rrhh/api/catalogosRrhhApi'
+import { listActivePositions, listSpecialties } from '@/rrhh/api/catalogosRrhhApi'
 import {
   createWorker,
   listWorkers,
@@ -82,13 +79,27 @@ export function TrabajadoresPanel() {
   }, [])
 
   useEffect(() => {
-    const workerPositionId = positionId ? Number(positionId) : undefined
-    void listActiveSpecialties(
-      workerPositionId ? { workerPositionId } : undefined,
-    )
-      .then(setSpecialties)
-      .catch(() => setSpecialties([]))
-  }, [positionId])
+    let cancelled = false
+    async function loadSpecialties() {
+      const all: SpecialtyOption[] = []
+      let page = 1
+      let total = Number.POSITIVE_INFINITY
+      while (all.length < total && page <= 40) {
+        const data = await listSpecialties({ page, activeOnly: true })
+        all.push(...data.specialties)
+        total = data.pagination.totalItems
+        if (data.specialties.length === 0) break
+        page += 1
+      }
+      if (!cancelled) setSpecialties(all)
+    }
+    void loadSpecialties().catch(() => {
+      if (!cancelled) setSpecialties([])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
